@@ -30,7 +30,7 @@ import getopt
 import appindicator
 import gtk
 
-__version__ = "0.6"
+__version__ = "0.7"
 
 class NextWall(object):
     def __init__(self):
@@ -38,6 +38,7 @@ class NextWall(object):
         self.recursive = False
         self.applet = False
         self.path = "/usr/share/backgrounds/"
+        self.client = gconf.client_get_default()
 
         try:
             opts, args = getopt.getopt(self.argv, "hra",
@@ -103,7 +104,7 @@ class NextWall(object):
 
     def usage(self):
         """Print usage information."""
-        print "nextwall %s" & (__version__ )
+        print "nextwall %s" % (__version__)
         print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
         print "  [path]\tPath to folder containing background images."
         print "\t\tIf no path is specified, the default path"
@@ -121,6 +122,23 @@ class NextWall(object):
     def on_preferences(self, widget, data=None):
         """Display preferences window."""
         Preferences(self)
+
+    def on_delete_current(self, widget, data=None):
+        """Delete the current background from the harddisk."""
+        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+
+        message = ("This will permanently remove the current background "
+            "image (%s) from your harddisk. Continue?") % (current_bg)
+        dialog = gtk.MessageDialog(parent=None, flags=0,
+            type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_YES_NO,
+            message_format=message)
+        response = dialog.run()
+
+        if response == gtk.RESPONSE_YES:
+            os.remove(current_bg)
+            self.on_change_background()
+
+        dialog.destroy()
 
     def on_change_background(self, widget=None, data=None):
         """Change background according to given arguments."""
@@ -162,10 +180,10 @@ class NextWall(object):
         item = random.randint(0, len(items) - 1)
 
         # Create a gconf object.
-        client = gconf.client_get_default()
+        #client = gconf.client_get_default()
 
         # Get the current background used by GNOME.
-        current_bg = client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
 
         # Make sure the random background item isn't the same as the
         # background currently being used.
@@ -173,7 +191,7 @@ class NextWall(object):
             item = random.randint(0, len(items) - 1)
 
         # Finally, set the new background.
-        client.set_string("/desktop/gnome/background/picture_filename",
+        self.client.set_string("/desktop/gnome/background/picture_filename",
             items[item])
 
     def show_applet(self):
@@ -190,23 +208,27 @@ class NextWall(object):
 
         # Create the menu items
         change_item = gtk.MenuItem("Next Wallpaper")
+        delete_item = gtk.MenuItem("Delete Current")
         pref_item = gtk.MenuItem("Preferences")
         quit_item = gtk.MenuItem("Quit")
         separator = gtk.SeparatorMenuItem()
 
         # Add them to the menu
         menu.append(change_item)
+        menu.append(delete_item)
         menu.append(separator)
         menu.append(pref_item)
         menu.append(quit_item)
 
         # Attach the callback functions to the activate signal
         change_item.connect("activate", self.on_change_background)
+        delete_item.connect("activate", self.on_delete_current)
         pref_item.connect("activate", self.on_preferences)
         quit_item.connect("activate", self.on_quit)
 
         # Show menu items
         change_item.show()
+        delete_item.show()
         pref_item.show()
         separator.show()
         quit_item.show()
@@ -329,7 +351,7 @@ class Preferences(gtk.Window):
 
         about = gtk.AboutDialog()
         about.set_program_name("NextWall")
-        about.set_version(__version__ )
+        about.set_version(__version__)
         about.set_copyright("Copyright © Davyd Madeley, Serrano Pereira")
         about.set_comments("A script to change to a random background image.")
         about.set_license(license)
