@@ -261,7 +261,7 @@ class Preferences(gtk.Window):
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # Create a fole chooser button
-        self.folderselect = gtk.FileChooserButton('Select a File')
+        self.folderselect = gtk.FileChooserButton('Select a folder')
         self.folderselect.set_action(gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
         self.folderselect.set_current_folder(self.wallobj.path)
         table.attach(child=self.folderselect, left_attach=1, right_attach=2,
@@ -269,7 +269,7 @@ class Preferences(gtk.Window):
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # Create a checkbutton for recusrion
-        self.check_recursion = gtk.CheckButton("Recursion (look in subfolders)")
+        self.check_recursion = gtk.CheckButton("Enable recursion (look in subfolders)")
         if self.wallobj.recursive:
             self.check_recursion.set_active(True)
         #check_recursion.unset_flags(gtk.CAN_FOCUS)
@@ -347,7 +347,7 @@ class Preferences(gtk.Window):
             "GNU General Public License for more details.\n\n"
 
             "You should have received a copy of the GNU General Public License\n"
-            "along with this program.  If not, see <http://www.gnu.org/licenses/>.")
+            "along with this program.  If not, see http://www.gnu.org/licenses/.")
 
         about = gtk.AboutDialog()
         about.set_program_name("NextWall")
