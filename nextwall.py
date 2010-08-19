@@ -130,7 +130,7 @@ class NextWall(object):
         message = ("This will permanently remove the current background "
             "image (%s) from your harddisk. Continue?") % (current_bg)
         dialog = gtk.MessageDialog(parent=None, flags=0,
-            type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_YES_NO,
+            type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_YES_NO,
             message_format=message)
         response = dialog.run()
 
