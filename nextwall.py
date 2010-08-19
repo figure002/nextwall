@@ -125,13 +125,16 @@ class NextWall(object):
 
     def on_delete_current(self, widget, data=None):
         """Delete the current background from the harddisk."""
-        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
 
-        message = ("This will permanently remove the current background "
-            "image (%s) from your harddisk. Continue?") % (current_bg)
+        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+        message = ("This will <b>permanently</b> remove the current background "
+            "image (%s) from your harddisk.") % (current_bg)
+
         dialog = gtk.MessageDialog(parent=None, flags=0,
             type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_YES_NO,
-            message_format=message)
+            message_format=None)
+        dialog.set_markup(message)
+        dialog.format_secondary_text("Continue?")
         response = dialog.run()
 
         if response == gtk.RESPONSE_YES:
