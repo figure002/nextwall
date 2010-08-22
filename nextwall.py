@@ -27,8 +27,14 @@ import os
 import random
 import mimetypes
 import getopt
-import appindicator
+
+import pygtk
+pygtk.require('2.0')
 import gtk
+try:
+    import appindicator
+except ImportError as ie:
+    sys.exit(str(ie))
 
 __version__ = "0.7"
 
@@ -78,6 +84,68 @@ class NextWall(object):
             # Change the background.
             self.on_change_background()
 
+    def usage(self):
+        """Print usage information."""
+        print "nextwall %s" % (__version__)
+        print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
+        print "  [path]\tPath to folder containing background images."
+        print "\t\tIf no path is specified, the default path"
+        print "\t\t/usr/share/backgrounds/ will be used."
+        print "\nOptions:"
+        print "  -h, --help\t\tShow usage information."
+        print "  -r, --recursive\tLook in subfolders."
+        print "  -a, --applet\t\tRun as applet in the GNOME panel."
+        sys.exit()
+
+    def show_applet(self):
+        """Display an Application Indicator in the GNOME panel."""
+
+        # Create an Application Indicator icon
+        ind = appindicator.Indicator("nextwall",
+            "gsd-xrandr",
+            appindicator.CATEGORY_OTHER)
+        ind.set_status(appindicator.STATUS_ACTIVE)
+
+        # Create GTK menu
+        menu = gtk.Menu()
+
+        # Create the menu items
+        change_item = gtk.MenuItem("Next Wallpaper")
+        open_item = gtk.MenuItem("Open Current")
+        delete_item = gtk.MenuItem("Delete Current")
+        pref_item = gtk.MenuItem("Preferences")
+        quit_item = gtk.MenuItem("Quit")
+        separator = gtk.SeparatorMenuItem()
+
+        # Add them to the menu
+        menu.append(change_item)
+        menu.append(open_item)
+        menu.append(delete_item)
+        menu.append(separator)
+        menu.append(pref_item)
+        menu.append(quit_item)
+
+        # Attach the callback functions to the activate signal
+        change_item.connect("activate", self.on_change_background)
+        open_item.connect("activate", self.on_open_current)
+        delete_item.connect("activate", self.on_delete_current)
+        pref_item.connect("activate", self.on_preferences)
+        quit_item.connect("activate", self.on_quit)
+
+        # Show menu items
+        change_item.show()
+        open_item.show()
+        delete_item.show()
+        pref_item.show()
+        separator.show()
+        quit_item.show()
+
+        # Add the menu to the Application Indicator
+        ind.set_menu(menu)
+
+        # Run the main loop
+        gtk.main()
+
     def get_files_recursively(self, rootdir):
         """Recursively get a list of files from a folder."""
         file_list = []
@@ -101,19 +169,6 @@ class NextWall(object):
             file_list.append(os.path.join(rootdir,file))
 
         return file_list
-
-    def usage(self):
-        """Print usage information."""
-        print "nextwall %s" % (__version__)
-        print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
-        print "  [path]\tPath to folder containing background images."
-        print "\t\tIf no path is specified, the default path"
-        print "\t\t/usr/share/backgrounds/ will be used."
-        print "\nOptions:"
-        print "  -h, --help\t\tShow usage information."
-        print "  -r, --recursive\tLook in subfolders."
-        print "  -a, --applet\t\tRun as applet in the GNOME panel."
-        sys.exit()
 
     def on_quit(self, widget, data=None):
         """Exit the application."""
@@ -142,6 +197,10 @@ class NextWall(object):
             self.on_change_background()
 
         dialog.destroy()
+
+    def on_open_current(self, widget, data=None):
+        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+        os.system("xdg-open %s" % (current_bg))
 
     def on_change_background(self, widget=None, data=None):
         """Change background according to given arguments."""
@@ -182,9 +241,6 @@ class NextWall(object):
         # Get a random background item from the file list.
         item = random.randint(0, len(items) - 1)
 
-        # Create a gconf object.
-        #client = gconf.client_get_default()
-
         # Get the current background used by GNOME.
         current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
 
@@ -196,51 +252,6 @@ class NextWall(object):
         # Finally, set the new background.
         self.client.set_string("/desktop/gnome/background/picture_filename",
             items[item])
-
-    def show_applet(self):
-        """Display an Application Indicator in the GNOME panel."""
-
-        # Create an Application Indicator icon
-        ind = appindicator.Indicator ("change-background-menu",
-            "gsd-xrandr",
-            appindicator.CATEGORY_APPLICATION_STATUS)
-        ind.set_status (appindicator.STATUS_ACTIVE)
-
-        # Create GTK menu
-        menu = gtk.Menu()
-
-        # Create the menu items
-        change_item = gtk.MenuItem("Next Wallpaper")
-        delete_item = gtk.MenuItem("Delete Current")
-        pref_item = gtk.MenuItem("Preferences")
-        quit_item = gtk.MenuItem("Quit")
-        separator = gtk.SeparatorMenuItem()
-
-        # Add them to the menu
-        menu.append(change_item)
-        menu.append(delete_item)
-        menu.append(separator)
-        menu.append(pref_item)
-        menu.append(quit_item)
-
-        # Attach the callback functions to the activate signal
-        change_item.connect("activate", self.on_change_background)
-        delete_item.connect("activate", self.on_delete_current)
-        pref_item.connect("activate", self.on_preferences)
-        quit_item.connect("activate", self.on_quit)
-
-        # Show menu items
-        change_item.show()
-        delete_item.show()
-        pref_item.show()
-        separator.show()
-        quit_item.show()
-
-        # Add the menu to the Application Indicator
-        ind.set_menu(menu)
-
-        # Run the main loop
-        gtk.main()
 
 class Preferences(gtk.Window):
     def __init__(self, wallobj):
