@@ -295,16 +295,22 @@ class NextWall(object):
         # Get the current background used by GNOME.
         current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
 
-        for i in range(10): # Give up after 10 tries.
+        sames = 0
+        for i in range(20): # Give up after 20 tries.
+            # Stop the loop if we find the same image 3 times.
+            if sames == 3:
+                break
+
             if self.verbose:
-                print "Found %s" % (items[item])
+                print "[%d] Found %s" % (i+1, items[item])
 
             # Make sure the random background item isn't the same as the
             # background currently being used.
             while(items[item] == current_bg):
+                sames += 1
                 item = random.randint(0, len(items) - 1)
                 if self.verbose:
-                    print "Same as current, found %s" % (items[item])
+                    print "..same as current, found %s" % (items[item])
 
             # Check if the image brightness matches the current time.
             if self.fit_time:
@@ -316,7 +322,7 @@ class NextWall(object):
                     # again (if maximum tries not exeeded).
                     item = random.randint(0, len(items) - 1)
                     if self.verbose:
-                        print "..does not match time."
+                        print "..does not match time of day."
             else:
                 break
 
@@ -401,9 +407,9 @@ class Indicator(object):
 
         if response == gtk.RESPONSE_YES:
             os.remove(current_bg)
-            self.main.change_background()
+            dialog.destroy()
 
-        dialog.destroy()
+        self.main.change_background()
 
     def on_open_current(self, widget, data=None):
         """Open the current background with the system's default image
@@ -447,7 +453,7 @@ class Preferences(gtk.Window):
         self.check_recursion = gtk.CheckButton("Enable recursion (look in subfolders)")
         if self.main.recursive:
             self.check_recursion.set_active(True)
-        #check_recursion.unset_flags(gtk.CAN_FOCUS)
+        #self.check_recursion.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=self.check_recursion, left_attach=0, right_attach=2,
             top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
@@ -456,7 +462,7 @@ class Preferences(gtk.Window):
         self.check_fit_time = gtk.CheckButton("Select backgrounds that fit the time of day (experimental)")
         if self.main.fit_time:
             self.check_fit_time.set_active(True)
-        #check_match_time.unset_flags(gtk.CAN_FOCUS)
+        #self.check_fit_time.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=self.check_fit_time, left_attach=0, right_attach=2,
             top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
