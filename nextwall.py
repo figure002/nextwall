@@ -27,6 +27,8 @@ import os
 import random
 import mimetypes
 import getopt
+import commands
+from time import localtime, strftime
 
 import pygtk
 pygtk.require('2.0')
@@ -36,23 +38,28 @@ try:
 except ImportError as ie:
     sys.exit(str(ie))
 
-__version__ = "0.7"
+__version__ = "0.8"
 
 class NextWall(object):
+    """The main program."""
+
     def __init__(self):
         self.argv = sys.argv[1:]
         self.recursive = False
         self.applet = False
+        self.fit_time = False
+        self.verbose = False
         self.path = "/usr/share/backgrounds/"
         self.client = gconf.client_get_default()
+        self.kurtosis_threshold = (0.0, 2.0)
 
         try:
-            opts, args = getopt.getopt(self.argv, "hra",
-                ["help", "recursive", "applet"])
+            opts, args = getopt.getopt(self.argv, "hratv",
+                ["help","recursive","applet","fit-time","verbose"])
         except getopt.GetoptError:
             self.usage()
 
-        # Check if the user wants help.
+        # Check for user defined options.
         for opt, arg in opts:
             if opt in ("-h", "--help"):
                 self.usage()
@@ -60,6 +67,10 @@ class NextWall(object):
                 self.recursive = True
             if opt in ("-a", "--applet"):
                 self.applet = True
+            if opt in ("-t", "--fit-time"):
+                self.set_fit_time(True)
+            if opt in ("-v", "--verbose"):
+                self.verbose = True
 
         # Set backgrounds folder.
         if len(args) == 0:
@@ -79,10 +90,10 @@ class NextWall(object):
         # Decide what to do next.
         if self.applet:
             # Show the applet.
-            self.show_applet()
+            Indicator(self)
         else:
             # Change the background.
-            self.on_change_background()
+            self.change_background()
 
     def usage(self):
         """Print usage information."""
@@ -95,10 +106,231 @@ class NextWall(object):
         print "  -h, --help\t\tShow usage information."
         print "  -r, --recursive\tLook in subfolders."
         print "  -a, --applet\t\tRun as applet in the GNOME panel."
+        print "  -t, --fit-time\tSelect backgrounds that fit the time of day (experimental)."
+        print "  -v, --verbose\t\tTurn on verbose output."
         sys.exit()
 
-    def show_applet(self):
-        """Display an Application Indicator in the GNOME panel."""
+    def set_fit_time(self, boolean):
+        if not boolean:
+            self.fit_time = False
+            return
+
+        # Make sure the identify command is available.
+        if not self._check_command('identify'):
+            message = ("Unmet dependency: identify (ImageMagick) - "
+                "The 'fit-time' feature requires the 'identify' "
+                "tool (member of ImageMagick). The 'fit-time' feature has been disabled.")
+
+            if self.applet:
+                dialog = gtk.MessageDialog(parent=None, flags=0,
+                    type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK,
+                    message_format=message)
+                response = dialog.run()
+
+                if response == gtk.RESPONSE_OK:
+                    dialog.destroy()
+                    return
+            else:
+                print message
+                return
+
+        self.fit_time = True
+
+    def _check_command(self, command):
+        """Check if a specific command is available."""
+        cmd = 'which %s' % (command)
+        output = commands.getoutput(cmd)
+        if len(output.splitlines()) == 0:
+            return False
+        else:
+            return True
+
+    def get_files_recursively(self, rootdir):
+        """Recursively get a list of files from a folder."""
+        file_list = []
+
+        for root, sub_folders, files in os.walk(rootdir):
+            for file in files:
+                file_list.append(os.path.join(root,file))
+
+            # Don't visit thumbnail directories.
+            if '.thumbs' in sub_folders:
+                sub_folders.remove('.thumbs')
+
+        return file_list
+
+    def get_files(self, rootdir):
+        """Non-recursively get a list of files from a folder."""
+        file_list = []
+
+        files = os.listdir(rootdir)
+        for file in files:
+            file_list.append(os.path.join(rootdir,file))
+
+        return file_list
+
+    def _get_image_kurtosis(self, file):
+        """Get kurtosis, a measure of the peakedness of the probability
+        distribution of a real-valued random variable. The tool
+        'identify' from the ImageMagick suit is used to calculate this.
+
+        Dark image: kurtosis >2
+        Bright imaget: kurtosis <0
+        """
+        cmd = 'identify -verbose "%s" | grep kurtosis' % (file)
+        output = commands.getoutput(cmd)
+        output = output.splitlines()
+        items = len(output)
+
+        # Handle exceptions.
+        if items < 1:
+            return 0
+
+        # Get the last kurtosis calculation, which is the overall.
+        output = output[items-1].split()
+
+        # The second part is the kurtosis value.
+        kurtosis = output[1]
+
+        if self.verbose:
+            print "\tOverall image kurtosis: %s" % (kurtosis)
+
+        return float(kurtosis)
+
+    def _get_image_brightness(self, file):
+        """Decide wether a kurtosis value is considered bright or dark
+
+        Dark: return 0
+        Medium: return 1
+        Bright: return 2
+        """
+        kurtosis = self._get_image_kurtosis(file)
+
+        if kurtosis < self.kurtosis_threshold[0]:
+            # Bright
+            return 2
+        elif kurtosis > self.kurtosis_threshold[1]:
+            # Dark
+            return 0
+        else:
+            # Medium
+            return 1
+
+    def match_image_time(self, file):
+        """Decide whether the image's brightness is suitable for the
+        time of day.
+
+        Suitable: return True
+        Not Suitable: return False
+        """
+        dawn_start = 9
+        day_start = 12
+        dusk_start = 18
+        night_start = 21
+        brightness = self._get_image_brightness(file)
+        hour = int(strftime("%H", localtime()))
+        expected = None
+
+        # Decide based on current time which brightness value (0,1,2)
+        # is expected.
+        if hour >= day_start and hour < dusk_start:
+            # Day
+            target = 2
+        elif hour >= night_start or hour < dawn_start:
+            # Night
+            target = 0
+        else:
+            # Dawn/Dusk
+            target = 1
+
+        if self.verbose:
+            print "\tBrightness value: %d" % (brightness)
+            print "\tTarget brightness value: %d" % (target)
+
+        # Compare image value with target value.
+        if brightness == target:
+            return True
+        else:
+            return False
+
+    def change_background(self, widget=None, data=None):
+        """Change background according to given arguments."""
+
+        if self.recursive:
+            # Get the files from the backgrounds folder recursively.
+            dir_items = self.get_files_recursively(self.path)
+        else:
+            # Get the files from the backgrounds folder non-recursively.
+            dir_items = self.get_files(self.path)
+
+        # Check if the background items are actually images. Approved
+        # files are put in 'items'.
+        items = []
+        for item in dir_items:
+            mimetype = mimetypes.guess_type(item)[0]
+            if mimetype and mimetype.split('/')[0] == "image":
+                items.append(item)
+
+        # Check if any image files were found.
+        if len(items) < 2:
+            message = ("No image files (or just one) were found in '%s'\n"
+                "Set a different backgrounds folder or enable recursion to "
+                "look in subfolders.") % (self.path)
+            if self.applet:
+                dialog = gtk.MessageDialog(parent=None, flags=0,
+                    type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK,
+                    message_format=message)
+                response = dialog.run()
+
+                if response == gtk.RESPONSE_OK:
+                    dialog.destroy()
+                    return
+            else:
+                print message
+                sys.exit(1)
+
+        # Get a random background item from the file list.
+        item = random.randint(0, len(items) - 1)
+
+        # Get the current background used by GNOME.
+        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+
+        for i in range(10): # Give up after 10 tries.
+            if self.verbose:
+                print "Found %s" % (items[item])
+
+            # Make sure the random background item isn't the same as the
+            # background currently being used.
+            while(items[item] == current_bg):
+                item = random.randint(0, len(items) - 1)
+                if self.verbose:
+                    print "Same as current, found %s" % (items[item])
+
+            # Check if the image brightness matches the current time.
+            if self.fit_time:
+                if self.match_image_time(items[item]):
+                    # Match; set this background.
+                    break
+                else:
+                    # No match; select random background and do the loop
+                    # again (if maximum tries not exeeded).
+                    item = random.randint(0, len(items) - 1)
+                    if self.verbose:
+                        print "..does not match time."
+            else:
+                break
+
+        # Finally, set the new background.
+        if self.verbose:
+            print "Setting background %s" % (items[item])
+        self.client.set_string("/desktop/gnome/background/picture_filename",
+            items[item])
+
+class Indicator(object):
+    """Display an Application Indicator in the GNOME panel."""
+
+    def __init__(self, main):
+        self.main = main
 
         # Create an Application Indicator icon
         ind = appindicator.Indicator("nextwall",
@@ -126,7 +358,7 @@ class NextWall(object):
         menu.append(quit_item)
 
         # Attach the callback functions to the activate signal
-        change_item.connect("activate", self.on_change_background)
+        change_item.connect("activate", self.main.change_background)
         open_item.connect("activate", self.on_open_current)
         delete_item.connect("activate", self.on_delete_current)
         pref_item.connect("activate", self.on_preferences)
@@ -146,42 +378,17 @@ class NextWall(object):
         # Run the main loop
         gtk.main()
 
-    def get_files_recursively(self, rootdir):
-        """Recursively get a list of files from a folder."""
-        file_list = []
-
-        for root, sub_folders, files in os.walk(rootdir):
-            for file in files:
-                file_list.append(os.path.join(root,file))
-
-            # Don't visit thumbnail directories.
-            if '.thumbs' in sub_folders:
-                sub_folders.remove('.thumbs')
-
-        return file_list
-
-    def get_files(self, rootdir):
-        """Non-recursively get a list of files from a folder."""
-        file_list = []
-
-        files = os.listdir(rootdir)
-        for file in files:
-            file_list.append(os.path.join(rootdir,file))
-
-        return file_list
-
     def on_quit(self, widget, data=None):
         """Exit the application."""
         gtk.main_quit()
 
     def on_preferences(self, widget, data=None):
         """Display preferences window."""
-        Preferences(self)
+        Preferences(self.main)
 
     def on_delete_current(self, widget, data=None):
         """Delete the current background from the harddisk."""
-
-        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
         message = ("This will <b>permanently</b> remove the current background "
             "image (%s) from your harddisk.") % (current_bg)
 
@@ -194,68 +401,22 @@ class NextWall(object):
 
         if response == gtk.RESPONSE_YES:
             os.remove(current_bg)
-            self.on_change_background()
+            self.main.change_background()
 
         dialog.destroy()
 
     def on_open_current(self, widget, data=None):
-        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
-        os.system("xdg-open %s" % (current_bg))
-
-    def on_change_background(self, widget=None, data=None):
-        """Change background according to given arguments."""
-
-        if self.recursive:
-            # Get the files from the backgrounds folder recursively.
-            dir_items = self.get_files_recursively(self.path)
-        else:
-            # Get the files from the backgrounds folder non-recursively.
-            dir_items = self.get_files(self.path)
-
-        # Check if the background items are actually images. Approved
-        # files are put in 'items'.
-        items = []
-        for item in dir_items:
-            mimetype = mimetypes.guess_type(item)[0]
-            if mimetype and mimetype.split('/')[0] == "image":
-                items.append(item)
-
-        # Check if any image files were found.
-        if len(items) == 0:
-            message = ("No image files were found in '%s'\nSet a "
-                "different backgrounds folder or enable recursion to "
-                "look in subfolders.") % (self.path)
-            if self.applet:
-                dialog = gtk.MessageDialog(parent=None, flags=0,
-                    type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK,
-                    message_format=message)
-                response = dialog.run()
-
-                if response == gtk.RESPONSE_OK:
-                    dialog.destroy()
-                    return
-            else:
-                print message
-                sys.exit(1)
-
-        # Get a random background item from the file list.
-        item = random.randint(0, len(items) - 1)
-
-        # Get the current background used by GNOME.
-        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
-
-        # Make sure the random background item isn't the same as the
-        # background currently being used.
-        while(items[item] == current_bg):
-            item = random.randint(0, len(items) - 1)
-
-        # Finally, set the new background.
-        self.client.set_string("/desktop/gnome/background/picture_filename",
-            items[item])
+        """Open the current background with the system's default image
+        viewer.
+        """
+        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
+        os.system('xdg-open "%s"' % (current_bg))
 
 class Preferences(gtk.Window):
-    def __init__(self, wallobj):
-        self.wallobj = wallobj
+    """Display a preferences window."""
+
+    def __init__(self, main):
+        self.main = main
         super(Preferences, self).__init__()
 
         self.set_title("Preferences")
@@ -264,7 +425,7 @@ class Preferences(gtk.Window):
         self.set_position(gtk.WIN_POS_CENTER)
 
         # Create table container
-        table = gtk.Table(rows=3, columns=2, homogeneous=False)
+        table = gtk.Table(rows=4, columns=2, homogeneous=False)
         table.set_col_spacings(10)
         table.set_row_spacings(10)
 
@@ -274,21 +435,30 @@ class Preferences(gtk.Window):
             top_attach=0, bottom_attach=1, xoptions=gtk.FILL,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
-        # Create a fole chooser button
+        # Create a file chooser button
         self.folderselect = gtk.FileChooserButton('Select a folder')
         self.folderselect.set_action(gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
-        self.folderselect.set_current_folder(self.wallobj.path)
+        self.folderselect.set_current_folder(self.main.path)
         table.attach(child=self.folderselect, left_attach=1, right_attach=2,
             top_attach=0, bottom_attach=1, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # Create a checkbutton for recusrion
         self.check_recursion = gtk.CheckButton("Enable recursion (look in subfolders)")
-        if self.wallobj.recursive:
+        if self.main.recursive:
             self.check_recursion.set_active(True)
         #check_recursion.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=self.check_recursion, left_attach=0, right_attach=2,
             top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+
+        # Create a checkbutton for match time
+        self.check_fit_time = gtk.CheckButton("Select backgrounds that fit the time of day (experimental)")
+        if self.main.fit_time:
+            self.check_fit_time.set_active(True)
+        #check_match_time.unset_flags(gtk.CAN_FOCUS)
+        table.attach(child=self.check_fit_time, left_attach=0, right_attach=2,
+            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # About button
@@ -298,7 +468,7 @@ class Preferences(gtk.Window):
         about_align = gtk.Alignment(xalign=0, yalign=0, xscale=0, yscale=0)
         about_align.add(button_about)
         table.attach(child=about_align, left_attach=0, right_attach=1,
-            top_attach=2, bottom_attach=3, xoptions=gtk.FILL,
+            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # OK button
@@ -322,7 +492,7 @@ class Preferences(gtk.Window):
 
         # Add the aligned box to the table
         table.attach(child=buttons_align, left_attach=1, right_attach=2,
-            top_attach=2, bottom_attach=3, xoptions=gtk.FILL,
+            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # Add the table to the main window.
@@ -334,13 +504,19 @@ class Preferences(gtk.Window):
     def on_ok(self, widget, data=None):
         """Save new settings and close the preferences dialog."""
         # Set the new backgrounds folder.
-        self.wallobj.path = self.folderselect.get_filename()
+        self.main.path = self.folderselect.get_filename()
 
         # Set recursion.
         if self.check_recursion.get_active():
-            self.wallobj.recursive = True
+            self.main.recursive = True
         else:
-            self.wallobj.recursive = False
+            self.main.recursive = False
+
+        # Set match time.
+        if self.check_fit_time.get_active():
+            self.main.set_fit_time(True)
+        else:
+            self.main.set_fit_time(False)
 
         # Destroy the dialog.
         self.destroy()
@@ -373,5 +549,5 @@ class Preferences(gtk.Window):
         about.destroy()
 
 if __name__ == "__main__":
-    wallobj = NextWall()
+    NextWall()
     sys.exit()
