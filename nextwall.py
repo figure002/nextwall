@@ -6,7 +6,7 @@
 # A script to change to a random background image.
 #
 #  Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
-#  Copyright 2010, Serrano Pereira <serrano.pereira@gmail.com>
+#  Copyright 2010, Serrano Pereira <figure002@gmail.com>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -549,7 +549,7 @@ class Preferences(gtk.Window):
         about.set_program_name("NextWall")
         about.set_version(__version__)
         about.set_copyright("Copyright © Davyd Madeley, Serrano Pereira")
-        about.set_authors(["Davyd Madeley <davyd@madeley.id.au>", "Serrano Pereira <serrano.pereira@gmail.com>"])
+        about.set_authors(["Davyd Madeley <davyd@madeley.id.au>", "Serrano Pereira <figure002@gmail.com>"])
         about.set_comments("A script to change to a random background image.")
         about.set_license(license)
         about.run()
