@@ -41,7 +41,7 @@ except ImportError as ie:
 __version__ = "0.8"
 
 class NextWall(object):
-    """The main program."""
+    """The main class."""
 
     def __init__(self):
         self.argv = sys.argv[1:]
@@ -111,6 +111,7 @@ class NextWall(object):
         sys.exit()
 
     def set_fit_time(self, boolean):
+        """Setter for fit_time."""
         if not boolean:
             self.fit_time = False
             return
@@ -229,7 +230,6 @@ class NextWall(object):
         night_start = 21
         brightness = self._get_image_brightness(file)
         hour = int(strftime("%H", localtime()))
-        expected = None
 
         # Decide based on current time which brightness value (0,1,2)
         # is expected.
@@ -543,12 +543,13 @@ class Preferences(gtk.Window):
             "GNU General Public License for more details.\n\n"
 
             "You should have received a copy of the GNU General Public License\n"
-            "along with this program.  If not, see http://www.gnu.org/licenses/.")
+            "along with this program.  If not, see http://www.gnu.org/licenses/")
 
         about = gtk.AboutDialog()
         about.set_program_name("NextWall")
         about.set_version(__version__)
         about.set_copyright("Copyright © Davyd Madeley, Serrano Pereira")
+        about.set_authors(["Davyd Madeley <davyd@madeley.id.au>", "Serrano Pereira <serrano.pereira@gmail.com>"])
         about.set_comments("A script to change to a random background image.")
         about.set_license(license)
         about.run()
