@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: latin-1 -*-
 #
-# nextwall.py
-#
-# A script to change to a random background image.
+# nextwall - a script to change to a random background image
 #
 #  Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
 #  Copyright 2010, Serrano Pereira <figure002@gmail.com>
