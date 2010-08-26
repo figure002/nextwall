@@ -1,0 +1,23 @@
+Installation Instructions
+*************************
+
+Standad Installation
+====================
+
+Building and installing this Python script is usually one simple command
+that needs to be run from a shell prompt. Open a Terminal window to get
+a shell prompt. Then run the following command as Root from the folder
+that has the 'setup.py' file:
+
+	python setup.py install
+
+On some systems you need to precede the command with 'sudo' to run it as
+Root:
+
+	sudo python setup.py install
+
+Alternate Installation
+======================
+
+For alternate installation instructions, see
+http://docs.python.org/install/
