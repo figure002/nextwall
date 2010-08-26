@@ -429,6 +429,8 @@ class Preferences(gtk.Window):
         self.set_size_request(400, -1)
         self.set_border_width(10)
         self.set_position(gtk.WIN_POS_CENTER)
+        self.set_resizable(False)
+        self.set_keep_above(True)
 
         # Create table container
         table = gtk.Table(rows=4, columns=2, homogeneous=False)
