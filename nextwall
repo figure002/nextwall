@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: utf_8 -*-
+# -*- coding: utf-8 -*-
 #
 # nextwall - a script to change to a random background image
 #
@@ -26,11 +26,13 @@ import logging
 import mimetypes
 import getopt
 import commands
+import threading
 from time import localtime, strftime, sleep
 
 import xdg.BaseDirectory as basedir
 from pysqlite2 import dbapi2 as sqlite
 import gconf
+import gobject
 
 import pygtk
 pygtk.require('2.0')
@@ -38,35 +40,31 @@ import gtk
 try:
     import appindicator
 except ImportError as ie:
-    # Appindicator not available.
     sys.exit(str(ie))
 
-__version__ = "0.9"
+gobject.threads_init()
 
-class NextWall(object):
+__version__ = "1.0"
+
+class NextWall(threading.Thread):
     """The main class."""
 
     def __init__(self):
+        super(NextWall, self).__init__()
+
         self.argv = sys.argv[1:]
         self.recursive = False
         self.applet = False
         self.fit_time = False
         self.populate_db = False
+        self.populate_total = 100
+        self.populate_current = 0
+        self.timer = None
         self.path = "/usr/share/backgrounds/"
         self.client = gconf.client_get_default()
         self.kurtosis_threshold = (0.0, 2.0)
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall')
         self.dbfile = "%s/nextwall.db" % (self.data_home)
-
-        # Check if the data folder exists. If not, create it.
-        if not os.path.exists(self.data_home):
-            logging.info("Creating data folder %s" % (self.data_home))
-            os.mkdir(self.data_home)
-
-        # Check if the database file exists. If not, create it.
-        if not os.path.isfile(self.dbfile):
-            logging.info("Creating database file %s" % (self.dbfile))
-            self.make_db()
 
         # Check for user defined options.
         try:
@@ -95,11 +93,24 @@ class NextWall(object):
                 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s %(message)s')
 
+        # Check if the data folder exists. If not, create it.
+        if not os.path.exists(self.data_home):
+            logging.info("Creating data folder %s" % (self.data_home))
+            os.mkdir(self.data_home)
+
+        # Check if the database file exists. If not, create it.
+        if not os.path.isfile(self.dbfile):
+            logging.info("Creating database file %s" % (self.dbfile))
+            self.make_db()
+
         # Set the backgrounds folder.
         self.set_backgrounds_folder(args)
 
         # Check if we need to populate the database.
         if self.populate_db:
+            logging.info("This could take a while, depending on the number of images in the\n"
+                "\tspecified folder. Starting in 10 seconds...")
+            sleep(10)
             self._populate_db()
             sys.exit()
 
@@ -288,19 +299,19 @@ class NextWall(object):
         """Calculate the image kurtosis for each image in the selected
         folder and save it to the database.
         """
-        logging.info("This could take a while, depending on the number of images in the\n"
-            "specified folder. Starting in 10 seconds...")
-        sleep(10)
         images = self.get_image_files()
+        self.populate_total = len(images)
 
         # Get the image kurtosis of each file and save it to the
         # database.
+        i = 1
         for image in images:
+            self.populate_current = i
             logging.info("Found %s" % (image))
             self.get_image_kurtosis(image)
+            i += 1
 
         logging.info("Database successfully populated.")
-        sys.exit()
 
     def get_image_brightness(self, file):
         """Decide wether a kurtosis value is considered bright or dark
@@ -458,6 +469,7 @@ class Indicator(object):
         change_item = gtk.MenuItem("Next Wallpaper")
         open_item = gtk.MenuItem("Open Current")
         delete_item = gtk.MenuItem("Delete Current")
+        populate_item = gtk.MenuItem("Analyze Images")
         pref_item = gtk.MenuItem("Preferences")
         quit_item = gtk.MenuItem("Quit")
         separator = gtk.SeparatorMenuItem()
@@ -466,6 +478,7 @@ class Indicator(object):
         menu.append(change_item)
         menu.append(open_item)
         menu.append(delete_item)
+        menu.append(populate_item)
         menu.append(separator)
         menu.append(pref_item)
         menu.append(quit_item)
@@ -474,6 +487,7 @@ class Indicator(object):
         change_item.connect("activate", self.main.change_background)
         open_item.connect("activate", self.on_open_current)
         delete_item.connect("activate", self.on_delete_current)
+        populate_item.connect("activate", self.on_populate_db)
         pref_item.connect("activate", self.on_preferences)
         quit_item.connect("activate", self.on_quit)
 
@@ -481,6 +495,7 @@ class Indicator(object):
         change_item.show()
         open_item.show()
         delete_item.show()
+        populate_item.show()
         pref_item.show()
         separator.show()
         quit_item.show()
@@ -513,8 +528,12 @@ class Indicator(object):
         response = dialog.run()
 
         if response == gtk.RESPONSE_YES:
+            logging.info("Removing %s" % (current_bg))
             os.remove(current_bg)
             dialog.destroy()
+        else:
+            dialog.destroy()
+            return
 
         self.main.change_background()
 
@@ -525,8 +544,26 @@ class Indicator(object):
         current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
         os.system('xdg-open "%s"' % (current_bg))
 
+    def on_populate_db(self, widget, data=None):
+        """Run the main._populate_db function in a separate thread, and
+        show a nice progress dialog.
+        """
+        # Display a Progress Dialog.
+        label = ("NextWall is now calculating the brightness value for each image file in the specified folder. "
+            "This brightness value is required for the \"fit time of day\" feature. "
+            "Depending on the number of images files, this may take a while. "
+            "Completing this analysis is recommended, as this will speed up the application drastically.")
+        pgd = ProgressDialog(self.main, "Analyzing Images", label)
+
+        # Start the PopulateDB class in a new thread.
+        pdb = PopulateDB(pgd)
+        pdb.start()
+
+
 class Preferences(gtk.Window):
-    """Display a preferences window."""
+    """Display a preferences dialog which allows the user to configure
+    the application.
+    """
 
     def __init__(self, main):
         self.main = main
@@ -568,7 +605,7 @@ class Preferences(gtk.Window):
             yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
 
         # Create a checkbutton for match time
-        self.check_fit_time = gtk.CheckButton("Select backgrounds that fit the time of day (experimental)")
+        self.check_fit_time = gtk.CheckButton("Select backgrounds that fit the time of day")
         if self.main.fit_time:
             self.check_fit_time.set_active(True)
         #self.check_fit_time.unset_flags(gtk.CAN_FOCUS)
@@ -663,6 +700,110 @@ class Preferences(gtk.Window):
         about.set_license(license)
         about.run()
         about.destroy()
+
+
+
+class ProgressDialog(gtk.Window):
+    """Show a progress dialog."""
+
+    def __init__(self, main, title, label):
+        super(ProgressDialog, self).__init__()
+        self.main = main
+        self.main.populate_db = True
+
+        self.connect("destroy", self.on_close)
+        self.set_size_request(350, -1)
+        self.set_title(title)
+        self.set_border_width(0)
+        self.set_resizable(False)
+        self.set_position(gtk.WIN_POS_CENTER)
+
+        # Create a vertical box container.
+        vbox = gtk.VBox(homogeneous=False, spacing=5)
+        vbox.set_border_width(10)
+
+        # Create a label.
+        self.label = gtk.Label()
+        self.label.set_line_wrap(True)
+        self.label.set_justify(gtk.JUSTIFY_FILL)
+        self.label.set_text(label)
+
+        # Create the progress bar.
+        self.pbar = gtk.ProgressBar()
+        self.pbar.set_fraction(0.0)
+        self.pbar.set_orientation(gtk.PROGRESS_LEFT_TO_RIGHT)
+
+        pbar_align = gtk.Alignment(xalign=0.0, yalign=0.0, xscale=1.0, yscale=0.0)
+        pbar_align.add(self.pbar)
+
+        # Close button
+        button_close = gtk.Button("Close")
+        button_close.set_size_request(70, -1)
+        button_close.connect("clicked", self.on_close)
+
+        # Put the buttons in a box.
+        button_box = gtk.HBox(homogeneous=True, spacing=5)
+        button_box.add(button_close)
+
+        buttons_align = gtk.Alignment(xalign=1.0, yalign=0, xscale=0, yscale=0)
+        buttons_align.add(button_box)
+
+        # Add the alignment objects to the vertical container.
+        vbox.pack_start(child=self.label, expand=False, fill=False, padding=5)
+        vbox.pack_start(child=pbar_align, expand=False, fill=False, padding=5)
+        vbox.pack_start(child=buttons_align, expand=False, fill=False, padding=0)
+
+        self.add(vbox)
+        self.show_all()
+        self.show()
+
+    def on_close(self, widget=None, data=None):
+        self.main.populate_db = False
+        self.destroy()
+
+class PopulateDB(threading.Thread):
+    """Analyze all image files in the specified folder and update the
+    progress bar in the progress dialog. The result is that all the
+    information will be saved to the database file.
+    """
+
+    def __init__(self, parent):
+        super(PopulateDB, self).__init__()
+        self.parent = parent
+        self.current = 0
+        self.total = 0
+
+    def update_progressbar(self):
+        fraction = self.current / float(self.total)
+        self.parent.pbar.set_fraction(fraction)
+        self.parent.pbar.set_text("%d/%d" % (self.current, self.total))
+        if self.current == self.total:
+            self.parent.pbar.set_text("Finished!")
+        return False
+
+    def run(self):
+        """Calculate the image kurtosis for each image in the selected
+        folder and save it to the database.
+        """
+        images = self.parent.main.get_image_files()
+        self.total = len(images)
+
+        # Get the image kurtosis of each file and save it to the
+        # database.
+        i = 1
+        for image in images:
+            if not self.parent.main.populate_db:
+                # Stop the process if 'populate_db' set to False.
+                logging.info("Analyze images: stopped by user.")
+                return False
+
+            self.current = i
+            logging.info("Found %s" % (image))
+            gobject.idle_add(self.update_progressbar)
+            self.parent.main.get_image_kurtosis(image)
+            i += 1
+
+        logging.info("Image files successfully analyzed.")
 
 def adapt_str(string):
     """Convert the custom Python type into one of SQLite's supported
