@@ -52,19 +52,20 @@ class NextWall(threading.Thread):
     def __init__(self):
         super(NextWall, self).__init__()
 
-        self.argv = sys.argv[1:]
-        self.recursive = False
-        self.applet = False
-        self.fit_time = False
-        self.populate_db = False
-        self.populate_total = 100
-        self.populate_current = 0
-        self.timer = None
-        self.path = "/usr/share/backgrounds/"
-        self.client = gconf.client_get_default()
-        self.kurtosis_threshold = (0.0, 2.0)
-        self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall')
-        self.dbfile = "%s/nextwall.db" % (self.data_home)
+        self.argv = sys.argv[1:] # User arguments
+        self.recursive = False # Enable recursion
+        self.applet = False # Display Application Indicator
+        self.fit_time = False # Fit time of day
+        self.populate_db = False # Analyze all image files
+        self.path = "/usr/share/backgrounds/" # Backgrounds folder
+        self.client = gconf.client_get_default() # GConf client
+        self.kurtosis_threshold = (0.0, 2.0) # <=first item = Night; >=second item = Day; In between = Dusk/Dawn
+        self.dawn_start = 9 # Hour at which dawn starts
+        self.day_start = 12 # Hour at which day starts
+        self.dusk_start = 18 # Hour at which dusk starts
+        self.night_start = 21 # Hour at which night starts
+        self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
+        self.dbfile = "%s/nextwall.db" % (self.data_home) # Path to database file
 
         # Check for user defined options.
         try:
@@ -313,7 +314,7 @@ class NextWall(threading.Thread):
 
         logging.info("Database successfully populated.")
 
-    def get_image_brightness(self, file):
+    def get_image_brightness(self, file, get=False):
         """Decide wether a kurtosis value is considered bright or dark
 
         Dark: return 0
@@ -324,13 +325,20 @@ class NextWall(threading.Thread):
 
         if kurtosis < self.kurtosis_threshold[0]:
             # Bright
-            return 2
+            brightness = 2
         elif kurtosis > self.kurtosis_threshold[1]:
             # Dark
-            return 0
+            brightness = 0
         else:
             # Medium
-            return 1
+            brightness = 1
+
+        logging.info("\tBrightness value: %d" % (brightness))
+
+        if get:
+            return (kurtosis, brightness)
+
+        return brightness
 
     def match_image_time(self, file):
         """Decide whether the image's brightness is suitable for the
@@ -339,26 +347,21 @@ class NextWall(threading.Thread):
         Suitable: return True
         Not Suitable: return False
         """
-        dawn_start = 9
-        day_start = 12
-        dusk_start = 18
-        night_start = 21
         brightness = self.get_image_brightness(file)
         hour = int(strftime("%H", localtime()))
 
         # Decide based on current time which brightness value (0,1,2)
         # is expected.
-        if hour >= day_start and hour < dusk_start:
+        if hour >= self.day_start and hour < self.dusk_start:
             # Day
             target = 2
-        elif hour >= night_start or hour < dawn_start:
+        elif hour >= self.night_start or hour < self.dawn_start:
             # Night
             target = 0
         else:
             # Dawn/Dusk
             target = 1
 
-        logging.info("\tBrightness value: %d" % (brightness))
         logging.info("\tTarget brightness value: %d" % (target))
 
         # Compare image value with target value.
@@ -467,15 +470,17 @@ class Indicator(object):
 
         # Create the menu items
         change_item = gtk.MenuItem("Next Wallpaper")
+        info_item = gtk.MenuItem("Image Information")
         open_item = gtk.MenuItem("Open Current")
         delete_item = gtk.MenuItem("Delete Current")
-        populate_item = gtk.MenuItem("Analyze Images")
+        populate_item = gtk.MenuItem("Analyze All Images")
         pref_item = gtk.MenuItem("Preferences")
         quit_item = gtk.MenuItem("Quit")
         separator = gtk.SeparatorMenuItem()
 
         # Add them to the menu
         menu.append(change_item)
+        menu.append(info_item)
         menu.append(open_item)
         menu.append(delete_item)
         menu.append(populate_item)
@@ -485,6 +490,7 @@ class Indicator(object):
 
         # Attach the callback functions to the activate signal
         change_item.connect("activate", self.main.change_background)
+        info_item.connect("activate", self.on_image_info)
         open_item.connect("activate", self.on_open_current)
         delete_item.connect("activate", self.on_delete_current)
         populate_item.connect("activate", self.on_populate_db)
@@ -492,19 +498,17 @@ class Indicator(object):
         quit_item.connect("activate", self.on_quit)
 
         # Show menu items
-        change_item.show()
-        open_item.show()
-        delete_item.show()
-        populate_item.show()
-        pref_item.show()
-        separator.show()
-        quit_item.show()
+        menu.show_all()
 
         # Add the menu to the Application Indicator
         ind.set_menu(menu)
 
         # Run the main loop
         gtk.main()
+
+    def on_image_info(self, widget, data=None):
+        """Display image information."""
+        ImageInformation(self.main)
 
     def on_quit(self, widget, data=None):
         """Exit the application."""
@@ -558,6 +562,109 @@ class Indicator(object):
         # Start the PopulateDB class in a new thread.
         pdb = PopulateDB(pgd)
         pdb.start()
+
+
+class ImageInformation(gtk.Window):
+    """Display a dialog showing the image information."""
+
+    def __init__(self, main):
+        self.main = main
+        super(ImageInformation, self).__init__()
+
+        self.set_title("Image Information")
+        self.set_size_request(-1, -1)
+        self.set_border_width(10)
+        self.set_position(gtk.WIN_POS_CENTER)
+        self.set_resizable(False)
+        self.set_keep_above(True)
+
+        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
+        info = self.main.get_image_brightness(file=current_bg, get=True)
+        if info[1] == 0:
+            time = "Night"
+        elif info[1] == 1:
+            time = "Dusk/Dawn"
+        elif info[1] == 2:
+            time = "Day"
+
+        # Create table container
+        table = gtk.Table(rows=4, columns=2, homogeneous=False)
+        table.set_col_spacings(10)
+        table.set_row_spacings(10)
+
+        # Text label
+        label_file = gtk.Label("Image path:")
+        label_file.set_alignment(1.0, 0)
+        table.attach(child=label_file, left_attach=0, right_attach=1,
+            top_attach=0, bottom_attach=1, xoptions=gtk.FILL,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # Value
+        text_file = gtk.Label(current_bg)
+        text_file.set_alignment(0, 1.0)
+        text_file.set_line_wrap(True)
+        text_file.set_selectable(True)
+        table.attach(child=text_file, left_attach=1, right_attach=2,
+            top_attach=0, bottom_attach=1, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # Text label
+        label_kurtosis = gtk.Label("Kurtosis:")
+        label_kurtosis.set_alignment(1.0, 0)
+        table.attach(child=label_kurtosis, left_attach=0, right_attach=1,
+            top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # Value
+        text_kurtosis = gtk.Label(info[0])
+        text_kurtosis.set_alignment(0, 1.0)
+        text_kurtosis.set_selectable(True)
+        table.attach(child=text_kurtosis, left_attach=1, right_attach=2,
+            top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # Text label
+        label_brightness = gtk.Label("Brightness value:")
+        label_brightness.set_alignment(1.0, 0)
+        table.attach(child=label_brightness, left_attach=0, right_attach=1,
+            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # Value
+        text_brightness = gtk.Label("%d (%s)" % (info[1], time))
+        text_brightness.set_alignment(0, 1.0)
+        text_brightness.set_selectable(True)
+        table.attach(child=text_brightness, left_attach=1, right_attach=2,
+            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
+            yoptions=gtk.FILL, xpadding=0, ypadding=0)
+
+        # OK button
+        button_ok = gtk.Button("OK")
+        button_ok.set_size_request(70, -1)
+        button_ok.connect("clicked", self.on_ok)
+
+        # Put the buttons in a box
+        button_box = gtk.HBox(homogeneous=True, spacing=5)
+        button_box.add(button_ok)
+
+        # Align the button box
+        buttons_align = gtk.Alignment(xalign=0.5, yalign=0, xscale=0, yscale=0)
+        buttons_align.add(button_box)
+
+        # Add the aligned box to the table
+        table.attach(child=buttons_align, left_attach=0, right_attach=2,
+            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
+            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+
+        # Add the table to the main window.
+        self.add(table)
+
+        # Make it visible.
+        self.show_all()
+
+    def on_ok(self, widget, data=None):
+        """Close the dialog."""
+        self.destroy()
 
 
 class Preferences(gtk.Window):
