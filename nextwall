@@ -44,7 +44,7 @@ except ImportError as ie:
 
 gobject.threads_init()
 
-__version__ = "1.0"
+__version__ = "0.9"
 
 class NextWall(threading.Thread):
     """The main class."""
