@@ -30,7 +30,7 @@ import threading
 from time import localtime, strftime, sleep
 
 import xdg.BaseDirectory as basedir
-from pysqlite2 import dbapi2 as sqlite
+from sqlite3 import dbapi2 as sqlite
 import gconf
 import gobject
 
@@ -59,11 +59,12 @@ class NextWall(threading.Thread):
         self.populate_db = False # Analyze all image files
         self.path = "/usr/share/backgrounds/" # Backgrounds folder
         self.client = gconf.client_get_default() # GConf client
-        self.kurtosis_threshold = (0.0, 2.0) # <=first item = Night; >=second item = Day; In between = Dusk/Dawn
+        self.kurtosis_threshold = (0.0, 2.0) # <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
         self.dawn_start = 9 # Hour at which dawn starts
         self.day_start = 12 # Hour at which day starts
         self.dusk_start = 18 # Hour at which dusk starts
         self.night_start = 21 # Hour at which night starts
+        self.max_tries = 20 # Maximum tries for finding image that fits time of day
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
         self.dbfile = "%s/nextwall.db" % (self.data_home) # Path to database file
 
@@ -419,7 +420,7 @@ class NextWall(threading.Thread):
         current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
 
         sames = 0
-        for i in range(20): # Give up after 20 tries.
+        for i in range(self.max_tries): # Give up after X tries.
             # Stop the loop if we find the same image 3 times.
             if sames == 3:
                 break
@@ -604,6 +605,7 @@ class ImageInformation(gtk.Window):
         text_file.set_alignment(0, 1.0)
         text_file.set_line_wrap(True)
         text_file.set_selectable(True)
+        text_file.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=text_file, left_attach=1, right_attach=2,
             top_attach=0, bottom_attach=1, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.FILL, xpadding=0, ypadding=0)
@@ -619,6 +621,7 @@ class ImageInformation(gtk.Window):
         text_kurtosis = gtk.Label(info[0])
         text_kurtosis.set_alignment(0, 1.0)
         text_kurtosis.set_selectable(True)
+        text_kurtosis.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=text_kurtosis, left_attach=1, right_attach=2,
             top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.FILL, xpadding=0, ypadding=0)
@@ -634,6 +637,7 @@ class ImageInformation(gtk.Window):
         text_brightness = gtk.Label("%d (%s)" % (info[1], time))
         text_brightness.set_alignment(0, 1.0)
         text_brightness.set_selectable(True)
+        text_brightness.unset_flags(gtk.CAN_FOCUS)
         table.attach(child=text_brightness, left_attach=1, right_attach=2,
             top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
             yoptions=gtk.FILL, xpadding=0, ypadding=0)
@@ -642,6 +646,7 @@ class ImageInformation(gtk.Window):
         button_ok = gtk.Button("OK")
         button_ok.set_size_request(70, -1)
         button_ok.connect("clicked", self.on_ok)
+        button_ok.set_flags(gtk.HAS_DEFAULT)
 
         # Put the buttons in a box
         button_box = gtk.HBox(homogeneous=True, spacing=5)
