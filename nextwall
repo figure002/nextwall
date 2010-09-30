@@ -4,7 +4,7 @@
 # nextwall - a script to change to a random background image
 #
 #  Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
-#  Copyright 2010, Serrano Pereira <figure002@gmail.com>
+#  Copyright 2010, Serrano Pereira <serrano.pereira@gmail.com>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -44,7 +44,18 @@ except ImportError as ie:
 
 gobject.threads_init()
 
+__author__ = "Davyd Madeley, Serrano Pereira"
+__copyright__ = ("Copyright 2004, Davyd Madeley\n"
+    "Copyright 2010, Serrano Pereira")
+__credits__ = ["Davyd Madeley <davyd@madeley.id.au>",
+    "Serrano Pereira <serrano.pereira@gmail.com>"]
+__license__ = "GPL3"
 __version__ = "0.9"
+__maintainer__ = "Serrano Pereira"
+__email__ = "serrano.pereira@gmail.com"
+__status__ = "Production"
+__date__ = "2010/09/30 22:33:24"
+
 
 class NextWall(threading.Thread):
     """The main class."""
@@ -66,7 +77,7 @@ class NextWall(threading.Thread):
         self.night_start = 21 # Hour at which night starts
         self.max_tries = 20 # Maximum tries for finding image that fits time of day
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
-        self.dbfile = "%s/nextwall.db" % (self.data_home) # Path to database file
+        self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
 
         # Check for user defined options.
         try:
@@ -806,13 +817,12 @@ class Preferences(gtk.Window):
         about = gtk.AboutDialog()
         about.set_program_name("NextWall")
         about.set_version(__version__)
-        about.set_copyright("Copyright © Davyd Madeley, Serrano Pereira")
-        about.set_authors(["Davyd Madeley <davyd@madeley.id.au>", "Serrano Pereira <figure002@gmail.com>"])
+        about.set_copyright(__copyright__)
+        about.set_authors(__credits__)
         about.set_comments("A script to change to a random background image.")
         about.set_license(license)
         about.run()
         about.destroy()
-
 
 
 class ProgressDialog(gtk.Window):
@@ -824,7 +834,7 @@ class ProgressDialog(gtk.Window):
         self.main.populate_db = True
 
         self.connect("destroy", self.on_close)
-        self.set_size_request(350, -1)
+        self.set_size_request(-1, -1)
         self.set_title(title)
         self.set_border_width(0)
         self.set_resizable(False)
@@ -929,4 +939,4 @@ if __name__ == "__main__":
     sqlite.register_adapter(str, adapt_str)
 
     NextWall()
-    sys.exit()
+    sys.exit(0)
