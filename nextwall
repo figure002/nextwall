@@ -28,12 +28,11 @@ import getopt
 import commands
 import threading
 from time import localtime, strftime, sleep
+from sqlite3 import dbapi2 as sqlite
 
 import xdg.BaseDirectory as basedir
-from sqlite3 import dbapi2 as sqlite
 import gconf
 import gobject
-
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -44,7 +43,7 @@ except ImportError as ie:
 
 gobject.threads_init()
 
-__author__ = "Davyd Madeley, Serrano Pereira"
+__author__ = "Serrano Pereira"
 __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, Serrano Pereira")
 __credits__ = ["Davyd Madeley <davyd@madeley.id.au>",
@@ -57,12 +56,10 @@ __status__ = "Production"
 __date__ = "2010/09/30 22:33:24"
 
 
-class NextWall(threading.Thread):
+class NextWall(object):
     """The main class."""
 
     def __init__(self):
-        super(NextWall, self).__init__()
-
         self.argv = sys.argv[1:] # User arguments
         self.recursive = False # Enable recursion
         self.applet = False # Display Application Indicator
@@ -121,10 +118,11 @@ class NextWall(threading.Thread):
 
         # Check if we need to populate the database.
         if self.populate_db:
-            logging.info("This could take a while, depending on the number of images in the\n"
+            logging.info("This could take a while, depending on the "
+                "number of images in the\n"
                 "\tspecified folder. Starting in 10 seconds...")
             sleep(10)
-            self._populate_db()
+            self.on_populate_db()
             sys.exit()
 
         # Decide what to do next.
@@ -165,13 +163,14 @@ class NextWall(threading.Thread):
                 # If argument was given, use this as the path.
                 path = os.path.abspath(path[0])
             else:
+                # The user provided 2 or more arguments, which is wrong.
                 self.usage()
 
         # Check if the backgrounds folder is valid.
-        if not os.path.exists(self.path):
+        if not os.path.exists(path):
             print ("The folder %s doesn't seem to exist.\n"
                 "Run '%s --help' for usage information." %
-                (self.path, os.path.split(sys.argv[0])[1]))
+                (path, os.path.split(sys.argv[0])[1]))
             sys.exit(1)
 
         # Set the new folder.
@@ -179,7 +178,11 @@ class NextWall(threading.Thread):
         self.path = path
 
     def set_fit_time(self, boolean):
-        """Setter for fit_time."""
+        """Setter for fit time of day feature.
+
+        Check if the requirements for this feature are present on the
+        system.
+        """
         if not boolean:
             self.fit_time = False
             return
@@ -260,7 +263,7 @@ class NextWall(threading.Thread):
 
             logging.info("..not found in database.")
 
-            # Use identify to calculate the image kurtosis.
+            # Use 'identify' to calculate the image kurtosis.
             logging.info("Calculating image kurtosis...")
             cmd = 'identify -verbose "%s" | grep kurtosis' % (file)
             output = commands.getoutput(cmd)
@@ -308,7 +311,7 @@ class NextWall(threading.Thread):
         cursor.close()
         connection.close()
 
-    def _populate_db(self):
+    def on_populate_db(self):
         """Calculate the image kurtosis for each image in the selected
         folder and save it to the database.
         """
@@ -473,7 +476,7 @@ class Indicator(object):
 
         # Create an Application Indicator icon
         ind = appindicator.Indicator("nextwall",
-            "gsd-xrandr",
+            "next", # Icon name
             appindicator.CATEGORY_OTHER)
         ind.set_status(appindicator.STATUS_ACTIVE)
 
