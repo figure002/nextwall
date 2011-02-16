@@ -117,7 +117,7 @@ def usage():
     print "  -a, --applet\t\tRun as applet in the GNOME panel."
     print ("  -t, --fit-time\tSelect backgrounds that fit the time of day. It is\n"
             "\t\t\trecommended to use --populate-db first.")
-    print ("      --populate-db\tAnalyze all images in [path] and save the information\n"
+    print ("  -s, --scan\t\tScan for images files in [path].\n"
             "\t\t\tto a database file. This drastically speeds up the\n"
             "\t\t\tprogram if the fit-time option is enabled.")
     print "  -v, --verbose\t\tTurn on verbose output."
@@ -131,7 +131,7 @@ class NextWall(object):
         self.recursive = False # Enable recursion
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
-        self.populate_db = False # Analyze all image files
+        self.scan_for_images = False # Analyze all image files
         self.path = "/usr/share/backgrounds/" # Default backgrounds folder
         self.gconf_client = gconf.client_get_default() # GConf client
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
@@ -139,9 +139,8 @@ class NextWall(object):
 
         # Check for user defined options.
         try:
-            opts, args = getopt.getopt(self.argv, "hratv",
-                ["help","recursive","applet","fit-time","verbose",
-                    "populate-db"])
+            opts, args = getopt.getopt(self.argv, "hratvs",
+                ["help","recursive","applet","fit-time","verbose","scan"])
         except getopt.GetoptError:
             usage()
 
@@ -157,8 +156,8 @@ class NextWall(object):
             if opt in ("-v", "--verbose"):
                 logging.basicConfig(level=logging.INFO,
                     format='%(levelname)s %(message)s')
-            if opt in ("--populate-db"):
-                self.populate_db = True
+            if opt in ("-s", "--scan"):
+                self.scan_for_images = True
 
                 # Turn on verbose mode, so the user knows what's happening.
                 logging.basicConfig(level=logging.INFO,
@@ -178,12 +177,11 @@ class NextWall(object):
         self.set_backgrounds_folder(args)
 
         # Check if we need to populate the database.
-        if self.populate_db:
-            logging.info("This could take a while, depending on the "
-                "number of images in the\n"
-                "\tspecified folder. Starting in 10 seconds...")
-            sleep(10)
-            self.on_populate_db()
+        if self.scan_for_images:
+            logging.info("Will start scanning for images. This could take a while depending on the \n"
+                "number of images in the specified folder. Starting in 5 seconds...")
+            sleep(5)
+            self.on_scan_for_images()
             sys.exit()
 
         # Decide what to do next.
@@ -244,7 +242,7 @@ class NextWall(object):
                 dialog.destroy()
                 return
             else:
-                print message
+                logging.error(message)
                 return
 
         self.fit_time = True
@@ -258,7 +256,6 @@ class NextWall(object):
         'identify' and save the value to the database.
         """
         # Try to get the image kurtosis from the database.
-        logging.info("Getting image information from the database...")
         connection = sqlite.connect(self.dbfile)
         cursor = connection.cursor()
         cursor.execute("SELECT kurtosis FROM wallpapers WHERE path=?", [file])
@@ -268,11 +265,9 @@ class NextWall(object):
 
         if not kurtosis:
             # If kurtosis not found in the database, calculate it.
-
-            logging.info("..not found in database.")
+            logging.info("\tNot in database. Calculating image kurtosis...")
 
             # Use 'identify' to calculate the image kurtosis.
-            logging.info("Calculating image kurtosis...")
             cmd = 'identify -verbose "%s" | grep kurtosis' % (file)
             output = commands.getoutput(cmd)
             output = output.splitlines()
@@ -289,13 +284,11 @@ class NextWall(object):
             kurtosis = output[1]
 
             # Save the calculated kurtosis to the database.
-            logging.info("Saving image information to database...")
             self.save_to_db(file, kurtosis)
-        else:
-            logging.info("..found in database.")
-            kurtosis = kurtosis[0]
 
-        logging.info("\tOverall image kurtosis: %s" % (kurtosis))
+            logging.info("\tImage kurtosis: %s" % (kurtosis))
+        else:
+            kurtosis = kurtosis[0]
 
         return float(kurtosis)
 
@@ -333,7 +326,7 @@ class NextWall(object):
         cursor.close()
         connection.close()
 
-    def on_populate_db(self):
+    def on_scan_for_images(self):
         """Calculate the image kurtosis for each image in the selected
         folder and save it to the database.
         """
@@ -369,8 +362,6 @@ class NextWall(object):
             # Medium
             brightness = 1
 
-        logging.info("\tBrightness value: %d" % (brightness))
-
         if get:
             return (kurtosis, brightness)
 
@@ -384,27 +375,29 @@ class NextWall(object):
         Not Suitable: return False
         """
         brightness = self.get_image_brightness(file)
+        current_brightness = self.get_current_brightness()
+
+        # Compare image value with target value.
+        if brightness == current_brightness:
+            return True
+        else:
+            return False
+
+    def get_current_brightness(self):
+        """Return the brightness value for the current time of day."""
         hour = int(strftime("%H", localtime()))
 
         # Decide based on current time which brightness value (0,1,2)
         # is expected.
         if hour >= DAY_START and hour < DUSK_START:
             # Day
-            target = 2
+            return 2
         elif hour >= NIGHT_START or hour < DAWN_START:
             # Night
-            target = 0
+            return 0
         else:
             # Dawn/Dusk
-            target = 1
-
-        logging.info("\tTarget brightness value: %d" % (target))
-
-        # Compare image value with target value.
-        if brightness == target:
-            return True
-        else:
-            return False
+            return 1
 
     def get_image_files(self):
         """Return a list of image files from the specified folder."""
@@ -425,69 +418,110 @@ class NextWall(object):
 
         return images
 
-    def change_background(self, widget=None, data=None):
-        """Change background according to given arguments."""
-        # Get a list of the image files.
-        images = self.get_image_files()
+    def get_random_wallpaper(self):
+        connection = sqlite.connect(self.dbfile)
+        cursor = connection.cursor()
 
-        # Check if any image files were found.
-        if len(images) < 2:
-            message = ("No image files (or just one) were found in '%s'\n"
-                "Set a different backgrounds folder or enable recursion to "
-                "look in subfolders.") % (self.path)
+        if not self.fit_time:
+            cursor.execute("SELECT id FROM wallpapers WHERE path LIKE \"%s%%\"" %
+                self.path)
+        else:
+            brightness = self.get_current_brightness()
+
+            # Day
+            if brightness == 2:
+                cursor.execute("SELECT id \
+                    FROM wallpapers \
+                    WHERE path LIKE \"%s%%\" \
+                    AND kurtosis < ?" % self.path,
+                    [KURTOSIS_THRESHOLD[0]]
+                    )
+            # Night
+            elif brightness == 0:
+                cursor.execute("SELECT id \
+                    FROM wallpapers \
+                    WHERE path LIKE \"%s%%\" \
+                    AND kurtosis > ?" % self.path,
+                    [KURTOSIS_THRESHOLD[1]]
+                    )
+            # Dusk/Dawn
+            elif brightness == 1:
+                cursor.execute("SELECT id \
+                    FROM wallpapers \
+                    WHERE path LIKE \"%s%%\" \
+                    AND kurtosis > ? \
+                    AND kurtosis < ?" % self.path,
+                    [URTOSIS_THRESHOLD[0], KURTOSIS_THRESHOLD[1]]
+                    )
+
+        matching_ids = cursor.fetchall()
+        if not matching_ids:
+            return None
+
+        # Get a new random wallpaper from the database.
+        random_id = random.choice(matching_ids)[0]
+        cursor.execute("SELECT path \
+            FROM wallpapers \
+            WHERE id = ?", [random_id])
+        path = cursor.fetchone()[0]
+
+        while not os.path.isfile(path):
+            # Remove this path from the database.
+            logging.info("The file %s does not exist. Removing from the database." % path)
+            cursor.execute("DELETE FROM wallpapers \
+                WHERE id = ?", [random_id])
+            connection.commit()
+
+            # Get a new random wallpaper from the database.
+            random_id = random.choice(matching_ids)[0]
+            cursor.execute("SELECT path \
+                FROM wallpapers \
+                WHERE id = ?", [random_id])
+            path = cursor.fetchone()[0]
+
+        cursor.close()
+        connection.close()
+
+        return path
+
+    def change_background(self, widget=None, data=None):
+        """Change the background."""
+        if self.fit_time:
+            logging.info("Looking for backgrounds that fit the time of day...")
+
+        path = self.get_random_wallpaper()
+
+        # Check if path was returned.
+        if not path:
+            message = ("No wallpaper was found in the database. You might need to scan for images.")
             if self.applet:
                 dialog = gtk.MessageDialog(parent=None, flags=0,
                     type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK,
                     message_format=message)
-                response = dialog.run()
-
-                if response == gtk.RESPONSE_OK:
-                    dialog.destroy()
-                    return
+                dialog.destroy()
+                return
             else:
-                print message
+                logging.error(message)
                 sys.exit(1)
-
-        # Get a random background item from the file list.
-        item = random.randint(0, len(images) - 1)
 
         # Get the current background used by GNOME.
         current_bg = self.gconf_client.get_string("/desktop/gnome/background/picture_filename")
 
+        # Make sure the random background item isn't the same as the
+        # current background.
         sames = 0
-        for i in range(MAX_TRIES): # Give up after X tries.
+        while path == current_bg:
             # Stop the loop if we find the same image 3 times.
             if sames == 3:
-                break
-
-            logging.info("[%d] Found %s" % (i+1, images[item]))
-
-            # Make sure the random background item isn't the same as the
-            # background currently being used.
-            while(images[item] == current_bg):
-                sames += 1
-                item = random.randint(0, len(images) - 1)
-
-                logging.info("..same as current, found %s" % (images[item]))
-
-            # Check if the image brightness matches the current time.
-            if self.fit_time:
-                if self.match_image_time(images[item]):
-                    # Match; set this background.
-                    break
-                else:
-                    # No match; select random background and do the loop
-                    # again (if maximum tries not exeeded).
-                    item = random.randint(0, len(images) - 1)
-
-                    logging.info("..does not match time of day.")
-            else:
-                break
+                logging.info("Not enough image files. Select a different folder or scan for image files.")
+                return
+            path = self.get_random_wallpaper()
+            sames += 1
 
         # Finally, set the new background.
-        logging.info("Setting background %s" % (images[item]))
+        logging.info("Setting background to %s" % path)
         self.gconf_client.set_string("/desktop/gnome/background/picture_filename",
-            images[item])
+            path)
 
 class Indicator(object):
     """Display an Application Indicator in the GNOME panel."""
@@ -529,7 +563,7 @@ class Indicator(object):
         info_item.connect("activate", self.on_image_info)
         open_item.connect("activate", self.on_open_current)
         delete_item.connect("activate", self.on_delete_current)
-        populate_item.connect("activate", self.on_populate_db)
+        populate_item.connect("activate", self.on_scan_for_images)
         pref_item.connect("activate", self.on_preferences)
         quit_item.connect("activate", self.on_quit)
 
@@ -584,8 +618,8 @@ class Indicator(object):
         current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
         os.system('xdg-open "%s"' % (current_bg))
 
-    def on_populate_db(self, widget, data=None):
-        """Run the main._populate_db function in a separate thread, and
+    def on_scan_for_images(self, widget, data=None):
+        """Run the main._scan_for_images function in a separate thread, and
         show a nice progress dialog.
         """
         # Display the load backgrounds dialog.
@@ -714,7 +748,7 @@ class LoadBackgroundsDialog(object):
 
     def __init__(self, nextwall):
         self.nextwall = nextwall
-        self.nextwall.populate_db = True
+        self.nextwall.scan_for_images = True
 
         self.builder = gtk.Builder()
         self.builder.add_from_file('glade/load_backgrounds.glade')
@@ -726,7 +760,7 @@ class LoadBackgroundsDialog(object):
         self.dialog = self.builder.get_object('load_backgrounds_dialog')
 
     def on_destroy(self, widget=None, data=None):
-        self.nextwall.populate_db = False
+        self.nextwall.scan_for_images = False
         self.dialog.destroy()
 
 class PopulateDB(threading.Thread):
@@ -740,7 +774,6 @@ class PopulateDB(threading.Thread):
         self.parent = parent
         self.current = 0
         self.total = 0
-
         self.progress_bar = self.parent.builder.get_object('progressbar')
 
     def update_progressbar(self):
@@ -765,8 +798,8 @@ class PopulateDB(threading.Thread):
         # database.
         i = 1
         for image in images:
-            if not self.parent.nextwall.populate_db:
-                # Stop the process if 'populate_db' set to False.
+            if not self.parent.nextwall.scan_for_images:
+                # Stop the process if 'scan_for_images' set to False.
                 logging.info("Analyze images: stopped by user.")
                 return False
 
@@ -776,7 +809,7 @@ class PopulateDB(threading.Thread):
             self.parent.nextwall.get_image_kurtosis(image)
             i += 1
 
-        logging.info("Image files successfully analyzed.")
+        logging.info("Image files successfully scanned.")
 
 if __name__ == "__main__":
     main()
