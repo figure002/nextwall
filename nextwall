@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# nextwall - a script to change to a random background image
+# NextWall is a script to change to a random background image.
 #
 #  Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
 #  Copyright 2010, Serrano Pereira <serrano.pereira@gmail.com>
@@ -36,10 +36,7 @@ import gobject
 import pygtk
 pygtk.require('2.0')
 import gtk
-try:
-    import appindicator
-except ImportError as ie:
-    sys.exit(str(ie))
+import appindicator
 
 gobject.threads_init()
 
@@ -53,8 +50,78 @@ __version__ = "0.9"
 __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
-__date__ = "2010/09/30 22:33:24"
+__date__ = "2011/02/16"
 
+
+KURTOSIS_THRESHOLD = (0.0, 2.0) # <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
+DAWN_START = 9 # Hour at which dawn starts
+DAY_START = 12 # Hour at which day starts
+DUSK_START = 18 # Hour at which dusk starts
+NIGHT_START = 21 # Hour at which night starts
+MAX_TRIES = 20 # Maximum tries for finding image that fits time of day
+
+def main():
+    # Registers adapt_str to convert the custom Python type into one of
+    # SQLite's supported types. This adds support for Unicode filenames.
+    sqlite.register_adapter(str, adapt_str)
+
+    NextWall()
+
+def adapt_str(string):
+    """Convert the custom Python type into one of SQLite's supported types."""
+    return string.decode("utf-8")
+
+def is_command(command):
+    """Check if a specific command is available."""
+    cmd = 'which %s' % (command)
+    output = commands.getoutput(cmd)
+    if len(output.splitlines()) == 0:
+        return False
+    else:
+        return True
+
+def get_files_recursively(rootdir):
+    """Recursively get a list of files from a folder."""
+    file_list = []
+
+    for root, sub_folders, files in os.walk(rootdir):
+        for file in files:
+            file_list.append(os.path.join(root,file))
+
+        # Don't visit thumbnail directories.
+        if '.thumbs' in sub_folders:
+            sub_folders.remove('.thumbs')
+
+    return file_list
+
+def get_files(rootdir):
+    """Non-recursively get a list of files from a folder."""
+    file_list = []
+
+    files = os.listdir(rootdir)
+    for file in files:
+        file_list.append(os.path.join(rootdir,file))
+
+    return file_list
+
+def usage():
+    """Print usage information."""
+    print "nextwall %s" % (__version__)
+    print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
+    print "  [path]\tPath to folder containing background images."
+    print "\t\tIf no path is specified, the default path"
+    print "\t\t/usr/share/backgrounds/ will be used."
+    print "\nOptions:"
+    print "  -h, --help\t\tShow usage information."
+    print "  -r, --recursive\tLook in subfolders."
+    print "  -a, --applet\t\tRun as applet in the GNOME panel."
+    print ("  -t, --fit-time\tSelect backgrounds that fit the time of day. It is\n"
+            "\t\t\trecommended to use --populate-db first.")
+    print ("      --populate-db\tAnalyze all images in [path] and save the information\n"
+            "\t\t\tto a database file. This drastically speeds up the\n"
+            "\t\t\tprogram if the fit-time option is enabled.")
+    print "  -v, --verbose\t\tTurn on verbose output."
+    sys.exit()
 
 class NextWall(object):
     """The main class."""
@@ -65,14 +132,8 @@ class NextWall(object):
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
         self.populate_db = False # Analyze all image files
-        self.path = "/usr/share/backgrounds/" # Backgrounds folder
-        self.client = gconf.client_get_default() # GConf client
-        self.kurtosis_threshold = (0.0, 2.0) # <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
-        self.dawn_start = 9 # Hour at which dawn starts
-        self.day_start = 12 # Hour at which day starts
-        self.dusk_start = 18 # Hour at which dusk starts
-        self.night_start = 21 # Hour at which night starts
-        self.max_tries = 20 # Maximum tries for finding image that fits time of day
+        self.path = "/usr/share/backgrounds/" # Default backgrounds folder
+        self.gconf_client = gconf.client_get_default() # GConf client
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
         self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
 
@@ -82,11 +143,11 @@ class NextWall(object):
                 ["help","recursive","applet","fit-time","verbose",
                     "populate-db"])
         except getopt.GetoptError:
-            self.usage()
+            usage()
 
         for opt, arg in opts:
             if opt in ("-h", "--help"):
-                self.usage()
+                usage()
             if opt in ("-r", "--recursive"):
                 self.recursive = True
             if opt in ("-a", "--applet"):
@@ -133,25 +194,6 @@ class NextWall(object):
             # Change the background.
             self.change_background()
 
-    def usage(self):
-        """Print usage information."""
-        print "nextwall %s" % (__version__)
-        print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
-        print "  [path]\tPath to folder containing background images."
-        print "\t\tIf no path is specified, the default path"
-        print "\t\t/usr/share/backgrounds/ will be used."
-        print "\nOptions:"
-        print "  -h, --help\t\tShow usage information."
-        print "  -r, --recursive\tLook in subfolders."
-        print "  -a, --applet\t\tRun as applet in the GNOME panel."
-        print ("  -t, --fit-time\tSelect backgrounds that fit the time of day. It is\n"
-                "\t\t\trecommended to use --populate-db first.")
-        print ("      --populate-db\tAnalyze all images in [path] and save the information\n"
-                "\t\t\tto a database file. This drastically speeds up the\n"
-                "\t\t\tprogram if the fit-time option is enabled.")
-        print "  -v, --verbose\t\tTurn on verbose output."
-        sys.exit()
-
     def set_backgrounds_folder(self, path):
         """Set the backgrounds folder."""
         if type(path) == type([]):
@@ -164,7 +206,7 @@ class NextWall(object):
                 path = os.path.abspath(path[0])
             else:
                 # The user provided 2 or more arguments, which is wrong.
-                self.usage()
+                usage()
 
         # Check if the backgrounds folder is valid.
         if not os.path.exists(path):
@@ -188,7 +230,7 @@ class NextWall(object):
             return
 
         # Make sure the identify command is available.
-        if not self._check_command('identify'):
+        if not is_command('identify'):
             message = ("Unmet dependency: identify (ImageMagick) - "
                 "The 'fit-time' feature requires the 'identify' "
                 "tool (member of ImageMagick). The 'fit-time' feature has been disabled.")
@@ -199,47 +241,13 @@ class NextWall(object):
                     message_format=message)
                 response = dialog.run()
 
-                if response == gtk.RESPONSE_OK:
-                    dialog.destroy()
-                    return
+                dialog.destroy()
+                return
             else:
                 print message
                 return
 
         self.fit_time = True
-
-    def _check_command(self, command):
-        """Check if a specific command is available."""
-        cmd = 'which %s' % (command)
-        output = commands.getoutput(cmd)
-        if len(output.splitlines()) == 0:
-            return False
-        else:
-            return True
-
-    def get_files_recursively(self, rootdir):
-        """Recursively get a list of files from a folder."""
-        file_list = []
-
-        for root, sub_folders, files in os.walk(rootdir):
-            for file in files:
-                file_list.append(os.path.join(root,file))
-
-            # Don't visit thumbnail directories.
-            if '.thumbs' in sub_folders:
-                sub_folders.remove('.thumbs')
-
-        return file_list
-
-    def get_files(self, rootdir):
-        """Non-recursively get a list of files from a folder."""
-        file_list = []
-
-        files = os.listdir(rootdir)
-        for file in files:
-            file_list.append(os.path.join(rootdir,file))
-
-        return file_list
 
     def get_image_kurtosis(self, file):
         """Return kurtosis, a measure of the peakedness of the
@@ -301,12 +309,26 @@ class NextWall(object):
 
     def make_db(self):
         """Create an empty database with the necessary tables."""
-        db_version = "0.1"
+        db_version = "0.2"
         connection = sqlite.connect(self.dbfile)
         cursor = connection.cursor()
-        cursor.execute("CREATE TABLE wallpapers (id INTEGER PRIMARY KEY, path TEXT, kurtosis FLOAT)")
-        cursor.execute("CREATE TABLE info (id INTEGER PRIMARY KEY, name VARCHAR, value VARCHAR)")
+
+        cursor.execute("CREATE TABLE wallpapers (\
+            id INTEGER PRIMARY KEY, \
+            path TEXT, \
+            kurtosis FLOAT, \
+            defined_brightness INTEGER, \
+            rating INTEGER, \
+            )")
+
+        cursor.execute("CREATE TABLE info (\
+            id INTEGER PRIMARY KEY, \
+            name VARCHAR, \
+            value VARCHAR \
+            )")
+
         cursor.execute("INSERT INTO info VALUES (null, 'version', ?)", [db_version])
+
         connection.commit()
         cursor.close()
         connection.close()
@@ -318,8 +340,7 @@ class NextWall(object):
         images = self.get_image_files()
         self.populate_total = len(images)
 
-        # Get the image kurtosis of each file and save it to the
-        # database.
+        # Get the image kurtosis of each file and save it to the database.
         i = 1
         for image in images:
             self.populate_current = i
@@ -338,10 +359,10 @@ class NextWall(object):
         """
         kurtosis = self.get_image_kurtosis(file)
 
-        if kurtosis < self.kurtosis_threshold[0]:
+        if kurtosis < KURTOSIS_THRESHOLD[0]:
             # Bright
             brightness = 2
-        elif kurtosis > self.kurtosis_threshold[1]:
+        elif kurtosis > KURTOSIS_THRESHOLD[1]:
             # Dark
             brightness = 0
         else:
@@ -367,10 +388,10 @@ class NextWall(object):
 
         # Decide based on current time which brightness value (0,1,2)
         # is expected.
-        if hour >= self.day_start and hour < self.dusk_start:
+        if hour >= DAY_START and hour < DUSK_START:
             # Day
             target = 2
-        elif hour >= self.night_start or hour < self.dawn_start:
+        elif hour >= NIGHT_START or hour < DAWN_START:
             # Night
             target = 0
         else:
@@ -389,10 +410,10 @@ class NextWall(object):
         """Return a list of image files from the specified folder."""
         if self.recursive:
             # Get the files from the backgrounds folder recursively.
-            dir_items = self.get_files_recursively(self.path)
+            dir_items = get_files_recursively(self.path)
         else:
             # Get the files from the backgrounds folder non-recursively.
-            dir_items = self.get_files(self.path)
+            dir_items = get_files(self.path)
 
         # Check if the background items are actually images. Approved
         # files are put in 'images'.
@@ -431,10 +452,10 @@ class NextWall(object):
         item = random.randint(0, len(images) - 1)
 
         # Get the current background used by GNOME.
-        current_bg = self.client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.gconf_client.get_string("/desktop/gnome/background/picture_filename")
 
         sames = 0
-        for i in range(self.max_tries): # Give up after X tries.
+        for i in range(MAX_TRIES): # Give up after X tries.
             # Stop the loop if we find the same image 3 times.
             if sames == 3:
                 break
@@ -465,14 +486,14 @@ class NextWall(object):
 
         # Finally, set the new background.
         logging.info("Setting background %s" % (images[item]))
-        self.client.set_string("/desktop/gnome/background/picture_filename",
+        self.gconf_client.set_string("/desktop/gnome/background/picture_filename",
             images[item])
 
 class Indicator(object):
     """Display an Application Indicator in the GNOME panel."""
 
-    def __init__(self, main):
-        self.main = main
+    def __init__(self, nextwall):
+        self.nextwall = nextwall
 
         # Create an Application Indicator icon
         ind = appindicator.Indicator("nextwall",
@@ -504,7 +525,7 @@ class Indicator(object):
         menu.append(quit_item)
 
         # Attach the callback functions to the activate signal
-        change_item.connect("activate", self.main.change_background)
+        change_item.connect("activate", self.nextwall.change_background)
         info_item.connect("activate", self.on_image_info)
         open_item.connect("activate", self.on_open_current)
         delete_item.connect("activate", self.on_delete_current)
@@ -523,7 +544,7 @@ class Indicator(object):
 
     def on_image_info(self, widget, data=None):
         """Display image information."""
-        ImageInformation(self.main)
+        ImageInformation(self.nextwall)
 
     def on_quit(self, widget, data=None):
         """Exit the application."""
@@ -531,11 +552,11 @@ class Indicator(object):
 
     def on_preferences(self, widget, data=None):
         """Display preferences window."""
-        Preferences(self.main)
+        Preferences(self.nextwall)
 
     def on_delete_current(self, widget, data=None):
         """Delete the current background image from the harddisk."""
-        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
         message = ("This will <b>permanently</b> remove the current background "
             "image (%s) from your harddisk.") % (current_bg)
 
@@ -554,337 +575,159 @@ class Indicator(object):
             dialog.destroy()
             return
 
-        self.main.change_background()
+        self.nextwall.change_background()
 
     def on_open_current(self, widget, data=None):
         """Open the current background with the system's default image
         viewer.
         """
-        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
         os.system('xdg-open "%s"' % (current_bg))
 
     def on_populate_db(self, widget, data=None):
         """Run the main._populate_db function in a separate thread, and
         show a nice progress dialog.
         """
-        # Display a Progress Dialog.
-        label = ("NextWall is now calculating the brightness value for each image file in the specified folder. "
-            "This brightness value is required for the \"fit time of day\" feature. "
-            "Depending on the number of images files, this may take a while. "
-            "Completing this analysis is recommended, as this will speed up the application drastically.")
-        pgd = ProgressDialog(self.main, "Analyzing Images", label)
+        # Display the load backgrounds dialog.
+        pgd = LoadBackgroundsDialog(self.nextwall)
 
         # Start the PopulateDB class in a new thread.
         pdb = PopulateDB(pgd)
         pdb.start()
 
 
-class ImageInformation(gtk.Window):
+class ImageInformation(object):
     """Display a dialog showing the image information."""
 
-    def __init__(self, main):
-        self.main = main
-        super(ImageInformation, self).__init__()
+    def __init__(self, nextwall):
+        self.nextwall = nextwall
 
-        self.set_title("Image Information")
-        self.set_size_request(-1, -1)
-        self.set_border_width(10)
-        self.set_position(gtk.WIN_POS_CENTER)
-        self.set_resizable(False)
-        self.set_keep_above(True)
+        self.builder = gtk.Builder()
+        self.builder.add_from_file('glade/image_info.glade')
 
-        current_bg = self.main.client.get_string("/desktop/gnome/background/picture_filename")
-        info = self.main.get_image_brightness(file=current_bg, get=True)
+        # Connect the window signals to the handlers.
+        self.builder.connect_signals(self)
+
+        # Get some GTK objects.
+        self.dialog = self.builder.get_object('image_info_dialog')
+        self.label_path_value = self.builder.get_object('label_path_value')
+        self.label_kurtosis_value = self.builder.get_object('label_kurtosis_value')
+        self.label_brightness_value = self.builder.get_object('label_brightness_value')
+
+        # Transform the layout.
+        self.transform_layout()
+
+    def transform_layout(self):
+        # Get the current background.
+        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+
+        # Get the image brightness for the current background.
+        info = self.nextwall.get_image_brightness(file=current_bg, get=True)
         if info[1] == 0:
             time = "Night"
         elif info[1] == 1:
-            time = "Dusk/Dawn"
+            time = "Dawn/Dusk"
         elif info[1] == 2:
             time = "Day"
 
-        # Create table container
-        table = gtk.Table(rows=4, columns=2, homogeneous=False)
-        table.set_col_spacings(10)
-        table.set_row_spacings(10)
+        # Update the values for the labels.
+        self.label_path_value.set_text(current_bg)
+        self.label_kurtosis_value.set_text(str(info[0]))
+        self.label_brightness_value.set_text("%d (%s)" % (info[1], time))
 
-        # Text label
-        label_file = gtk.Label("Image path:")
-        label_file.set_alignment(1.0, 0)
-        table.attach(child=label_file, left_attach=0, right_attach=1,
-            top_attach=0, bottom_attach=1, xoptions=gtk.FILL,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # Value
-        text_file = gtk.Label(current_bg)
-        text_file.set_alignment(0, 1.0)
-        text_file.set_line_wrap(True)
-        text_file.set_selectable(True)
-        text_file.unset_flags(gtk.CAN_FOCUS)
-        table.attach(child=text_file, left_attach=1, right_attach=2,
-            top_attach=0, bottom_attach=1, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # Text label
-        label_kurtosis = gtk.Label("Kurtosis:")
-        label_kurtosis.set_alignment(1.0, 0)
-        table.attach(child=label_kurtosis, left_attach=0, right_attach=1,
-            top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # Value
-        text_kurtosis = gtk.Label(info[0])
-        text_kurtosis.set_alignment(0, 1.0)
-        text_kurtosis.set_selectable(True)
-        text_kurtosis.unset_flags(gtk.CAN_FOCUS)
-        table.attach(child=text_kurtosis, left_attach=1, right_attach=2,
-            top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # Text label
-        label_brightness = gtk.Label("Brightness value:")
-        label_brightness.set_alignment(1.0, 0)
-        table.attach(child=label_brightness, left_attach=0, right_attach=1,
-            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # Value
-        text_brightness = gtk.Label("%d (%s)" % (info[1], time))
-        text_brightness.set_alignment(0, 1.0)
-        text_brightness.set_selectable(True)
-        text_brightness.unset_flags(gtk.CAN_FOCUS)
-        table.attach(child=text_brightness, left_attach=1, right_attach=2,
-            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.FILL, xpadding=0, ypadding=0)
-
-        # OK button
-        button_ok = gtk.Button("OK")
-        button_ok.set_size_request(70, -1)
-        button_ok.connect("clicked", self.on_ok)
-        button_ok.set_flags(gtk.HAS_DEFAULT)
-
-        # Put the buttons in a box
-        button_box = gtk.HBox(homogeneous=True, spacing=5)
-        button_box.add(button_ok)
-
-        # Align the button box
-        buttons_align = gtk.Alignment(xalign=0.5, yalign=0, xscale=0, yscale=0)
-        buttons_align.add(button_box)
-
-        # Add the aligned box to the table
-        table.attach(child=buttons_align, left_attach=0, right_attach=2,
-            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
-
-        # Add the table to the main window.
-        self.add(table)
-
-        # Make it visible.
-        self.show_all()
-
-    def on_ok(self, widget, data=None):
+    def on_button_ok_clicked(self, widget, data=None):
         """Close the dialog."""
-        self.destroy()
+        self.dialog.destroy()
 
-
-class Preferences(gtk.Window):
+class Preferences(object):
     """Display a preferences dialog which allows the user to configure
     the application.
     """
 
-    def __init__(self, main):
-        self.main = main
-        super(Preferences, self).__init__()
+    def __init__(self, nextwall):
+        self.nextwall = nextwall
 
-        self.set_title("Preferences")
-        self.set_size_request(400, -1)
-        self.set_border_width(10)
-        self.set_position(gtk.WIN_POS_CENTER)
-        self.set_resizable(False)
-        self.set_keep_above(True)
+        self.builder = gtk.Builder()
+        self.builder.add_from_file('glade/preferences.glade')
 
-        # Create table container
-        table = gtk.Table(rows=4, columns=2, homogeneous=False)
-        table.set_col_spacings(10)
-        table.set_row_spacings(10)
+        # Connect the window signals to the handlers.
+        self.builder.connect_signals(self)
 
-        # Create a label
-        title = gtk.Label("Select backgrounds folder:")
-        table.attach(child=title, left_attach=0, right_attach=1,
-            top_attach=0, bottom_attach=1, xoptions=gtk.FILL,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+        # Get some GTK objects.
+        self.dialog = self.builder.get_object('preferences_dialog')
+        self.chooser_backgrounds_folder = self.builder.get_object('chooser_backgrounds_folder')
+        self.checkbutton_recursion = self.builder.get_object('checkbutton_recursion')
+        self.checkbutton_fit_time = self.builder.get_object('checkbutton_fit_time')
 
-        # Create a file chooser button
-        self.folderselect = gtk.FileChooserButton('Select a folder')
-        self.folderselect.set_action(gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER)
-        self.folderselect.set_current_folder(self.main.path)
-        table.attach(child=self.folderselect, left_attach=1, right_attach=2,
-            top_attach=0, bottom_attach=1, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+        # Transform the layout.
+        self.transform_layout()
 
-        # Create a checkbutton for recusrion
-        self.check_recursion = gtk.CheckButton("Enable recursion (look in subfolders)")
-        if self.main.recursive:
-            self.check_recursion.set_active(True)
-        #self.check_recursion.unset_flags(gtk.CAN_FOCUS)
-        table.attach(child=self.check_recursion, left_attach=0, right_attach=2,
-            top_attach=1, bottom_attach=2, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+    def transform_layout(self):
+        # Set the path for the folder chooser.
+        self.chooser_backgrounds_folder.set_current_folder(self.nextwall.path)
 
-        # Create a checkbutton for match time
-        self.check_fit_time = gtk.CheckButton("Select backgrounds that fit the time of day")
-        if self.main.fit_time:
-            self.check_fit_time.set_active(True)
-        #self.check_fit_time.unset_flags(gtk.CAN_FOCUS)
-        table.attach(child=self.check_fit_time, left_attach=0, right_attach=2,
-            top_attach=2, bottom_attach=3, xoptions=gtk.FILL|gtk.EXPAND,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+        # Enable/disable recusion checkbutton.
+        if self.nextwall.recursive:
+            self.checkbutton_recursion.set_active(True)
 
-        # About button
-        button_about = gtk.Button("About")
-        button_about.set_size_request(70, -1)
-        button_about.connect("clicked", self.on_about)
-        about_align = gtk.Alignment(xalign=0, yalign=0, xscale=0, yscale=0)
-        about_align.add(button_about)
-        table.attach(child=about_align, left_attach=0, right_attach=1,
-            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
+        # Enable/disable fit time checkbutton.
+        if self.nextwall.fit_time:
+            self.checkbutton_fit_time.set_active(True)
 
-        # OK button
-        button_ok = gtk.Button("OK")
-        button_ok.set_size_request(70, -1)
-        button_ok.connect("clicked", self.on_ok)
-
-        # Cancel button
-        button_cancel = gtk.Button("Cancel")
-        button_cancel.set_size_request(70, -1)
-        button_cancel.connect("clicked", self.on_cancel)
-
-        # Put the buttons in a box
-        button_box = gtk.HBox(homogeneous=True, spacing=5)
-        button_box.add(button_cancel)
-        button_box.add(button_ok)
-
-        # Align the button box
-        buttons_align = gtk.Alignment(xalign=1.0, yalign=0, xscale=0, yscale=0)
-        buttons_align.add(button_box)
-
-        # Add the aligned box to the table
-        table.attach(child=buttons_align, left_attach=1, right_attach=2,
-            top_attach=3, bottom_attach=4, xoptions=gtk.FILL,
-            yoptions=gtk.SHRINK, xpadding=0, ypadding=0)
-
-        # Add the table to the main window.
-        self.add(table)
-
-        # Make it visible.
-        self.show_all()
-
-    def on_ok(self, widget, data=None):
+    def on_button_ok_clicked(self, widget, data=None):
         """Save new settings and close the preferences dialog."""
         # Set the new backgrounds folder.
-        self.main.set_backgrounds_folder( self.folderselect.get_filename() )
+        self.nextwall.set_backgrounds_folder( self.chooser_backgrounds_folder.get_filename() )
 
         # Set recursion.
-        if self.check_recursion.get_active():
-            self.main.recursive = True
+        if self.checkbutton_recursion.get_active():
+            self.nextwall.recursive = True
         else:
-            self.main.recursive = False
+            self.nextwall.recursive = False
 
         # Set match time.
-        if self.check_fit_time.get_active():
-            self.main.set_fit_time(True)
+        if self.checkbutton_fit_time.get_active():
+            self.nextwall.set_fit_time(True)
         else:
-            self.main.set_fit_time(False)
+            self.nextwall.set_fit_time(False)
 
         # Destroy the dialog.
-        self.destroy()
+        self.dialog.destroy()
 
-    def on_cancel(self, widget, data=None):
+    def on_button_cancel_clicked(self, widget, data=None):
         """Close the preferences dialog."""
-        self.destroy()
+        self.dialog.destroy()
 
-    def on_about(self, widget, data=None):
-        license = ("This program is free software: you can redistribute it and/or modify\n"
-            "it under the terms of the GNU General Public License as published by\n"
-            "the Free Software Foundation, either version 3 of the License, or\n"
-            "(at your option) any later version.\n\n"
+    def on_button_about_clicked(self, widget, data=None):
+        builder = gtk.Builder()
+        builder.add_from_file('glade/about.glade')
 
-            "This program is distributed in the hope that it will be useful,\n"
-            "but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-            "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-            "GNU General Public License for more details.\n\n"
-
-            "You should have received a copy of the GNU General Public License\n"
-            "along with this program.  If not, see http://www.gnu.org/licenses/")
-
-        about = gtk.AboutDialog()
-        about.set_program_name("NextWall")
+        about = builder.get_object('about_dialog')
         about.set_version(__version__)
         about.set_copyright(__copyright__)
         about.set_authors(__credits__)
-        about.set_comments("A script to change to a random background image.")
-        about.set_license(license)
         about.run()
         about.destroy()
 
+class LoadBackgroundsDialog(object):
+    """Show the load backgrounds dialog."""
 
-class ProgressDialog(gtk.Window):
-    """Show a progress dialog."""
+    def __init__(self, nextwall):
+        self.nextwall = nextwall
+        self.nextwall.populate_db = True
 
-    def __init__(self, main, title, label):
-        super(ProgressDialog, self).__init__()
-        self.main = main
-        self.main.populate_db = True
+        self.builder = gtk.Builder()
+        self.builder.add_from_file('glade/load_backgrounds.glade')
 
-        self.connect("destroy", self.on_close)
-        self.set_size_request(-1, -1)
-        self.set_title(title)
-        self.set_border_width(0)
-        self.set_resizable(False)
-        self.set_position(gtk.WIN_POS_CENTER)
+        # Connect the window signals to the handlers.
+        self.builder.connect_signals(self)
 
-        # Create a vertical box container.
-        vbox = gtk.VBox(homogeneous=False, spacing=5)
-        vbox.set_border_width(10)
+        # Get some GTK objects.
+        self.dialog = self.builder.get_object('load_backgrounds_dialog')
 
-        # Create a label.
-        self.label = gtk.Label()
-        self.label.set_line_wrap(True)
-        self.label.set_justify(gtk.JUSTIFY_FILL)
-        self.label.set_text(label)
-
-        # Create the progress bar.
-        self.pbar = gtk.ProgressBar()
-        self.pbar.set_fraction(0.0)
-        self.pbar.set_orientation(gtk.PROGRESS_LEFT_TO_RIGHT)
-
-        pbar_align = gtk.Alignment(xalign=0.0, yalign=0.0, xscale=1.0, yscale=0.0)
-        pbar_align.add(self.pbar)
-
-        # Close button
-        button_close = gtk.Button("Close")
-        button_close.set_size_request(70, -1)
-        button_close.connect("clicked", self.on_close)
-
-        # Put the buttons in a box.
-        button_box = gtk.HBox(homogeneous=True, spacing=5)
-        button_box.add(button_close)
-
-        buttons_align = gtk.Alignment(xalign=1.0, yalign=0, xscale=0, yscale=0)
-        buttons_align.add(button_box)
-
-        # Add the alignment objects to the vertical container.
-        vbox.pack_start(child=self.label, expand=False, fill=False, padding=5)
-        vbox.pack_start(child=pbar_align, expand=False, fill=False, padding=5)
-        vbox.pack_start(child=buttons_align, expand=False, fill=False, padding=0)
-
-        self.add(vbox)
-        self.show_all()
-        self.show()
-
-    def on_close(self, widget=None, data=None):
-        self.main.populate_db = False
-        self.destroy()
+    def on_destroy(self, widget=None, data=None):
+        self.nextwall.populate_db = False
+        self.dialog.destroy()
 
 class PopulateDB(threading.Thread):
     """Analyze all image files in the specified folder and update the
@@ -898,26 +741,31 @@ class PopulateDB(threading.Thread):
         self.current = 0
         self.total = 0
 
+        self.progress_bar = self.parent.builder.get_object('progressbar')
+
     def update_progressbar(self):
         fraction = self.current / float(self.total)
-        self.parent.pbar.set_fraction(fraction)
-        self.parent.pbar.set_text("%d/%d" % (self.current, self.total))
+
+        self.progress_bar.set_fraction(fraction)
+        self.progress_bar.set_text("%d/%d" % (self.current, self.total))
+
         if self.current == self.total:
-            self.parent.pbar.set_text("Finished!")
+            self.progress_bar.set_text("Finished!")
+
         return False
 
     def run(self):
         """Calculate the image kurtosis for each image in the selected
         folder and save it to the database.
         """
-        images = self.parent.main.get_image_files()
+        images = self.parent.nextwall.get_image_files()
         self.total = len(images)
 
         # Get the image kurtosis of each file and save it to the
         # database.
         i = 1
         for image in images:
-            if not self.parent.main.populate_db:
+            if not self.parent.nextwall.populate_db:
                 # Stop the process if 'populate_db' set to False.
                 logging.info("Analyze images: stopped by user.")
                 return False
@@ -925,21 +773,12 @@ class PopulateDB(threading.Thread):
             self.current = i
             logging.info("Found %s" % (image))
             gobject.idle_add(self.update_progressbar)
-            self.parent.main.get_image_kurtosis(image)
+            self.parent.nextwall.get_image_kurtosis(image)
             i += 1
 
         logging.info("Image files successfully analyzed.")
 
-def adapt_str(string):
-    """Convert the custom Python type into one of SQLite's supported
-    types.
-    """
-    return string.decode("utf-8")
-
 if __name__ == "__main__":
-    # Registers adapt_str to convert the custom Python type into one of
-    # SQLite's supported types. This adds support for Unicode filenames.
-    sqlite.register_adapter(str, adapt_str)
+    main()
 
-    NextWall()
-    sys.exit(0)
+sys.exit()
