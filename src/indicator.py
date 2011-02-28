@@ -21,6 +21,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import logging
 import threading
 from sqlite3 import dbapi2 as sqlite
@@ -43,6 +44,10 @@ __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
 __date__ = "2011/02/16"
+
+
+def module_path():
+    return os.path.dirname(unicode(__file__, sys.getfilesystemencoding()))
 
 class Indicator(object):
     """Display an Application Indicator in the GNOME panel."""
@@ -166,7 +171,7 @@ class ImageInformation(object):
         self.nextwall = nextwall
 
         self.builder = gtk.Builder()
-        self.builder.add_from_file('glade/image_info.glade')
+        self.builder.add_from_file(os.path.join(module_path(), 'glade/image_info.glade'))
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
@@ -211,7 +216,7 @@ class Preferences(object):
         self.nextwall = nextwall
 
         self.builder = gtk.Builder()
-        self.builder.add_from_file('glade/preferences.glade')
+        self.builder.add_from_file(os.path.join(module_path(), 'glade/preferences.glade'))
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
@@ -267,7 +272,7 @@ class Preferences(object):
 class About(object):
     def __init__(self):
         builder = gtk.Builder()
-        builder.add_from_file('glade/about.glade')
+        builder.add_from_file(os.path.join(module_path(), 'glade/about.glade'))
 
         about = builder.get_object('about_dialog')
         about.set_logo_icon_name("nextwall")
@@ -285,7 +290,7 @@ class LoadBackgroundsDialog(object):
         self.nextwall.scan_for_images = True
 
         self.builder = gtk.Builder()
-        self.builder.add_from_file('glade/load_backgrounds.glade')
+        self.builder.add_from_file(os.path.join(module_path(), 'glade/load_backgrounds.glade'))
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
