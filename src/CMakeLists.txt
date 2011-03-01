@@ -5,10 +5,19 @@ project (nextwall)
 set (nextwall_VERSION_MAJOR 0)
 set (nextwall_VERSION_MINOR 9)
 
-set (CMAKE_INSTALL_PREFIX /usr/share)
+# Set the install prefix.
+set (CMAKE_INSTALL_PREFIX /usr)
 
-# add the install targets
-install (FILES "${PROJECT_BINARY_DIR}/*.py COPYING" DESTINATION nextwall)
-install (FILES "${PROJECT_BINARY_DIR}/nextwall" DESTINATION nextwall)
-install (FILES "${PROJECT_BINARY_DIR}/docs" DESTINATION nextwall)
-install (FILES "${PROJECT_BINARY_DIR}/glade" DESTINATION nextwall)
+# Pass some of the CMake settings to the nextwall script.
+configure_file (
+  "${PROJECT_SOURCE_DIR}/scripts/nextwall.in"
+  "${PROJECT_BINARY_DIR}/scripts/nextwall"
+  )
+
+# Add the install targets.
+install (FILES nextwall.py indicator.py COPYING DESTINATION share/nextwall)
+install (DIRECTORY glade DESTINATION share/nextwall)
+install (PROGRAMS ${PROJECT_BINARY_DIR}/scripts/nextwall DESTINATION bin)
+
+# Add a subdirectory to the build.
+#add_subdirectory (scripts)
