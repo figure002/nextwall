@@ -2,7 +2,7 @@
 <interface>
   <requires lib="gtk+" version="2.16"/>
   <!-- interface-naming-policy project-wide -->
-  <object class="GtkWindow" id="load_backgrounds_dialog">
+  <object class="GtkWindow" id="scan_backgrounds_dialog">
     <property name="visible">True</property>
     <property name="title" translatable="yes">Analyzing Backgrounds Images</property>
     <property name="resizable">False</property>

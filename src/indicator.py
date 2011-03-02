@@ -290,13 +290,13 @@ class LoadBackgroundsDialog(object):
         self.nextwall.scan_for_images = True
 
         self.builder = gtk.Builder()
-        self.builder.add_from_file(os.path.join(module_path(), 'glade/load_backgrounds.glade'))
+        self.builder.add_from_file(os.path.join(module_path(), 'glade/scan_backgrounds.glade'))
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
 
         # Get some GTK objects.
-        self.dialog = self.builder.get_object('load_backgrounds_dialog')
+        self.dialog = self.builder.get_object('scan_backgrounds_dialog')
 
     def on_destroy(self, widget=None, data=None):
         self.nextwall.scan_for_images = False

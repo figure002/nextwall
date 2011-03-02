@@ -1,0 +1,58 @@
+This is the README file for NextWall (nextwall). NextWall is a script to change
+to a random background image.
+
+Home page: http://saibot.no-ip.info/wiki/NextWall
+
+Installation Instructions for nextwall
+**************************************
+
+1) Configuring the nextwall build
+
+In the top level directory from where you extracted nextwall, run the following
+commands:
+
+mkdir build
+cd build/
+ccmake ..
+
+This will present you with a simple console based GUI of options for nextwall.
+First press 'c' to run the configure script. Review the options and change what
+you think is necessary. Press 'c' to run the configure script again. Press 'g'
+to generate the make files and exit.
+
+
+2) Compiling and installing
+
+As usual, type:
+
+make
+
+followed by (as root):
+
+make install
+
+
+Uninstallation Instructions
+***************************
+
+Removing all installed nextwall files
+=====================================
+
+Change to the build folder which you created in the top level directory
+from where you extracted nextwall:
+
+cd build/
+
+And run the uninstall command (as root):
+
+make uninstall
+
+
+Alternative uninstallation
+==========================
+
+Alternatively, you can remove the files listed in the install_manifest.txt file
+which has the same result as the 'make uninstall' command.
+
+xargs rm < install_manifest.txt
+
