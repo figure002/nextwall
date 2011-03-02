@@ -272,7 +272,7 @@ class NextWall(object):
     def save_to_db(self, path, kurtosis):
         connection = sqlite.connect(self.dbfile)
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?)", [path, kurtosis])
+        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?, null, null)", [path, kurtosis])
         connection.commit()
         cursor.close()
         connection.close()
@@ -288,7 +288,7 @@ class NextWall(object):
             path TEXT, \
             kurtosis FLOAT, \
             defined_brightness INTEGER, \
-            rating INTEGER, \
+            rating INTEGER \
             )")
 
         cursor.execute("CREATE TABLE info (\
@@ -311,12 +311,10 @@ class NextWall(object):
         self.populate_total = len(images)
 
         # Get the image kurtosis of each file and save it to the database.
-        i = 1
-        for image in images:
+        for i, image in enumerate(images, start=1):
             self.populate_current = i
             logging.info("Found %s" % (image))
             self.get_image_kurtosis(image)
-            i += 1
 
         logging.info("Database successfully populated.")
 
@@ -471,7 +469,7 @@ class NextWall(object):
         # Check if a path was returned.
         if not path:
             logging.error("No wallpaper was found in the database. You might need to scan for images first.")
-            return False
+            return 1
 
         # Get the current background used by GNOME.
         current_bg = self.gconf_client.get_string("/desktop/gnome/background/picture_filename")
@@ -483,7 +481,7 @@ class NextWall(object):
             # Stop the loop if we find the same image 3 times.
             if sames == 3:
                 logging.info("Not enough image files. Select a different folder or scan for image files.")
-                return False
+                return 2
             path = self.get_random_wallpaper()
             sames += 1
 
@@ -492,7 +490,7 @@ class NextWall(object):
         self.gconf_client.set_string("/desktop/gnome/background/picture_filename",
             path)
 
-        return True
+        return 0
 
 if __name__ == "__main__":
     main()

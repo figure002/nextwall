@@ -4,7 +4,7 @@
   <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="scan_backgrounds_dialog">
     <property name="visible">True</property>
-    <property name="title" translatable="yes">Analyzing Backgrounds Images</property>
+    <property name="title" translatable="yes">Scan Wallpapers Folder</property>
     <property name="resizable">False</property>
     <property name="modal">True</property>
     <property name="window_position">center</property>
@@ -19,7 +19,7 @@
           <object class="GtkLabel" id="label_descr">
             <property name="visible">True</property>
             <property name="xalign">0</property>
-            <property name="label" translatable="yes">NextWall is now calculating the brightness value for each image file in the specified folder. This brightness value is required for the "fit time of day" feature. Depending on the number of images files, this may take a while. Completing this analysis is recommended, as this will speed up the application drastically.</property>
+            <property name="label" translatable="yes">NextWall is now scanning the selected wallpapers folder for image files. At the same time it's calculating the brightness value for each image file. This brightness value is required for the "fit time of day" feature. Depending on the number of images files, this may take a while.</property>
             <property name="justify">fill</property>
             <property name="wrap">True</property>
           </object>

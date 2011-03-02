@@ -57,7 +57,7 @@ class Indicator(object):
 
         # Create an Application Indicator icon
         ind = appindicator.Indicator("nextwall",
-            "next", # Icon name
+            "nextwall", # Icon name
             appindicator.CATEGORY_OTHER)
         ind.set_status(appindicator.STATUS_ACTIVE)
 
@@ -69,7 +69,7 @@ class Indicator(object):
         info_item = gtk.MenuItem("Image Information")
         open_item = gtk.MenuItem("Open Current")
         delete_item = gtk.MenuItem("Delete Current")
-        populate_item = gtk.MenuItem("Analyze All Images")
+        populate_item = gtk.MenuItem("Scan Wallpapers Folder")
         pref_item = gtk.MenuItem("Preferences")
         quit_item = gtk.MenuItem("Quit")
         separator = gtk.SeparatorMenuItem()
@@ -103,13 +103,35 @@ class Indicator(object):
         gtk.main()
 
     def on_change_background(self, widget, data=None):
-        response = self.nextwall.change_background()
-        if not response:
-            message = ("No wallpaper was found in the database. You might need to scan for images first.")
+        return_code = self.nextwall.change_background()
+        if return_code == 1:
+            message = ("No wallpapers found")
             dialog = gtk.MessageDialog(parent=None, flags=0,
-                type=gtk.MESSAGE_INFO, buttons=gtk.BUTTONS_OK,
+                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
                 message_format=message)
+            dialog.format_secondary_text("No image files are known for the selected "
+                "wallpapers folder. If the \"fit time of day\" feature is enabled, "
+                "there might not be a wallpaper for the current time of day. "
+                "Would you like to scan the folder for more images?")
+            response = dialog.run()
             dialog.destroy()
+
+            if response == gtk.RESPONSE_YES:
+                self.on_scan_for_images()
+        elif return_code == 2:
+            message = ("Not enough wallpapers")
+            dialog = gtk.MessageDialog(parent=None, flags=0,
+                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
+                message_format=message)
+            dialog.format_secondary_text("Not enough image files are known for the selected "
+                "wallpapers folder. If the \"fit time of day\" feature is enabled, "
+                "there might not be a wallpaper for the current time of day. "
+                "Would you like to scan the folder for more images?")
+            response = dialog.run()
+            dialog.destroy()
+
+            if response == gtk.RESPONSE_YES:
+                self.on_scan_for_images()
 
     def on_image_info(self, widget, data=None):
         """Display image information."""
@@ -153,12 +175,12 @@ class Indicator(object):
         current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
         os.system('xdg-open "%s"' % (current_bg))
 
-    def on_scan_for_images(self, widget, data=None):
+    def on_scan_for_images(self, widget=None, data=None):
         """Run the main._scan_for_images function in a separate thread, and
         show a nice progress dialog.
         """
         # Display the load backgrounds dialog.
-        pgd = LoadBackgroundsDialog(self.nextwall)
+        pgd = ScanWallpapersDialog(self.nextwall)
 
         # Start the PopulateDB class in a new thread.
         pdb = PopulateDB(pgd)
@@ -282,7 +304,7 @@ class About(object):
         about.run()
         about.destroy()
 
-class LoadBackgroundsDialog(object):
+class ScanWallpapersDialog(object):
     """Show the load backgrounds dialog."""
 
     def __init__(self, nextwall):
@@ -333,10 +355,13 @@ class PopulateDB(threading.Thread):
         images = self.parent.nextwall.get_image_files()
         self.total = len(images)
 
+        if self.total == 0:
+            gobject.idle_add(self.progress_bar.set_text, "No image files found")
+            return False
+
         # Get the image kurtosis of each file and save it to the
         # database.
-        i = 1
-        for image in images:
+        for i, image in enumerate(images, start=1):
             if not self.parent.nextwall.scan_for_images:
                 # Stop the process if 'scan_for_images' set to False.
                 logging.info("Analyze images: stopped by user.")
@@ -346,6 +371,5 @@ class PopulateDB(threading.Thread):
             logging.info("Found %s" % (image))
             gobject.idle_add(self.update_progressbar)
             self.parent.nextwall.get_image_kurtosis(image)
-            i += 1
 
         logging.info("Image files successfully scanned.")
