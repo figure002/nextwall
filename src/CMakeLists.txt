@@ -4,6 +4,7 @@ project (nextwall)
 # The version number.
 set (nextwall_VERSION_MAJOR 0)
 set (nextwall_VERSION_MINOR 9)
+set (nextwall_VERSION_BUILD 1)
 
 # Set the install prefix.
 #set (CMAKE_INSTALL_PREFIX /usr)
