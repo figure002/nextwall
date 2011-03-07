@@ -39,11 +39,11 @@ __copyright__ = ("Copyright 2004, Davyd Madeley\n"
 __credits__ = ["Davyd Madeley <davyd@madeley.id.au>",
     "Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
-__version__ = "0.9.1"
+__version__ = "0.2.0"
 __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
-__date__ = "2011/02/16"
+__date__ = "2011/03/03"
 
 
 def module_path():

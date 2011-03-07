@@ -1,13 +1,8 @@
 cmake_minimum_required (VERSION 2.6)
-project (nextwall)
-
-# The version number.
-set (nextwall_VERSION_MAJOR 0)
-set (nextwall_VERSION_MINOR 9)
-set (nextwall_VERSION_BUILD 1)
+project (nextwall-core)
 
 # Set the install prefix.
-#set (CMAKE_INSTALL_PREFIX /usr)
+set (CMAKE_INSTALL_PREFIX /usr)
 
 # Pass some of the CMake settings to the nextwall script.
 configure_file (

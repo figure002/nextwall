@@ -6,7 +6,21 @@ Home page: http://saibot.no-ip.info/wiki/NextWall
 Installation Instructions for nextwall
 **************************************
 
-1) Configuring the nextwall build
+1) First make sure you have all dependencies installed
+
+* gnome
+* python2.6
+* libappindicator-dev
+* python-appindicator
+* imagemagick
+
+On Ubuntu or other Debian based systems, run this command to install all
+dependencies:
+
+sudo apt-get install python libappindicator-dev python-appindicator imagemagick
+
+
+2) Configuring the nextwall build
 
 In the top level directory from where you extracted nextwall, run the following
 commands:
@@ -21,7 +35,7 @@ you think is necessary. Press 'c' to run the configure script again. Press 'g'
 to generate the make files and exit.
 
 
-2) Compiling and installing
+3) Compiling and installing
 
 As usual, type:
 
