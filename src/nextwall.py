@@ -119,7 +119,7 @@ def usage():
     print "  -r, --recursive\tLook in subfolders."
     print "  -a, --applet\t\tRun as applet in the GNOME panel."
     print ("  -t, --fit-time\tSelect backgrounds that fit the time of day. It is\n"
-            "\t\t\trecommended to use --populate-db first.")
+            "\t\t\trecommended to use --scan first.")
     print ("  -s, --scan\t\tScan for images files in [path].\n"
             "\t\t\tto a database file. This drastically speeds up the\n"
             "\t\t\tprogram if the fit-time option is enabled.")
