@@ -41,13 +41,13 @@
      inkscape:window-height="715"
      id="namedview13"
      showgrid="true"
-     inkscape:zoom="18.266926"
-     inkscape:cx="12.460648"
-     inkscape:cy="9.1829711"
+     inkscape:zoom="12.916667"
+     inkscape:cx="13.236571"
+     inkscape:cy="9.2819484"
      inkscape:window-x="0"
      inkscape:window-y="25"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g3876">
+     inkscape:current-layer="layer3">
     <inkscape:grid
        type="xygrid"
        id="grid2993"
@@ -126,23 +126,23 @@
          id="stop3778" />
     </linearGradient>
     <linearGradient
-       x1="-33.805603"
-       y1="3"
-       x2="-33.805603"
-       y2="15.041595"
+       x1="-33.746998"
+       y1="3.2205486"
+       x2="-33.746998"
+       y2="15.010414"
        id="linearGradient3274"
-       xlink:href="#linearGradient3587-6-5"
+       xlink:href="#linearGradient3767"
        gradientUnits="userSpaceOnUse"
        gradientTransform="matrix(1.1333356,-0.00138617,0,1.3570977,49.246672,0.58262195)" />
     <linearGradient
        id="linearGradient3587-6-5">
       <stop
          id="stop3589-9-2"
-         style="stop-color:#73adff;stop-opacity:1;"
+         style="stop-color:#9db8d2;stop-opacity:1;"
          offset="0" />
       <stop
          id="stop3591-7-4"
-         style="stop-color:#00386f;stop-opacity:1;"
+         style="stop-color:#4b6983;stop-opacity:1;"
          offset="1" />
     </linearGradient>
     <linearGradient
@@ -318,11 +318,11 @@
     </linearGradient>
     <linearGradient
        inkscape:collect="always"
-       xlink:href="#linearGradient3805"
+       xlink:href="#linearGradient3767"
        id="linearGradient3811"
-       x1="15"
+       x1="14"
        y1="8"
-       x2="15"
+       x2="14"
        y2="14"
        gradientUnits="userSpaceOnUse"
        gradientTransform="translate(1,2)" />
@@ -509,6 +509,15 @@
          offset="1"
          id="stop3809-6" />
     </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3587-6-5"
+       id="linearGradient4128"
+       x1="11"
+       y1="5"
+       x2="11"
+       y2="17"
+       gradientUnits="userSpaceOnUse" />
   </defs>
   <g
      inkscape:groupmode="layer"
@@ -574,23 +583,27 @@
      inkscape:label="objects"
      style="display:inline"
      transform="translate(0,-2)">
-    <path
-       inkscape:connector-curvature="0"
-       id="path3035-9"
-       d="m 17,12 -4,-3 0,6 z"
-       style="opacity:0.59999999999999998;fill:#000000;fill-opacity:1;stroke:none;display:inline"
-       sodipodi:nodetypes="cccc"
-       transform="translate(0,2)" />
     <g
-       transform="translate(0,1)"
-       style="opacity:0.6;fill:#000000;fill-opacity:1;display:inline"
-       id="g3876-4">
+       id="g3086"
+       style="fill:#ffffff;fill-opacity:1;opacity:0.6">
       <path
-         sodipodi:nodetypes="sssssssssccccc"
-         inkscape:connector-curvature="0"
-         style="fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
-         id="rect2722-8"
-         d="M 4,5 C 3,5 2,6 2,7 l 0,12 c 0,1 1,2 2,2 l 14,0 c 1,0 2,-1 2,-2 L 20,7 C 20,6 19.000001,5 18,5 z m 0,2 14,0 0,12 -14,0 z" />
+         transform="translate(0,2)"
+         sodipodi:nodetypes="cccc"
+         style="opacity:0.59999999999999998;fill:#ffffff;fill-opacity:1;stroke:none;display:inline"
+         d="m 17,12 -4,-3 0,6 z"
+         id="path3035-9"
+         inkscape:connector-curvature="0" />
+      <g
+         id="g3876-4"
+         style="opacity:0.59999999999999998;fill:#ffffff;fill-opacity:1;display:inline"
+         transform="translate(0,1)">
+        <path
+           d="M 4,5 C 3,5 2,6 2,7 l 0,12 c 0,1 1,2 2,2 l 14,0 c 1,0 2,-1 2,-2 L 20,7 C 20,6 19.000001,5 18,5 z m 0,2 14,0 0,12 -14,0 z"
+           id="rect2722-8"
+           style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="sssssssssccccc" />
+      </g>
     </g>
   </g>
   <g
@@ -608,6 +621,30 @@
          style="fill:url(#linearGradient3274);fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
          id="rect2722"
          d="M 4,5 C 3,5 2,6 2,7 l 0,12 c 0,1 1,2 2,2 l 14,0 c 1,0 2,-1 2,-2 L 20,7 C 20,6 19.000001,5 18,5 z m 0,2 14,0 0,12 -14,0 z" />
+      <rect
+         style="opacity:0.6;fill:none;stroke:none"
+         id="rect4116"
+         width="14"
+         height="12"
+         x="4"
+         y="5"
+         transform="translate(0,2)" />
+      <rect
+         style="opacity:0.6;fill:none;stroke:none"
+         id="rect4118"
+         width="5"
+         height="6"
+         x="4"
+         y="5"
+         transform="translate(0,2)" />
+      <rect
+         style="fill:url(#linearGradient4128);fill-opacity:1;stroke:none;opacity:0.6"
+         id="rect4120"
+         width="14"
+         height="12"
+         x="4"
+         y="5"
+         transform="translate(0,2)" />
     </g>
     <path
        transform="translate(0,-2)"
