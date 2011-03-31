@@ -5,6 +5,7 @@
   <object class="GtkAboutDialog" id="about_dialog">
     <property name="border_width">5</property>
     <property name="window_position">center</property>
+    <property name="icon_name">nextwall</property>
     <property name="type_hint">normal</property>
     <property name="program_name">NextWall</property>
     <property name="comments" translatable="yes">A script to change to a random background image.</property>

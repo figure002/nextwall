@@ -8,6 +8,7 @@
     <property name="title" translatable="yes">Preferences</property>
     <property name="resizable">False</property>
     <property name="window_position">center</property>
+    <property name="icon_name">nextwall</property>
     <child>
       <object class="GtkTable" id="table">
         <property name="visible">True</property>
