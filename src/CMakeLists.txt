@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 2.6)
 project (nextwall-core)
 
 # Set the install prefix.
-set (CMAKE_INSTALL_PREFIX /usr)
+#set (CMAKE_INSTALL_PREFIX /usr)
 
 # Pass some of the CMake settings to the nextwall script.
 configure_file (
