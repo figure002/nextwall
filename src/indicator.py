@@ -36,8 +36,7 @@ import appindicator
 __author__ = "Serrano Pereira"
 __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, 2011, Serrano Pereira")
-__credits__ = ["Davyd Madeley <davyd@madeley.id.au>",
-    "Serrano Pereira <serrano.pereira@gmail.com>"]
+__credits__ = ["Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
 __version__ = "0.2.0"
 __maintainer__ = "Serrano Pereira"

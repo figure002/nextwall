@@ -42,8 +42,7 @@ gobject.threads_init()
 __author__ = "Serrano Pereira"
 __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, 2011, Serrano Pereira")
-__credits__ = ["Davyd Madeley <davyd@madeley.id.au>",
-    "Serrano Pereira <serrano.pereira@gmail.com>"]
+__credits__ = ["Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
 __version__ = "0.2.0"
 __maintainer__ = "Serrano Pereira"
@@ -121,7 +120,7 @@ class NextWall(object):
         self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
 
         # Create main argument parser.
-        parser = argparse.ArgumentParser(description='A wallpaper changer.')
+        parser = argparse.ArgumentParser(prog='nextwall', description='A wallpaper changer with some sense of time.')
         parser.add_argument('--version',
             action='version',
             help="Print version information.",
