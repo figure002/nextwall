@@ -8,7 +8,7 @@
     <property name="icon_name">nextwall</property>
     <property name="type_hint">normal</property>
     <property name="program_name">NextWall</property>
-    <property name="comments" translatable="yes">A script to change to a random background image.</property>
+    <property name="comments" translatable="yes">A wallpaper changer with some sense of time.</property>
     <property name="license" translatable="yes">NextWall is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
