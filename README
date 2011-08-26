@@ -68,5 +68,5 @@ Alternative uninstallation
 Alternatively, you can remove the files listed in the install_manifest.txt file
 which has the same result as the 'make uninstall' command.
 
-xargs rm < install_manifest.txt
+xargs -d "\n" rm < install_manifest.txt
 

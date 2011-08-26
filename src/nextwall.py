@@ -25,7 +25,7 @@ import os
 import random
 import logging
 import mimetypes
-import getopt
+import argparse
 import commands
 import threading
 import time
@@ -53,10 +53,10 @@ __date__ = "2011/03/03"
 
 
 KURTOSIS_THRESHOLD = (0.0, 2.0) # <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
-DAWN_START = 9 # Hour at which dawn starts
-DAY_START = 12 # Hour at which day starts
-DUSK_START = 18 # Hour at which dusk starts
-NIGHT_START = 21 # Hour at which night starts
+DAWN_START = 6 # Hour at which dawn starts
+DAY_START = 8 # Hour at which day starts
+DUSK_START = 20 # Hour at which dusk starts
+NIGHT_START = 22 # Hour at which night starts
 
 def main():
     # Make sure the 'identify' command is available.
@@ -107,30 +107,10 @@ def get_files(rootdir):
 
     return file_list
 
-def usage():
-    """Print usage information."""
-    print "nextwall %s" % (__version__)
-    print "\nUsage: %s [options] [path]" % ( os.path.split(sys.argv[0])[1] )
-    print "  [path]\tPath to folder containing background images."
-    print "\t\tIf no path is specified, the default path"
-    print "\t\t/usr/share/backgrounds/ will be used."
-    print "\nOptions:"
-    print "  -h, --help\t\tShow usage information."
-    print "  -r, --recursive\tLook in subfolders."
-    print "  -a, --applet\t\tRun as applet in the GNOME panel."
-    print ("  -t, --fit-time\tSelect backgrounds that fit the time of day. It is\n"
-            "\t\t\trecommended to use --scan first.")
-    print ("  -s, --scan\t\tScan for images files in [path].\n"
-            "\t\t\tto a database file. This drastically speeds up the\n"
-            "\t\t\tprogram if the fit-time option is enabled.")
-    print "  -v, --verbose\t\tTurn on verbose output."
-    sys.exit()
-
 class NextWall(object):
     """The main class."""
 
     def __init__(self):
-        self.argv = sys.argv[1:] # User arguments
         self.recursive = False # Enable recursion
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
@@ -140,31 +120,56 @@ class NextWall(object):
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
         self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
 
-        # Check for user defined options.
-        try:
-            opts, args = getopt.getopt(self.argv, "hratvs",
-                ["help","recursive","applet","fit-time","verbose","scan"])
-        except getopt.GetoptError:
-            usage()
+        # Create main argument parser.
+        parser = argparse.ArgumentParser(description='A wallpaper changer.')
+        parser.add_argument('--version',
+            action='version',
+            help="Print version information.",
+            version="nextwall "+__version__)
+        parser.add_argument('-r, --recursive',
+            action='store_true',
+            help="Look in subfolders",
+            dest='recursive')
+        parser.add_argument('-a, --applet',
+            action='store_true',
+            help="Run as applet in the GNOME panel.",
+            dest='applet')
+        parser.add_argument('-t, --fit-time',
+            action='store_true',
+            help="Select backgrounds that fit the time of day. It is required to scan (--scan) for wallpapers first.",
+            dest='fit_time')
+        parser.add_argument('-s, --scan',
+            action='store_true',
+            help="Scan for images files in PATH.",
+            dest='scan')
+        parser.add_argument('-v, --verbose',
+            action='store_true',
+            help="Turn on verbose output.",
+            dest='verbose')
+        parser.add_argument('path',
+            action='store',
+            default='/usr/share/backgrounds/',
+            nargs='?',
+            type=str,
+            help="Path to folder containing background images. If no path is specified, the default path /usr/share/backgrounds/ will be used.",
+            metavar="PATH")
 
-        for opt, arg in opts:
-            if opt in ("-h", "--help"):
-                usage()
-            if opt in ("-r", "--recursive"):
-                self.recursive = True
-            if opt in ("-a", "--applet"):
-                self.applet = True
-            if opt in ("-t", "--fit-time"):
-                self.set_fit_time(True)
-            if opt in ("-v", "--verbose"):
-                logging.basicConfig(level=logging.INFO,
-                    format='%(levelname)s %(message)s')
-            if opt in ("-s", "--scan"):
-                self.scan_for_images = True
+        # Parse the arguments.
+        args = parser.parse_args()
 
-                # Turn on verbose mode, so the user knows what's happening.
-                logging.basicConfig(level=logging.INFO,
-                    format='%(levelname)s %(message)s')
+        # Handle the arguments.
+        if args.recursive:
+            self.recursive = True
+        if args.applet:
+            self.applet = True
+        if args.fit_time:
+            self.set_fit_time(True)
+        if args.verbose:
+            logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
+        if args.scan:
+            self.scan_for_images = True
+            # Turn on verbose mode, so the user knows what's happening.
+            logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
 
         # Check if the data folder exists. If not, create it.
         if not os.path.exists(self.data_home):
@@ -177,7 +182,7 @@ class NextWall(object):
             self.make_db()
 
         # Set the backgrounds folder.
-        self.set_backgrounds_folder(args)
+        self.set_backgrounds_folder(args.path)
 
         # Check if we need to populate the database.
         if self.scan_for_images:
@@ -197,17 +202,9 @@ class NextWall(object):
 
     def set_backgrounds_folder(self, path):
         """Set the backgrounds folder."""
-        if type(path) == type([]):
-            # Get the path from the given argument.
-            if len(path) == 0:
-                # If no argument was set, use the default path.
-                return
-            elif len(path) == 1:
-                # If argument was given, use this as the path.
-                path = os.path.abspath(path[0])
-            else:
-                # The user provided 2 or more arguments, which is wrong.
-                usage()
+        # If no argument was set, use the default path.
+        if not path:
+            return
 
         # Check if the backgrounds folder is valid.
         if not os.path.exists(path):
