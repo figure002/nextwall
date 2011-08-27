@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# This file is part of NextWall - A script to change to a random background
-# image.
+# This file is part of NextWall - A wallpaper changer with some sense of time.
 #
 #  Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
 #  Copyright 2010, 2011, Serrano Pereira <serrano.pereira@gmail.com>
@@ -38,11 +37,11 @@ __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, 2011, Serrano Pereira")
 __credits__ = ["Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
-__date__ = "2011/03/03"
+__date__ = "2011/08/27"
 
 
 def module_path():
