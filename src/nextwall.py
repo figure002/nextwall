@@ -29,6 +29,7 @@ import commands
 import threading
 import time
 from sqlite3 import dbapi2 as sqlite
+import subprocess
 
 import xdg.BaseDirectory as basedir
 import gconf
@@ -117,6 +118,12 @@ class NextWall(object):
         self.gconf_client = gconf.client_get_default() # GConf client
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
         self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
+
+        # Check which version of Gnome we are using.
+        if is_command('gsettings'):
+            self.gnome = 3
+        else:
+            self.gnome = 2
 
         # Create main argument parser.
         parser = argparse.ArgumentParser(prog='nextwall', description='A wallpaper changer with some sense of time.')
@@ -467,7 +474,7 @@ class NextWall(object):
             return 1
 
         # Get the current background used by GNOME.
-        current_bg = self.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.get_background_uri()
 
         # Make sure the random background item isn't the same as the
         # current background.
@@ -482,10 +489,42 @@ class NextWall(object):
 
         # Finally, set the new background.
         logging.info("Setting background to %s" % path)
-        self.gconf_client.set_string("/desktop/gnome/background/picture_filename",
-            path)
+        self.set_background_uri(path)
 
         return 0
+
+    def set_background_uri(self, filename):
+        """Set the background URI.
+
+        If we are running GNOME 2, then the gconf client is used to set the
+        new background. If running GNOME 3, then `gsettings' is used.
+        """
+        if self.gnome == 3:
+            if not filename.startswith("file://"):
+                filename = "file://"+filename
+            cmd = ['gsettings','set','org.gnome.desktop.background','picture-uri', filename]
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+        else:
+            self.gconf_client.set_string("/desktop/gnome/background/picture_filename", filename)
+
+    def get_background_uri(self):
+        """Return the background URI.
+
+        If we are running GNOME 2, then the gconf client is used to get the
+        URI. If running GNOME 3, then `gsettings' is used.
+        """
+        if self.gnome == 3:
+            cmd = ['gsettings','get','org.gnome.desktop.background','picture-uri']
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+            uri = stdout
+            uri = stdout.strip("'")
+            uri = uri[7:]
+            uri = uri[:-2] # This is a workaround.
+        else:
+            uri = self.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+        return uri
 
 if __name__ == "__main__":
     main()

@@ -145,7 +145,7 @@ class Indicator(object):
 
     def on_delete_current(self, widget, data=None):
         """Delete the current background image from the harddisk."""
-        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.nextwall.get_background_uri()
         message = ("This will <b>permanently</b> remove the current background "
             "image (%s) from your harddisk.") % (current_bg)
 
@@ -170,7 +170,7 @@ class Indicator(object):
         """Open the current background with the system's default image
         viewer.
         """
-        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.nextwall.get_background_uri()
         os.system('xdg-open "%s"' % (current_bg))
 
     def on_scan_for_images(self, widget=None, data=None):
@@ -207,7 +207,8 @@ class ImageInformation(object):
 
     def transform_layout(self):
         # Get the current background.
-        current_bg = self.nextwall.gconf_client.get_string("/desktop/gnome/background/picture_filename")
+        current_bg = self.nextwall.get_background_uri()
+        print current_bg
 
         # Get the image brightness for the current background.
         info = self.nextwall.get_image_brightness(file=current_bg, get=True)
