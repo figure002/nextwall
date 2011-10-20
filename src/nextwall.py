@@ -269,7 +269,7 @@ class NextWall(object):
         return float(kurtosis)
 
     def set_gnome_version(self):
-        cmd = 'gnome-about --gnome-version | grep Version'
+        cmd = 'gnome-session --version'
         output = commands.getoutput(cmd)
         output = output.split()
         version = output[1][0]
