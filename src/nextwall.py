@@ -44,7 +44,7 @@ __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, 2011, Serrano Pereira")
 __credits__ = ["Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
-__version__ = "0.2.1"
+__version__ = "0.2.2"
 __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
@@ -119,11 +119,8 @@ class NextWall(object):
         self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
         self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
 
-        # Check which version of Gnome we are using.
-        if is_command('gsettings'):
-            self.gnome = 3
-        else:
-            self.gnome = 2
+        # Check which version of Gnome we are running.
+        self.set_gnome_version()
 
         # Create main argument parser.
         parser = argparse.ArgumentParser(prog='nextwall', description='A wallpaper changer with some sense of time.')
@@ -270,6 +267,17 @@ class NextWall(object):
             kurtosis = kurtosis[0]
 
         return float(kurtosis)
+
+    def set_gnome_version(self):
+        cmd = 'gnome-about --gnome-version | grep Version'
+        output = commands.getoutput(cmd)
+        output = output.split()
+        version = output[1][0]
+        try:
+            version = int(version)
+        except:
+            raise OSError("You don't appear to be running GNOME. Either GNOME 2 or 3 is required.")
+        self.gnome_version = version
 
     def save_to_db(self, path, kurtosis):
         connection = sqlite.connect(self.dbfile)
@@ -499,7 +507,7 @@ class NextWall(object):
         If we are running GNOME 2, then the gconf client is used to set the
         new background. If running GNOME 3, then `gsettings' is used.
         """
-        if self.gnome == 3:
+        if self.gnome_version == 3:
             if not filename.startswith("file://"):
                 filename = "file://"+filename
             cmd = ['gsettings','set','org.gnome.desktop.background','picture-uri', filename]
@@ -514,7 +522,7 @@ class NextWall(object):
         If we are running GNOME 2, then the gconf client is used to get the
         URI. If running GNOME 3, then `gsettings' is used.
         """
-        if self.gnome == 3:
+        if self.gnome_version == 3:
             cmd = ['gsettings','get','org.gnome.desktop.background','picture-uri']
             p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
