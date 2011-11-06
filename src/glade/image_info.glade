@@ -67,18 +67,6 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="label_brightness">
-            <property name="visible">True</property>
-            <property name="xalign">1</property>
-            <property name="label" translatable="yes">Brightness value:</property>
-          </object>
-          <packing>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-            <property name="x_options">GTK_FILL</property>
-          </packing>
-        </child>
-        <child>
           <object class="GtkLabel" id="label_path_value">
             <property name="visible">True</property>
             <property name="can_focus">True</property>
@@ -106,11 +94,25 @@
           </packing>
         </child>
         <child>
-          <object class="GtkLabel" id="label_brightness_value">
+          <object class="GtkLabel" id="label_brightness">
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="xalign">0</property>
-            <property name="selectable">True</property>
+            <property name="xalign">1</property>
+            <property name="label" translatable="yes">Brightness value:</property>
+          </object>
+          <packing>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkAlignment" id="alignment_brightness">
+            <property name="visible">True</property>
+            <child>
+              <object class="GtkComboBox" id="combobox_brightness">
+                <property name="visible">True</property>
+                <property name="model">liststore_brightness</property>
+              </object>
+            </child>
           </object>
           <packing>
             <property name="left_attach">1</property>
@@ -121,5 +123,11 @@
         </child>
       </object>
     </child>
+  </object>
+  <object class="GtkListStore" id="liststore_brightness">
+    <columns>
+      <!-- column-name brightness -->
+      <column type="gchararray"/>
+    </columns>
   </object>
 </interface>

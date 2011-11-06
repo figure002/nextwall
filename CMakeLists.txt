@@ -4,7 +4,7 @@ project (nextwall)
 # The version number.
 set (nextwall_VERSION_MAJOR 0)
 set (nextwall_VERSION_MINOR 2)
-set (nextwall_VERSION_PATCH 1)
+set (nextwall_VERSION_PATCH 2)
 
 # Pass some of the CMake settings to the post install script.
 configure_file (

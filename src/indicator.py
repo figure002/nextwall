@@ -23,9 +23,7 @@ import os
 import sys
 import logging
 import threading
-from sqlite3 import dbapi2 as sqlite
 
-import gconf
 import gobject
 import pygtk
 pygtk.require('2.0')
@@ -200,32 +198,41 @@ class ImageInformation(object):
         self.dialog = self.builder.get_object('image_info_dialog')
         self.label_path_value = self.builder.get_object('label_path_value')
         self.label_kurtosis_value = self.builder.get_object('label_kurtosis_value')
-        self.label_brightness_value = self.builder.get_object('label_brightness_value')
+        self.combobox_brightness = self.builder.get_object('combobox_brightness')
 
         # Transform the layout.
         self.transform_layout()
 
     def transform_layout(self):
         # Get the current background.
-        current_bg = self.nextwall.get_background_uri()
-        print current_bg
+        self.current_bg = self.nextwall.get_background_uri()
 
         # Get the image brightness for the current background.
-        info = self.nextwall.get_image_brightness(file=current_bg, get=True)
-        if info[1] == 0:
-            time = "Night"
-        elif info[1] == 1:
-            time = "Dawn/Dusk"
-        elif info[1] == 2:
-            time = "Day"
+        kurtosis, self.brightness = self.nextwall.get_image_brightness(self.current_bg, get=True)
 
         # Update the values for the labels.
-        self.label_path_value.set_text(current_bg)
-        self.label_kurtosis_value.set_text(str(info[0]))
-        self.label_brightness_value.set_text("%d (%s)" % (info[1], time))
+        self.label_path_value.set_text(self.current_bg)
+        self.label_kurtosis_value.set_text(str(kurtosis))
+
+        # Add items to the "New brightness" combobox.
+        #print gobject.type_name(gobject.TYPE_STRING)
+        cell = gtk.CellRendererText()
+        self.combobox_brightness.pack_start(cell, True)
+        self.combobox_brightness.add_attribute(cell, 'text', 0)
+        self.combobox_brightness.append_text('Night')
+        self.combobox_brightness.append_text('Dawn/Dusk')
+        self.combobox_brightness.append_text('Day')
+        self.combobox_brightness.set_active(self.brightness)
 
     def on_button_ok_clicked(self, widget, data=None):
-        """Close the dialog."""
+        """Save settings and close the dialog."""
+        # Get the selected brightness value.
+        active = self.combobox_brightness.get_active()
+
+        # Set the new brightness value, if the user selected a different one.
+        if self.brightness != active:
+            self.nextwall.set_defined_brightness(self.current_bg, active)
+
         self.dialog.destroy()
 
 class Preferences(object):
@@ -247,6 +254,8 @@ class Preferences(object):
         self.chooser_backgrounds_folder = self.builder.get_object('chooser_backgrounds_folder')
         self.checkbutton_recursion = self.builder.get_object('checkbutton_recursion')
         self.checkbutton_fit_time = self.builder.get_object('checkbutton_fit_time')
+        self.entry_lat = self.builder.get_object('entry_lat')
+        self.entry_lon = self.builder.get_object('entry_lon')
 
         # Transform the layout.
         self.transform_layout()
@@ -262,6 +271,10 @@ class Preferences(object):
         # Enable/disable fit time checkbutton.
         if self.nextwall.fit_time:
             self.checkbutton_fit_time.set_active(True)
+
+        # Set latitude and longitude values.
+        self.entry_lat.set_text(str(self.nextwall.latitude))
+        self.entry_lon.set_text(str(self.nextwall.longitude))
 
     def on_button_ok_clicked(self, widget, data=None):
         """Save new settings and close the preferences dialog."""
@@ -279,6 +292,42 @@ class Preferences(object):
             self.nextwall.set_fit_time(True)
         else:
             self.nextwall.set_fit_time(False)
+
+        # Set latitude and longitude values.
+        lat_lon_set = False
+        latitude = self.entry_lat.get_text()
+        longitude = self.entry_lon.get_text()
+
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+        except:
+            dialog = gtk.MessageDialog(parent=None, flags=0,
+                type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
+                message_format="Latitude and longitude")
+            dialog.format_secondary_text("The values you entered for latitude "
+                "and longitude are not correct. Please correct the values.")
+            dialog.set_position(gtk.WIN_POS_CENTER)
+            dialog.run()
+            dialog.destroy()
+            return
+
+        self.nextwall.latitude = latitude
+        self.nextwall.longitude = longitude
+        lat_lon_set = True
+
+        # Make sure that both latitude and longitude are set if the fit time
+        # of day checkbox is checked.
+        if self.checkbutton_fit_time.get_active() and not lat_lon_set:
+            dialog = gtk.MessageDialog(parent=None, flags=0,
+                type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
+                message_format="Latitude and longitude")
+            dialog.format_secondary_text("Latitude and longitude must be set "
+                "for the fit time of day feature to work. Please set these values.")
+            dialog.set_position(gtk.WIN_POS_CENTER)
+            dialog.run()
+            dialog.destroy()
+            return
 
         # Destroy the dialog.
         self.dialog.destroy()

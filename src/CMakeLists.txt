@@ -11,7 +11,7 @@ configure_file (
   )
 
 # Add the install targets.
-install (FILES nextwall.py indicator.py DESTINATION share/nextwall)
+install (FILES nextwall.py indicator.py sun.py std.py DESTINATION share/nextwall)
 install (DIRECTORY glade DESTINATION share/nextwall)
 install (PROGRAMS ${PROJECT_BINARY_DIR}/scripts/nextwall DESTINATION bin)
 

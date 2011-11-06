@@ -30,11 +30,13 @@ import threading
 import time
 from sqlite3 import dbapi2 as sqlite
 import subprocess
+import datetime
 
 import xdg.BaseDirectory as basedir
 import gconf
 import gobject
 
+import std
 import indicator
 
 gobject.threads_init()
@@ -51,15 +53,17 @@ __status__ = "Production"
 __date__ = "2011/08/27"
 
 
-KURTOSIS_THRESHOLD = (0.0, 2.0) # <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
-DAWN_START = 6 # Hour at which dawn starts
-DAY_START = 8 # Hour at which day starts
-DUSK_START = 20 # Hour at which dusk starts
-NIGHT_START = 22 # Hour at which night starts
+# Set the user's data folder.
+DATA_HOME = os.path.join(basedir.xdg_data_home, 'nextwall')
+# Set the path to database file.
+DBFILE = os.path.join(DATA_HOME, 'nextwall.db')
+# <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
+KURTOSIS_THRESHOLD = (0.0, 2.0)
+
 
 def main():
     # Make sure the 'identify' command is available.
-    if not is_command('identify'):
+    if not std.is_command('identify'):
         logging.error("No command 'identify' found. Please install package 'imagemagick'.")
         sys.exit(1)
 
@@ -67,57 +71,68 @@ def main():
     # SQLite's supported types. This adds support for Unicode filenames.
     sqlite.register_adapter(str, adapt_str)
 
-    NextWall()
+    # Check if the data folder exists. If not, create it.
+    if not os.path.exists(DATA_HOME):
+        logging.info("Creating data folder %s" % (DATA_HOME))
+        os.mkdir(DATA_HOME)
+
+    # Check if the database file exists. If not, create it.
+    if not os.path.isfile(DBFILE):
+        logging.info("Creating database file %s" % (DBFILE))
+        connection = sqlite.connect(DBFILE)
+        make_db(connection)
+        connection.close()
+
+    # Create a database connection.
+    connection = sqlite.connect(DBFILE)
+
+    # Run the main class.
+    NextWall(connection)
+
+    # Close the database connection.
+    connection.close()
 
 def adapt_str(string):
     """Convert the custom Python type into one of SQLite's supported types."""
     return string.decode("utf-8")
 
-def is_command(command):
-    """Check if a specific command is available."""
-    cmd = 'which %s' % (command)
-    output = commands.getoutput(cmd)
-    if len(output.splitlines()) == 0:
-        return False
-    else:
-        return True
+def make_db(connection):
+    """Create an empty database with the necessary tables."""
+    db_version = "0.2"
+    cursor = connection.cursor()
 
-def get_files_recursively(rootdir):
-    """Recursively get a list of files from a folder."""
-    file_list = []
+    cursor.execute("CREATE TABLE wallpapers (\
+        id INTEGER PRIMARY KEY, \
+        path TEXT, \
+        kurtosis FLOAT, \
+        defined_brightness INTEGER, \
+        rating INTEGER \
+        )")
 
-    for root, sub_folders, files in os.walk(rootdir):
-        for file in files:
-            file_list.append(os.path.join(root,file))
+    cursor.execute("CREATE TABLE info (\
+        id INTEGER PRIMARY KEY, \
+        name VARCHAR, \
+        value VARCHAR \
+        )")
 
-        # Don't visit thumbnail directories.
-        if '.thumbs' in sub_folders:
-            sub_folders.remove('.thumbs')
+    cursor.execute("INSERT INTO info VALUES (null, 'version', ?)", [db_version])
 
-    return file_list
+    connection.commit()
+    cursor.close()
 
-def get_files(rootdir):
-    """Non-recursively get a list of files from a folder."""
-    file_list = []
-
-    files = os.listdir(rootdir)
-    for file in files:
-        file_list.append(os.path.join(rootdir,file))
-
-    return file_list
 
 class NextWall(object):
     """The main class."""
 
-    def __init__(self):
+    def __init__(self, connection):
+        self.connection = connection # Database connection
         self.recursive = False # Enable recursion
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
-        self.scan_for_images = False # Analyze all image files
         self.path = "/usr/share/backgrounds/" # Default backgrounds folder
         self.gconf_client = gconf.client_get_default() # GConf client
-        self.data_home = os.path.join(basedir.xdg_data_home, 'nextwall') # User's data folder
-        self.dbfile = os.path.join(self.data_home, 'nextwall.db') # Path to database file
+        self.longitude = 0.0
+        self.latitude = 0.0
 
         # Check which version of Gnome we are running.
         self.set_gnome_version()
@@ -140,6 +155,13 @@ class NextWall(object):
             action='store_true',
             help="Select backgrounds that fit the time of day. It is required to scan (--scan) for wallpapers first.",
             dest='fit_time')
+        parser.add_argument('-l',
+            action='store',
+            type=str,
+            required=False,
+            help="Specify latitude and longitude of your current location.",
+            metavar="LAT:LON",
+            dest='lat_lon')
         parser.add_argument('-s, --scan',
             action='store_true',
             help="Scan for images files in PATH.",
@@ -160,34 +182,32 @@ class NextWall(object):
         args = parser.parse_args()
 
         # Handle the arguments.
-        if args.recursive:
-            self.recursive = True
-        if args.applet:
-            self.applet = True
-        if args.fit_time:
-            self.set_fit_time(True)
+        if args.recursive: self.recursive = True
+        if args.fit_time: self.fit_time = True
+        if args.lat_lon:
+            try:
+                lat_lon = args.lat_lon.split(':')
+                self.latitude = float(lat_lon[0])
+                self.longitude = float(lat_lon[1])
+            except:
+                parser.print_help()
+                sys.exit()
         if args.verbose:
             logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
         if args.scan:
-            self.scan_for_images = True
-            # Turn on verbose mode, so the user knows what's happening.
+            # Turn on verbose mode for scanning, so the user knows what's happening.
             logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
-
-        # Check if the data folder exists. If not, create it.
-        if not os.path.exists(self.data_home):
-            logging.info("Creating data folder %s" % (self.data_home))
-            os.mkdir(self.data_home)
-
-        # Check if the database file exists. If not, create it.
-        if not os.path.isfile(self.dbfile):
-            logging.info("Creating database file %s" % (self.dbfile))
-            self.make_db()
 
         # Set the backgrounds folder.
         self.set_backgrounds_folder(args.path)
 
+        # Set sunrise and sunset times.
+        self.sunrise = std.get_sunrise(datetime.datetime.today(), self.longitude, self.latitude)
+        self.sunset = std.get_sunset(datetime.datetime.today(), self.longitude, self.latitude)
+        self.twilight = std.get_twilight(datetime.datetime.today(), self.longitude, self.latitude)
+
         # Check if we need to populate the database.
-        if self.scan_for_images:
+        if args.scan:
             logging.info("Will start scanning for images. This could take a while depending on the \n"
                 "number of images in the specified folder. Starting in 5 seconds...")
             time.sleep(5)
@@ -195,12 +215,24 @@ class NextWall(object):
             sys.exit()
 
         # Decide what to do next.
-        if self.applet:
+        if args.applet:
             # Show the applet.
             indicator.Indicator(self)
         else:
             # Change the background.
             self.change_background()
+
+    def set_gnome_version(self):
+        """Set the version of Gnome."""
+        cmd = 'gnome-session --version'
+        output = commands.getoutput(cmd)
+        output = output.split()
+        version = output[1][0]
+        try:
+            version = int(version)
+        except:
+            raise OSError("You don't appear to be running GNOME. Either GNOME 2 or 3 is required.")
+        self.gnome_version = version
 
     def set_backgrounds_folder(self, path):
         """Set the backgrounds folder."""
@@ -219,10 +251,6 @@ class NextWall(object):
         logging.info("Setting backgrounds folder to %s" % (path))
         self.path = path
 
-    def set_fit_time(self, boolean):
-        """Setter for fit time of day feature."""
-        self.fit_time = boolean
-
     def get_image_kurtosis(self, file):
         """Return kurtosis, a measure of the peakedness of the
         probability distribution of a real-valued random variable.
@@ -231,8 +259,9 @@ class NextWall(object):
         If it's not in the database, calculate it using ImageMagick's
         'identify' and save the value to the database.
         """
-        # Try to get the image kurtosis from the database.
-        connection = sqlite.connect(self.dbfile)
+        # Try to get the image kurtosis from the database. We create a new
+        # connection, because this can be called from a new thread.
+        connection = sqlite.connect(DBFILE)
         cursor = connection.cursor()
         cursor.execute("SELECT kurtosis FROM wallpapers WHERE path=?", [file])
         kurtosis = cursor.fetchone()
@@ -268,50 +297,37 @@ class NextWall(object):
 
         return float(kurtosis)
 
-    def set_gnome_version(self):
-        cmd = 'gnome-session --version'
-        output = commands.getoutput(cmd)
-        output = output.split()
-        version = output[1][0]
-        try:
-            version = int(version)
-        except:
-            raise OSError("You don't appear to be running GNOME. Either GNOME 2 or 3 is required.")
-        self.gnome_version = version
-
-    def save_to_db(self, path, kurtosis):
-        connection = sqlite.connect(self.dbfile)
+    def save_to_db(self, file, kurtosis):
+        """Save the kurtosis value for `file` to the database."""
+        # Here we create a new database connection, as this may be called from
+        # a separate thread.
+        connection = sqlite.connect(DBFILE)
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?, null, null)", [path, kurtosis])
+        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?, null, null);", [file, kurtosis])
         connection.commit()
         cursor.close()
         connection.close()
 
-    def make_db(self):
-        """Create an empty database with the necessary tables."""
-        db_version = "0.2"
-        connection = sqlite.connect(self.dbfile)
-        cursor = connection.cursor()
+    def set_fit_time(self, boolean):
+        """Setter for fit time of day feature."""
+        self.fit_time = boolean
 
-        cursor.execute("CREATE TABLE wallpapers (\
-            id INTEGER PRIMARY KEY, \
-            path TEXT, \
-            kurtosis FLOAT, \
-            defined_brightness INTEGER, \
-            rating INTEGER \
-            )")
-
-        cursor.execute("CREATE TABLE info (\
-            id INTEGER PRIMARY KEY, \
-            name VARCHAR, \
-            value VARCHAR \
-            )")
-
-        cursor.execute("INSERT INTO info VALUES (null, 'version', ?)", [db_version])
-
-        connection.commit()
+    def set_defined_brightness(self, file, brightness):
+        if brightness not in (0,1,2):
+            raise ValueError("The brightness value must be one of 0, 1, or 2.")
+        cursor = self.connection.cursor()
+        cursor.execute("UPDATE wallpapers SET defined_brightness=? WHERE path=?;", [brightness, file])
+        self.connection.commit()
         cursor.close()
-        connection.close()
+
+    def get_defined_brightness(self, file):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT defined_brightness FROM wallpapers WHERE path=?;", [file])
+        brightness = cursor.fetchone()
+        cursor.close()
+        if not brightness:
+            return None
+        return brightness[0]
 
     def on_scan_for_images(self):
         """Calculate the image kurtosis for each image in the selected
@@ -329,23 +345,28 @@ class NextWall(object):
         logging.info("Database successfully populated.")
 
     def get_image_brightness(self, file, get=False):
-        """Decide wether a kurtosis value is considered bright or dark
+        """Return the image brightness value for `file`.
+
+        First checks if the user defined a brightness for this image. If not,
+        it used the kurtosis value to define the brightness value.
 
         Dark: return 0
         Medium: return 1
         Bright: return 2
         """
         kurtosis = self.get_image_kurtosis(file)
+        brightness = self.get_defined_brightness(file)
 
-        if kurtosis < KURTOSIS_THRESHOLD[0]:
-            # Bright
-            brightness = 2
-        elif kurtosis > KURTOSIS_THRESHOLD[1]:
-            # Dark
-            brightness = 0
-        else:
-            # Medium
-            brightness = 1
+        if brightness == None:
+            if kurtosis < KURTOSIS_THRESHOLD[0]:
+                # Bright
+                brightness = 2
+            elif kurtosis > KURTOSIS_THRESHOLD[1]:
+                # Dark
+                brightness = 0
+            else:
+                # Medium
+                brightness = 1
 
         if get:
             return (kurtosis, brightness)
@@ -360,7 +381,7 @@ class NextWall(object):
         Not Suitable: return False
         """
         brightness = self.get_image_brightness(file)
-        current_brightness = self.get_current_brightness()
+        current_brightness = self.get_local_brightness()
 
         # Compare image value with target value.
         if brightness == current_brightness:
@@ -368,30 +389,35 @@ class NextWall(object):
         else:
             return False
 
-    def get_current_brightness(self):
-        """Return the brightness value for the current time of day."""
-        hour = int(time.strftime("%H", time.localtime()))
+    def get_local_brightness(self):
+        """Return the brightness value for the current time of day.
+
+        Twilight is the time between dawn and sunrise or between sunset and
+        dusk."""
+        time = std.localtime()
+        dawn = self.twilight[0]
+        dusk = self.twilight[1]
+
+        # Create info message.
+        logging.info("Dawn: %s; Sunrise: %s; Sunset: %s; Dusk: %s" % (dawn, self.sunrise, self.sunset, dusk))
 
         # Decide based on current time which brightness value (0,1,2)
         # is expected.
-        if hour >= DAY_START and hour < DUSK_START:
-            # Day
-            return 2
-        elif hour >= NIGHT_START or hour < DAWN_START:
-            # Night
-            return 0
+        if self.sunrise < time < self.sunset:
+            return 2 # Day
+        elif time > dusk or time < dawn:
+            return 0 # Night
         else:
-            # Dawn/Dusk
-            return 1
+            return 1 # Dawn/Dusk
 
     def get_image_files(self):
         """Return a list of image files from the specified folder."""
         if self.recursive:
             # Get the files from the backgrounds folder recursively.
-            dir_items = get_files_recursively(self.path)
+            dir_items = std.get_files_recursively(self.path)
         else:
             # Get the files from the backgrounds folder non-recursively.
-            dir_items = get_files(self.path)
+            dir_items = std.get_files(self.path)
 
         # Check if the background items are actually images. Approved
         # files are put in 'images'.
@@ -404,21 +430,31 @@ class NextWall(object):
         return images
 
     def get_random_wallpaper(self):
-        connection = sqlite.connect(self.dbfile)
-        cursor = connection.cursor()
+        cursor = self.connection.cursor()
 
         if not self.fit_time:
             cursor.execute("SELECT id FROM wallpapers WHERE path LIKE \"%s%%\"" %
                 self.path)
+
+            matching_ids = cursor.fetchall()
+            if matching_ids:
+                matching_ids = list(matching_ids)
+            else:
+                # Return None if no wallpapers were found.
+                return None
         else:
-            brightness = self.get_current_brightness()
+            brightness = self.get_local_brightness()
+
+            # First get the wallpapers for which the user hasn't set a custom
+            # brightness value.
 
             # Day
             if brightness == 2:
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis < ?" % self.path,
+                    AND kurtosis < ? \
+                    AND defined_brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[0]]
                     )
             # Night
@@ -426,7 +462,8 @@ class NextWall(object):
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis > ?" % self.path,
+                    AND kurtosis > ? \
+                    AND defined_brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[1]]
                     )
             # Dusk/Dawn
@@ -435,37 +472,64 @@ class NextWall(object):
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
                     AND kurtosis > ? \
-                    AND kurtosis < ?" % self.path,
+                    AND kurtosis < ? \
+                    AND defined_brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[0], KURTOSIS_THRESHOLD[1]]
                     )
 
-        matching_ids = cursor.fetchall()
-        if not matching_ids:
-            return None
+            matching_ids = cursor.fetchall()
+            if matching_ids:
+                matching_ids = list(matching_ids)
+            else:
+                matching_ids = []
+            #print matching_ids
+
+            # Then get the wallpapers with a custom brightness value and where
+            # the custom value matched the current time of day.
+
+            cursor.execute("SELECT id \
+                FROM wallpapers \
+                WHERE path LIKE \"%s%%\" \
+                AND defined_brightness = ?;" % self.path,
+                [brightness]
+                )
+
+            # Finally, merge the two lists together.
+
+            matching_ids_extended = cursor.fetchall()
+            #print matching_ids_extended
+            if matching_ids_extended:
+                matching_ids.extend(matching_ids_extended)
+
+            # Return None if no wallpapers were found.
+            if len(matching_ids) == 0:
+                return None
+
+        # Get a list of integers instead of a list of tuples.
+        matching_ids = [x[0] for x in matching_ids]
+        #print matching_ids
 
         # Get a new random wallpaper from the database.
-        random_id = random.choice(matching_ids)[0]
-        cursor.execute("SELECT path \
-            FROM wallpapers \
-            WHERE id = ?", [random_id])
+        random_id = random.choice(matching_ids)
+        cursor.execute("SELECT path FROM wallpapers WHERE id = ?;", [random_id])
         path = cursor.fetchone()[0]
 
         while not os.path.isfile(path):
-            # Remove this path from the database.
+            # Remove this wallpaper from the database and the list.
             logging.info("The file %s does not exist. Removing from the database." % path)
-            cursor.execute("DELETE FROM wallpapers \
-                WHERE id = ?", [random_id])
-            connection.commit()
+            cursor.execute("DELETE FROM wallpapers WHERE id = ?;", [random_id])
+            self.connection.commit()
+            matching_ids.remove(random_id)
 
-            # Get a new random wallpaper from the database.
-            random_id = random.choice(matching_ids)[0]
-            cursor.execute("SELECT path \
-                FROM wallpapers \
-                WHERE id = ?", [random_id])
+            # Get a new random wallpaper from the selection.
+            if len(matching_ids) == 0:
+                path = None
+                break
+            random_id = random.choice(matching_ids)
+            cursor.execute("SELECT path FROM wallpapers WHERE id = ?;", [random_id])
             path = cursor.fetchone()[0]
 
         cursor.close()
-        connection.close()
 
         return path
 
