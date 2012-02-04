@@ -6,7 +6,6 @@
     <property name="width_request">400</property>
     <property name="visible">True</property>
     <property name="title" translatable="yes">Preferences</property>
-    <property name="resizable">False</property>
     <property name="window_position">center</property>
     <property name="icon_name">nextwall</property>
     <child>
