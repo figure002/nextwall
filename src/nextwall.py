@@ -224,14 +224,19 @@ class NextWall(object):
 
     def set_gnome_version(self):
         """Set the version of Gnome."""
-        cmd = 'gnome-session --version'
-        output = commands.getoutput(cmd)
-        output = output.split()
-        version = output[1][0]
         try:
-            version = int(version)
+            # Here subprocess.Popen() is used instead of commands.getoutput()
+            # because stdout and stderr can be separated. If a GTK theme
+            # results in errors, this won't affect the version detecion.
+            cmd = ['gnome-session','--version']
+            p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+            # Get the version number.
+            output = stdout.split()
+            version = int(output[1][0])
         except:
             raise OSError("You don't appear to be running GNOME. Either GNOME 2 or 3 is required.")
+        # Set the GNOME version.
         self.gnome_version = version
 
     def set_backgrounds_folder(self, path):
