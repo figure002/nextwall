@@ -64,6 +64,7 @@ class Indicator(object):
         change_item = gtk.MenuItem("Next Wallpaper")
         info_item = gtk.MenuItem("Image Information")
         open_item = gtk.MenuItem("Open Current")
+        show_item = gtk.MenuItem("Show in Browser")
         delete_item = gtk.MenuItem("Delete Current")
         populate_item = gtk.MenuItem("Scan Wallpapers Folder")
         pref_item = gtk.MenuItem("Preferences")
@@ -74,6 +75,7 @@ class Indicator(object):
         menu.append(change_item)
         menu.append(info_item)
         menu.append(open_item)
+        menu.append(show_item)
         menu.append(delete_item)
         menu.append(populate_item)
         menu.append(separator)
@@ -84,6 +86,7 @@ class Indicator(object):
         change_item.connect("activate", self.on_change_background)
         info_item.connect("activate", self.on_image_info)
         open_item.connect("activate", self.on_open_current)
+        show_item.connect("activate", self.on_show_file)
         delete_item.connect("activate", self.on_delete_current)
         populate_item.connect("activate", self.on_scan_for_images)
         pref_item.connect("activate", self.on_preferences)
@@ -170,6 +173,11 @@ class Indicator(object):
         """
         current_bg = self.nextwall.get_background_uri()
         os.system('xdg-open "%s"' % (current_bg))
+
+    def on_show_file(self, widget, data=None):
+        """Show the file in the default file browser."""
+        current_bg = self.nextwall.get_background_uri()
+        os.system('nautilus --no-desktop "%s"' % (current_bg))
 
     def on_scan_for_images(self, widget=None, data=None):
         """Run the main._scan_for_images function in a separate thread, and
