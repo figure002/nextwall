@@ -1,7 +1,7 @@
-This is the README file for NextWall (nextwall). NextWall is a script to change
-to a random background image.
+This is the README file for NextWall (nextwall) - A wallpaper changer for the
+GNOME desktop.
 
-Home page: http://saibot.no-ip.info/wiki/NextWall
+Home page: http://byobu.info/wiki/NextWall
 
 Installation Instructions for nextwall
 **************************************
@@ -9,7 +9,7 @@ Installation Instructions for nextwall
 1) First make sure you have all dependencies installed
 
 * gnome
-* python2.6
+* python >= 2.6 && python < 3
 * libappindicator-dev
 * python-appindicator
 * imagemagick
