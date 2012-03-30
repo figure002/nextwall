@@ -228,7 +228,7 @@ class ImageInformation(object):
         self.combobox_brightness.pack_start(cell, True)
         self.combobox_brightness.add_attribute(cell, 'text', 0)
         self.combobox_brightness.append_text('Night')
-        self.combobox_brightness.append_text('Dawn/Dusk')
+        self.combobox_brightness.append_text('Twilight')
         self.combobox_brightness.append_text('Day')
         self.combobox_brightness.set_active(self.brightness)
 

@@ -57,7 +57,7 @@ __date__ = "2011/08/27"
 DATA_HOME = os.path.join(basedir.xdg_data_home, 'nextwall')
 # Set the path to database file.
 DBFILE = os.path.join(DATA_HOME, 'nextwall.db')
-# <=1st item = Day; >=2nd item = Night; In between = Dusk/Dawn
+# <=1st item = Day; >=2nd item = Night; In between = Twilight
 KURTOSIS_THRESHOLD = (0.0, 2.0)
 
 
@@ -413,7 +413,7 @@ class NextWall(object):
         elif time > dusk or time < dawn:
             return 0 # Night
         else:
-            return 1 # Dawn/Dusk
+            return 1 # Twilight
 
     def get_image_files(self):
         """Return a list of image files from the specified folder."""
@@ -471,7 +471,7 @@ class NextWall(object):
                     AND defined_brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[1]]
                     )
-            # Dusk/Dawn
+            # Twilight
             elif brightness == 1:
                 cursor.execute("SELECT id \
                     FROM wallpapers \
