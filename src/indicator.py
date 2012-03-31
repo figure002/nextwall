@@ -24,6 +24,7 @@ import sys
 import logging
 import threading
 import hashlib
+import urllib
 
 import gobject
 import pygtk
@@ -57,6 +58,12 @@ def get_thumbnail_path(filename, dimension='normal'):
     # Make sure that the dimension is either 'normal' or 'large'.
     if dimension not in ('normal','large'):
         raise ValueError("Invalid value for thumbnail dimension. Must be either 'normal' or 'large'.")
+
+    # Escape special characters in the path. As stated in the URI RFC 2396
+    # standard, unreserved characters (-_.!~*'()) are allowed in the URI and
+    # thus should not be escaped here.
+    # URI RFC 2396 standard: http://community.roxen.com/developers/idocs/rfc/rfc2396.html
+    filename = urllib.quote(filename, safe="/-_.!~*'()")
 
     # Generate MD5 hash from the absolute canonical URI for the original file.
     file_hash = hashlib.md5('file://'+filename).hexdigest()
