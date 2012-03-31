@@ -438,6 +438,10 @@ class NextWall(object):
         cursor = self.connection.cursor()
 
         if not self.fit_time:
+            # Prevent that /path/a matches /path/abc by appending the path
+            # with a trailing slash.
+            if not self.path.endswith('/'): self.path += '/'
+
             cursor.execute("SELECT id FROM wallpapers WHERE path LIKE \"%s%%\"" %
                 self.path)
 
