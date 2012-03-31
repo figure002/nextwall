@@ -1,24 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
-  <!-- interface-naming-policy project-wide -->
   <object class="GtkWindow" id="image_info_dialog">
-    <property name="width_request">400</property>
+    <property name="width_request">450</property>
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="title" translatable="yes">Image Information</property>
     <property name="window_position">center</property>
     <property name="icon_name">nextwall</property>
     <child>
       <object class="GtkTable" id="table">
         <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="valign">start</property>
         <property name="border_width">10</property>
-        <property name="n_rows">4</property>
+        <property name="n_rows">5</property>
         <property name="n_columns">2</property>
         <property name="column_spacing">10</property>
         <property name="row_spacing">10</property>
         <child>
           <object class="GtkHButtonBox" id="hbuttonbox">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">5</property>
             <child>
               <object class="GtkButton" id="button_ok">
@@ -26,8 +29,9 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="use_action_appearance">False</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_button_ok_clicked"/>
+                <signal name="clicked" handler="on_button_ok_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -38,26 +42,17 @@
           </object>
           <packing>
             <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
+            <property name="top_attach">4</property>
+            <property name="bottom_attach">5</property>
           </packing>
         </child>
         <child>
           <object class="GtkLabel" id="label_path">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="xalign">1</property>
             <property name="yalign">0</property>
             <property name="label" translatable="yes">Image path:</property>
-          </object>
-          <packing>
-            <property name="x_options">GTK_FILL</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="label_kurtosis">
-            <property name="visible">True</property>
-            <property name="xalign">1</property>
-            <property name="label" translatable="yes">Image kurtosis:</property>
           </object>
           <packing>
             <property name="top_attach">1</property>
@@ -66,7 +61,21 @@
           </packing>
         </child>
         <child>
+          <object class="GtkLabel" id="label_kurtosis">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">1</property>
+            <property name="label" translatable="yes">Image kurtosis:</property>
+          </object>
+          <packing>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+            <property name="x_options">GTK_FILL</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkLabel" id="label_path_value">
+            <property name="width_request">300</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="xalign">0</property>
@@ -76,6 +85,8 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
           </packing>
         </child>
         <child>
@@ -88,27 +99,30 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkLabel" id="label_brightness">
-            <property name="visible">True</property>
-            <property name="xalign">1</property>
-            <property name="label" translatable="yes">Brightness value:</property>
-          </object>
-          <packing>
             <property name="top_attach">2</property>
             <property name="bottom_attach">3</property>
           </packing>
         </child>
         <child>
+          <object class="GtkLabel" id="label_brightness">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">1</property>
+            <property name="label" translatable="yes">Brightness value:</property>
+          </object>
+          <packing>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkAlignment" id="alignment_brightness">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <child>
               <object class="GtkComboBox" id="combobox_brightness">
                 <property name="visible">True</property>
+                <property name="can_focus">False</property>
                 <property name="model">liststore_brightness</property>
               </object>
             </child>
@@ -116,8 +130,18 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkImage" id="image_thumb">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="stock">gtk-missing-image</property>
+          </object>
+          <packing>
+            <property name="right_attach">2</property>
           </packing>
         </child>
       </object>

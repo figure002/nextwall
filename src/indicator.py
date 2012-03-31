@@ -23,6 +23,7 @@ import os
 import sys
 import logging
 import threading
+import hashlib
 
 import gobject
 import pygtk
@@ -44,6 +45,31 @@ __date__ = "2011/08/27"
 
 def module_path():
     return os.path.dirname(unicode(__file__, sys.getfilesystemencoding()))
+
+def get_thumbnail_path(filename, dimension='normal'):
+    """Given the filename for an image, return the path to the thumbnail file.
+
+    Returns None if there is no thumbnail file.
+
+    Follows the freedesktop.org standards:
+    http://people.freedesktop.org/~vuntz/thumbnail-spec-cache/
+    """
+    # Make sure that the dimension is either 'normal' or 'large'.
+    if dimension not in ('normal','large'):
+        raise ValueError("Invalid value for thumbnail dimension. Must be either 'normal' or 'large'.")
+
+    # Generate MD5 hash from the absolute canonical URI for the original file.
+    file_hash = hashlib.md5('file://'+filename).hexdigest()
+
+    # The filename for the thumbnail is '.png' appended to the hash string.
+    tb_filename = os.path.join(os.path.expanduser('~/.thumbnails/'+dimension),
+        file_hash) + '.png'
+
+    # Return the path to the thumbnail is it exists.
+    if os.path.exists(tb_filename):
+        return tb_filename
+    else:
+        return None
 
 class Indicator(object):
     """Display an Application Indicator in the GNOME panel."""
@@ -204,6 +230,7 @@ class ImageInformation(object):
 
         # Get some GTK objects.
         self.dialog = self.builder.get_object('image_info_dialog')
+        self.thumbnail = self.builder.get_object('image_thumb')
         self.label_path_value = self.builder.get_object('label_path_value')
         self.label_kurtosis_value = self.builder.get_object('label_kurtosis_value')
         self.combobox_brightness = self.builder.get_object('combobox_brightness')
@@ -217,6 +244,13 @@ class ImageInformation(object):
 
         # Get the image brightness for the current background.
         kurtosis, self.brightness = self.nextwall.get_image_brightness(self.current_bg, get=True)
+
+        # Get the path to the thumbnail of the current background.
+        thumb_path = get_thumbnail_path(self.current_bg, 'normal')
+
+        # Show the thumbnail.
+        if thumb_path:
+            self.thumbnail.set_from_file(thumb_path)
 
         # Update the values for the labels.
         self.label_path_value.set_text(self.current_bg)
