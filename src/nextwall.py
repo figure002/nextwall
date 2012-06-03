@@ -208,9 +208,7 @@ class NextWall(object):
 
         # Check if we need to populate the database.
         if args.scan:
-            logging.info("Will start scanning for images. This could take a while depending on the \n"
-                "number of images in the specified folder. Starting in 5 seconds...")
-            time.sleep(5)
+            logging.info("Scanning image files in the specified folder...")
             self.on_scan_for_images()
             sys.exit()
 
@@ -275,7 +273,6 @@ class NextWall(object):
 
         if not kurtosis:
             # If kurtosis not found in the database, calculate it.
-            logging.info("\tNot in database. Calculating image kurtosis...")
 
             # Use 'identify' to calculate the image kurtosis.
             cmd = 'identify -verbose "%s" | grep kurtosis' % (file)
@@ -295,8 +292,6 @@ class NextWall(object):
 
             # Save the calculated kurtosis to the database.
             self.save_to_db(file, kurtosis)
-
-            logging.info("\tImage kurtosis: %s" % (kurtosis))
         else:
             kurtosis = kurtosis[0]
 
@@ -339,14 +334,21 @@ class NextWall(object):
         folder and save it to the database.
         """
         images = self.get_image_files()
-        self.populate_total = len(images)
+        if len(images) == 0:
+            logging.info("No images found.")
+            return
+
+        # Create a progress bar.
+        pbar = std.ProgressBar(0, len(images), 30)
 
         # Get the image kurtosis of each file and save it to the database.
         for i, image in enumerate(images, start=1):
-            self.populate_current = i
-            logging.info("Found %s" % (image))
+            pbar.updateAmount(i)
+            sys.stdout.write("\r%s" % str(pbar))
+            sys.stdout.flush()
             self.get_image_kurtosis(image)
 
+        print
         logging.info("Database successfully populated.")
 
     def get_image_brightness(self, file, get=False):
