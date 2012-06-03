@@ -290,6 +290,12 @@ class NextWall(object):
             # The second part is the kurtosis value.
             kurtosis = output[1]
 
+            # Convert to float.
+            try:
+                kurtosis = float(kurtosis)
+            except:
+                return None
+
             # Save the calculated kurtosis to the database.
             self.save_to_db(file, kurtosis)
         else:
@@ -299,6 +305,7 @@ class NextWall(object):
 
     def save_to_db(self, file, kurtosis):
         """Save the kurtosis value for `file` to the database."""
+        if not isinstance(kurtosis, float): return
         # Here we create a new database connection, as this may be called from
         # a separate thread.
         connection = sqlite.connect(DBFILE)
@@ -362,6 +369,8 @@ class NextWall(object):
         Bright: return 2
         """
         kurtosis = self.get_image_kurtosis(file)
+        if kurtosis == None:
+            return None
         brightness = self.get_defined_brightness(file)
 
         if brightness == None:
