@@ -45,6 +45,10 @@ followed by (as root):
 
 make install
 
+4) Updating the icon cache
+
+cmake/debian/postinst
+
 
 Uninstallation Instructions
 ***************************
