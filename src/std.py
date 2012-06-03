@@ -121,36 +121,36 @@ class ProgressBar:
 
     Code from http://code.activestate.com/recipes/168639/ (r1)
     """
-	def __init__(self, minValue = 0, maxValue = 10, totalWidth=12):
-		self.progBar = "[]"   # This holds the progress bar string
-		self.min = minValue
-		self.max = maxValue
-		self.span = maxValue - minValue
-		self.width = totalWidth
-		self.amount = 0       # When amount == max, we are 100% done
-		self.updateAmount(0)  # Build progress bar string
+    def __init__(self, minValue = 0, maxValue = 10, totalWidth=12):
+        self.progBar = "[]"   # This holds the progress bar string
+        self.min = minValue
+        self.max = maxValue
+        self.span = maxValue - minValue
+        self.width = totalWidth
+        self.amount = 0       # When amount == max, we are 100% done
+        self.updateAmount(0)  # Build progress bar string
 
-	def updateAmount(self, newAmount = 0):
-		if newAmount < self.min: newAmount = self.min
-		if newAmount > self.max: newAmount = self.max
-		self.amount = newAmount
+    def updateAmount(self, newAmount = 0):
+        if newAmount < self.min: newAmount = self.min
+        if newAmount > self.max: newAmount = self.max
+        self.amount = newAmount
 
-		# Figure out the new percent done, round to an integer
-		diffFromMin = float(self.amount - self.min)
-		percentDone = (diffFromMin / float(self.span)) * 100.0
-		percentDone = int(round(percentDone))
+        # Figure out the new percent done, round to an integer
+        diffFromMin = float(self.amount - self.min)
+        percentDone = (diffFromMin / float(self.span)) * 100.0
+        percentDone = int(round(percentDone))
 
-		# Figure out how many hash bars the percentage should be
-		allFull = self.width - 2
-		numHashes = (percentDone / 100.0) * allFull
-		numHashes = int(round(numHashes))
+        # Figure out how many hash bars the percentage should be
+        allFull = self.width - 2
+        numHashes = (percentDone / 100.0) * allFull
+        numHashes = int(round(numHashes))
 
-		# Build a progress bar with hashes and spaces.
-		self.progBar = "[" + '#'*numHashes + ' '*(allFull-numHashes) + "]"
+        # Build a progress bar with hashes and spaces.
+        self.progBar = "[" + '#'*numHashes + ' '*(allFull-numHashes) + "]"
 
-		# Add the percentage to the progress bar.
-		self.progBar = "%s %d%%" % (self.progBar, percentDone)
+        # Add the percentage to the progress bar.
+        self.progBar = "%s %d%%" % (self.progBar, percentDone)
 
-	def __str__(self):
-		return str(self.progBar)
+    def __str__(self):
+        return str(self.progBar)
 
