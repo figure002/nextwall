@@ -70,12 +70,14 @@ def get_thumbnail_path(filename, dimension='normal'):
     file_hash = hashlib.md5('file://'+filename).hexdigest()
 
     # The filename for the thumbnail is '.png' appended to the hash string.
-    tb_filename = os.path.join(os.path.expanduser('~/.thumbnails/'+dimension),
-        file_hash) + '.png'
+    tb_filename1 = os.path.join(os.path.expanduser('~/.cache/thumbnails/'+dimension), file_hash) + '.png'
+    tb_filename2 = os.path.join(os.path.expanduser('~/.thumbnails/'+dimension), file_hash) + '.png'
 
     # Return the path to the thumbnail is it exists.
-    if os.path.exists(tb_filename):
-        return tb_filename
+    if os.path.exists(tb_filename1):
+        return tb_filename1
+    elif os.path.exists(tb_filename2):
+        return tb_filename2
     else:
         return None
 
