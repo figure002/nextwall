@@ -25,6 +25,7 @@ import logging
 import threading
 import hashlib
 import urllib
+from PIL import Image
 
 import gobject
 import pygtk
@@ -240,6 +241,7 @@ class ImageInformation(object):
         self.thumbnail = self.builder.get_object('image_thumb')
         self.label_path_value = self.builder.get_object('label_path_value')
         self.label_kurtosis_value = self.builder.get_object('label_kurtosis_value')
+        self.label_size_value = self.builder.get_object('label_size_value')
         self.combobox_brightness = self.builder.get_object('combobox_brightness')
 
         # Transform the layout.
@@ -259,9 +261,14 @@ class ImageInformation(object):
         if thumb_path:
             self.thumbnail.set_from_file(thumb_path)
 
+        # Get the image's width and height in pixels.
+        img = Image.open(self.current_bg)
+        image_size = "%d x %d pixels" % img.size
+
         # Update the values for the labels.
         self.label_path_value.set_text(self.current_bg)
         self.label_kurtosis_value.set_text(str(kurtosis))
+        self.label_size_value.set_text(image_size)
 
         # Add items to the "New brightness" combobox.
         #print gobject.type_name(gobject.TYPE_STRING)

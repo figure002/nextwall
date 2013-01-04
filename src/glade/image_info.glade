@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <requires lib="gtk+" version="2.16"/>
+  <!-- interface-naming-policy toplevel-contextual -->
   <object class="GtkWindow" id="image_info_dialog">
     <property name="width_request">450</property>
     <property name="visible">True</property>
@@ -12,9 +13,8 @@
       <object class="GtkTable" id="table">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="valign">start</property>
         <property name="border_width">10</property>
-        <property name="n_rows">5</property>
+        <property name="n_rows">6</property>
         <property name="n_columns">2</property>
         <property name="column_spacing">10</property>
         <property name="row_spacing">10</property>
@@ -42,8 +42,8 @@
           </object>
           <packing>
             <property name="right_attach">2</property>
-            <property name="top_attach">4</property>
-            <property name="bottom_attach">5</property>
+            <property name="top_attach">5</property>
+            <property name="bottom_attach">6</property>
           </packing>
         </child>
         <child>
@@ -111,8 +111,8 @@
             <property name="label" translatable="yes">Brightness value:</property>
           </object>
           <packing>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
+            <property name="top_attach">4</property>
+            <property name="bottom_attach">5</property>
           </packing>
         </child>
         <child>
@@ -130,8 +130,8 @@
           <packing>
             <property name="left_attach">1</property>
             <property name="right_attach">2</property>
-            <property name="top_attach">3</property>
-            <property name="bottom_attach">4</property>
+            <property name="top_attach">4</property>
+            <property name="bottom_attach">5</property>
           </packing>
         </child>
         <child>
@@ -142,6 +142,31 @@
           </object>
           <packing>
             <property name="right_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="label_size">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">1</property>
+            <property name="label" translatable="yes">Image Size:</property>
+          </object>
+          <packing>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="label_size_value">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">0</property>
+          </object>
+          <packing>
+            <property name="left_attach">1</property>
+            <property name="right_attach">2</property>
+            <property name="top_attach">3</property>
+            <property name="bottom_attach">4</property>
           </packing>
         </child>
       </object>
