@@ -361,8 +361,7 @@ class Preferences(object):
             dialog.destroy()
             return
 
-        self.nextwall.latitude = latitude
-        self.nextwall.longitude = longitude
+        error = self.nextwall.set_lat_lon(latitude, longitude)
         lat_lon_set = True
 
         # Make sure that both latitude and longitude are set if the fit time

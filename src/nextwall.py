@@ -185,13 +185,16 @@ class NextWall(object):
         if args.recursive: self.recursive = True
         if args.fit_time: self.fit_time = True
         if args.lat_lon:
-            try:
-                lat_lon = args.lat_lon.split(':')
-                self.latitude = float(lat_lon[0])
-                self.longitude = float(lat_lon[1])
-            except:
+            lat_lon = args.lat_lon.split(':')
+            if len(lat_lon) == 2:
+                error = self.set_lat_lon(lat_lon[0], lat_lon[1])
+                if error:
+                    parser.print_help()
+                    sys.exit()
+            else:
                 parser.print_help()
                 sys.exit()
+
         if args.verbose:
             logging.basicConfig(level=logging.INFO, format='%(levelname)s %(message)s')
         if args.scan:
@@ -200,11 +203,6 @@ class NextWall(object):
 
         # Set the backgrounds folder.
         self.set_backgrounds_folder(args.path)
-
-        # Set sunrise and sunset times.
-        self.sunrise = std.get_sunrise(datetime.datetime.today(), self.longitude, self.latitude)
-        self.sunset = std.get_sunset(datetime.datetime.today(), self.longitude, self.latitude)
-        self.twilight = std.get_twilight(datetime.datetime.today(), self.longitude, self.latitude)
 
         # Check if we need to populate the database.
         if args.scan:
@@ -219,6 +217,21 @@ class NextWall(object):
         else:
             # Change the background.
             self.change_background()
+
+    def set_lat_lon(self, lat, lon):
+        """Set latitude and longitude."""
+        try:
+            self.latitude = float(lat)
+            self.longitude = float(lon)
+
+            # Set sunrise and sunset times.
+            self.sunrise = std.get_sunrise(datetime.datetime.today(), self.longitude, self.latitude)
+            self.sunset = std.get_sunset(datetime.datetime.today(), self.longitude, self.latitude)
+            self.twilight = std.get_twilight(datetime.datetime.today(), self.longitude, self.latitude)
+
+            return 0
+        except:
+            return 1
 
     def set_gnome_version(self):
         """Set the version of Gnome."""
