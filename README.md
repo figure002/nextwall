@@ -60,8 +60,8 @@ icon cache by running the post-installation script:
 
 ## Uninstall
 
-To removing all installed nextwall files, change to the build folder which you
-created in the top level directory:
+To remove all installed nextwall files, change to the build folder which you
+created in the top level directory of the nextwall package:
 
     cd build/
 
@@ -80,7 +80,6 @@ which has the same result as the `make uninstall` command.
   For 60 seconds, run `watch -n 60 nextwall [options] [path]`
 * You can also use the cron deamon to schedule execution of NextWall. For once
   an hour, run `sudo crontab -u $USER -e` and add this line:
-
   ``0 * * * * DISPLAY=:0.0 nextwall [options] [path]``
 
 
