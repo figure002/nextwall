@@ -53,7 +53,8 @@ nextwall (you may need to run this as root):
     make install
 
 This will also install icons for nextwall, so you need to update the system's
-icon cache by running the post-installation script:
+icon cache by running the post-installation script (you may need to run this as
+root):
 
     cmake/debian/postinst
 
