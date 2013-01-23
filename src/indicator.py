@@ -27,7 +27,7 @@ import hashlib
 import urllib
 from PIL import Image
 
-import gobject
+from gi.repository import GObject, Gio, GnomeDesktop
 import pygtk
 pygtk.require('2.0')
 import gtk
@@ -239,6 +239,7 @@ class ImageInformation(object):
 
     def __init__(self, nextwall):
         self.nextwall = nextwall
+        self.thumbnail_factory = GnomeDesktop.DesktopThumbnailFactory()
 
         self.builder = gtk.Builder()
         self.builder.add_from_file(os.path.join(module_path(), 'glade/image_info.glade'))
@@ -256,7 +257,7 @@ class ImageInformation(object):
         self.dialog.connect('delete-event', self.hide)
 
         # Add items to the "New brightness" combobox.
-        #print gobject.type_name(gobject.TYPE_STRING)
+        #print GObject.type_name(GObject.TYPE_STRING)
         cell = gtk.CellRendererText()
         self.combobox_brightness.pack_start(cell, True)
         self.combobox_brightness.add_attribute(cell, 'text', 0)
@@ -285,7 +286,7 @@ class ImageInformation(object):
         kurtosis, self.brightness = self.nextwall.get_image_brightness(self.current_bg, get=True)
 
         # Get the path to the thumbnail of the current background.
-        thumb_path = get_thumbnail_path(self.current_bg, 'normal')
+        thumb_path = self.make_thumbnail(self.thumbnail_factory, self.current_bg)
 
         # Show the thumbnail.
         if thumb_path:
@@ -315,6 +316,50 @@ class ImageInformation(object):
 
         # Hide the dialog.
         self.dialog.hide()
+
+    def make_thumbnail(self, factory, filename):
+        """Create a thumbnail for an image file.
+
+        Creates a thumbnail if it doesn't exist already and return the
+        absolute path for the thumbnail. If a thumbnail can't be generated,
+        return None.
+
+        This method is based on code shared by `James Henstridge
+        <http://askubuntu.com/users/12469/james-henstridge>` on
+        `AskUbuntu.com <http://askubuntu.com/a/201997/303>`, licensed under the
+        Creative Commons Attribution-ShareAlike 3.0 Unported license.
+        """
+        mtime = os.path.getmtime(filename)
+        # Use Gio to determine the URI and mime type
+        f = Gio.file_new_for_path(filename)
+        uri = f.get_uri()
+        info = f.query_info(
+            'standard::content-type', Gio.FileQueryInfoFlags.NONE, None)
+        mime_type = info.get_content_type()
+
+        # Try to locate an existing thumbnail for the file specified. Returns
+        # the absolute path of the thumbnail, or None if none exist.
+        path = factory.lookup(uri, mtime)
+        if path is not None:
+            return path
+
+        # Returns TRUE if GnomeIconFactory can (at least try) to thumbnail this
+        # file.
+        if not factory.can_thumbnail(uri, mime_type, mtime):
+            return None
+
+        # Try to generate a thumbnail for the specified file. If it succeeds it
+        # returns a pixbuf that can be used as a thumbnail.
+        thumbnail = factory.generate_thumbnail(uri, mime_type)
+        if not thumbnail:
+            return None
+
+        # Save thumbnail at the right place. If the save fails a failed
+        # thumbnail is written.
+        factory.save_thumbnail(thumbnail, uri, mtime)
+
+        # Return the absolute path for the thumbnail.
+        return factory.lookup(uri, mtime)
 
 class Preferences(object):
     """Display a preferences dialog which allows the user to configure
@@ -484,7 +529,7 @@ class PopulateDB(threading.Thread):
         self.total = len(images)
 
         if self.total == 0:
-            gobject.idle_add(self.progress_bar.set_text, "No image files found")
+            GObject.idle_add(self.progress_bar.set_text, "No image files found")
             return False
 
         # Get the image kurtosis of each file and save it to the
@@ -497,7 +542,7 @@ class PopulateDB(threading.Thread):
 
             self.current = i
             logging.info("Found %s" % (image))
-            gobject.idle_add(self.update_progressbar)
+            GObject.idle_add(self.update_progressbar)
             self.parent.nextwall.get_image_kurtosis(image)
 
         logging.info("Image files successfully scanned.")

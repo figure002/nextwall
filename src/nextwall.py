@@ -33,13 +33,12 @@ import subprocess
 import datetime
 
 import xdg.BaseDirectory as basedir
-import gconf
-import gobject
+from gi.repository import GObject, GConf
 
 import std
 import indicator
 
-gobject.threads_init()
+GObject.threads_init()
 
 __author__ = "Serrano Pereira"
 __copyright__ = ("Copyright 2004, Davyd Madeley\n"
@@ -130,7 +129,7 @@ class NextWall(object):
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
         self.path = "/usr/share/backgrounds/" # Default backgrounds folder
-        self.gconf_client = gconf.client_get_default() # GConf client
+        #self.gconf_client = gconf.client_get_default() # GConf client
         self.longitude = 0.0
         self.latitude = 0.0
 
