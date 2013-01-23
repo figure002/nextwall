@@ -134,10 +134,13 @@ class Indicator(object):
         # Add the menu to the Application Indicator
         ind.set_menu(menu)
 
+        # Create Image Information dialog.
+        self.image_info = ImageInformation(self.nextwall)
+
         # Run the main loop
         gtk.main()
 
-    def on_change_background(self, widget, data=None):
+    def on_change_background(self, widget=None, data=None):
         return_code = self.nextwall.change_background()
         if return_code == 1:
             message = ("No wallpapers found")
@@ -167,10 +170,14 @@ class Indicator(object):
 
             if response == gtk.RESPONSE_YES:
                 self.on_scan_for_images()
+        else:
+            # Update image info dialog.
+            self.image_info.update()
 
     def on_image_info(self, widget, data=None):
         """Display image information."""
-        ImageInformation(self.nextwall)
+        self.image_info.update()
+        self.image_info.show()
 
     def on_quit(self, widget, data=None):
         """Exit the application."""
@@ -201,7 +208,8 @@ class Indicator(object):
             dialog.destroy()
             return
 
-        self.nextwall.change_background()
+        # Change the background.
+        self.on_change_background()
 
     def on_open_current(self, widget, data=None):
         """Open the current background with the system's default image
@@ -235,9 +243,6 @@ class ImageInformation(object):
         self.builder = gtk.Builder()
         self.builder.add_from_file(os.path.join(module_path(), 'glade/image_info.glade'))
 
-        # Connect the window signals to the handlers.
-        self.builder.connect_signals(self)
-
         # Get some GTK objects.
         self.dialog = self.builder.get_object('image_info_dialog')
         self.thumbnail = self.builder.get_object('image_thumb')
@@ -246,10 +251,33 @@ class ImageInformation(object):
         self.label_size_value = self.builder.get_object('label_size_value')
         self.combobox_brightness = self.builder.get_object('combobox_brightness')
 
-        # Transform the layout.
-        self.transform_layout()
+        # Connect the window signals to the handlers.
+        self.builder.connect_signals(self)
+        self.dialog.connect('delete-event', self.hide)
 
-    def transform_layout(self):
+        # Add items to the "New brightness" combobox.
+        #print gobject.type_name(gobject.TYPE_STRING)
+        cell = gtk.CellRendererText()
+        self.combobox_brightness.pack_start(cell, True)
+        self.combobox_brightness.add_attribute(cell, 'text', 0)
+        self.combobox_brightness.append_text('Night')
+        self.combobox_brightness.append_text('Twilight')
+        self.combobox_brightness.append_text('Day')
+
+        # Hide the dialog.
+        self.hide()
+
+    def show(self, widget=None, data=None):
+        """Show the dialog."""
+        self.dialog.show_all()
+
+    def hide(self, widget=None, data=None):
+        """Hide the dialog."""
+        self.dialog.hide()
+        # Prevent default action.
+        return True
+
+    def update(self):
         # Get the current background.
         self.current_bg = self.nextwall.get_background_uri()
 
@@ -262,6 +290,8 @@ class ImageInformation(object):
         # Show the thumbnail.
         if thumb_path:
             self.thumbnail.set_from_file(thumb_path)
+        else:
+            self.thumbnail.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_DIALOG)
 
         # Get the image's width and height in pixels.
         img = Image.open(self.current_bg)
@@ -272,14 +302,7 @@ class ImageInformation(object):
         self.label_kurtosis_value.set_text(str(kurtosis))
         self.label_size_value.set_text(image_size)
 
-        # Add items to the "New brightness" combobox.
-        #print gobject.type_name(gobject.TYPE_STRING)
-        cell = gtk.CellRendererText()
-        self.combobox_brightness.pack_start(cell, True)
-        self.combobox_brightness.add_attribute(cell, 'text', 0)
-        self.combobox_brightness.append_text('Night')
-        self.combobox_brightness.append_text('Twilight')
-        self.combobox_brightness.append_text('Day')
+        # Set brightness.
         self.combobox_brightness.set_active(self.brightness)
 
     def on_button_ok_clicked(self, widget, data=None):
@@ -287,11 +310,11 @@ class ImageInformation(object):
         # Get the selected brightness value.
         active = self.combobox_brightness.get_active()
 
-        # Set the new brightness value, if the user selected a different one.
-        if self.brightness != active:
-            self.nextwall.set_defined_brightness(self.current_bg, active)
+        # Set the new brightness value.
+        self.nextwall.set_defined_brightness(self.current_bg, active)
 
-        self.dialog.destroy()
+        # Hide the dialog.
+        self.dialog.hide()
 
 class Preferences(object):
     """Display a preferences dialog which allows the user to configure
