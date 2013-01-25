@@ -264,12 +264,9 @@ class ImageInformation(object):
         self.combobox_brightness.append_text('Twilight')
         self.combobox_brightness.append_text('Day')
 
-        # Hide the dialog.
-        self.hide()
-
     def show(self, widget=None, data=None):
         """Show the dialog."""
-        self.dialog.show_all()
+        self.dialog.show()
 
     def hide(self, widget=None, data=None):
         """Hide the dialog."""
