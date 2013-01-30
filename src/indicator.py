@@ -253,7 +253,6 @@ class ImageInformation(object):
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
-        self.dialog.connect('delete-event', self.hide)
 
         # Add items to the "New brightness" combobox.
         #print gobject.type_name(gobject.TYPE_STRING)
