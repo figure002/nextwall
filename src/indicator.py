@@ -27,10 +27,10 @@ import hashlib
 import urllib
 from PIL import Image
 
-import gobject
-import pygtk
-pygtk.require('2.0')
-import gtk
+from gi.repository import GObject
+import gi
+gi.require_version('Gtk', '3.0')
+from gi.repository import Gtk
 import appindicator
 
 __author__ = "Serrano Pereira"
@@ -94,18 +94,18 @@ class Indicator(object):
         ind.set_status(appindicator.STATUS_ACTIVE)
 
         # Create GTK menu
-        menu = gtk.Menu()
+        menu = Gtk.Menu()
 
         # Create the menu items
-        change_item = gtk.MenuItem("Next Wallpaper")
-        info_item = gtk.MenuItem("Image Information")
-        open_item = gtk.MenuItem("Open Current")
-        show_item = gtk.MenuItem("Show in Browser")
-        delete_item = gtk.MenuItem("Delete Current")
-        populate_item = gtk.MenuItem("Scan Wallpapers Folder")
-        pref_item = gtk.MenuItem("Preferences")
-        quit_item = gtk.MenuItem("Quit")
-        separator = gtk.SeparatorMenuItem()
+        change_item = Gtk.MenuItem("Next Wallpaper")
+        info_item = Gtk.MenuItem("Image Information")
+        open_item = Gtk.MenuItem("Open Current")
+        show_item = Gtk.MenuItem("Show in Browser")
+        delete_item = Gtk.MenuItem("Delete Current")
+        populate_item = Gtk.MenuItem("Scan Wallpapers Folder")
+        pref_item = Gtk.MenuItem("Preferences")
+        quit_item = Gtk.MenuItem("Quit")
+        separator = Gtk.SeparatorMenuItem()
 
         # Add them to the menu
         menu.append(change_item)
@@ -138,14 +138,14 @@ class Indicator(object):
         self.image_info = ImageInformation(self.nextwall)
 
         # Run the main loop
-        gtk.main()
+        Gtk.main()
 
     def on_change_background(self, widget=None, data=None):
         return_code = self.nextwall.change_background()
         if return_code == 1:
             message = ("No wallpapers found")
-            dialog = gtk.MessageDialog(parent=None, flags=0,
-                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
+            dialog = Gtk.MessageDialog(parent=None, flags=0,
+                type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.YES_NO,
                 message_format=message)
             dialog.format_secondary_text("No image files are known for the selected "
                 "wallpapers folder. If the \"fit time of day\" feature is enabled, "
@@ -154,12 +154,12 @@ class Indicator(object):
             response = dialog.run()
             dialog.destroy()
 
-            if response == gtk.RESPONSE_YES:
+            if response == Gtk.ResponseType.YES:
                 self.on_scan_for_images()
         elif return_code == 2:
             message = ("Not enough wallpapers")
-            dialog = gtk.MessageDialog(parent=None, flags=0,
-                type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_YES_NO,
+            dialog = Gtk.MessageDialog(parent=None, flags=0,
+                type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.YES_NO,
                 message_format=message)
             dialog.format_secondary_text("Not enough image files are known for the selected "
                 "wallpapers folder. If the \"fit time of day\" feature is enabled, "
@@ -168,7 +168,7 @@ class Indicator(object):
             response = dialog.run()
             dialog.destroy()
 
-            if response == gtk.RESPONSE_YES:
+            if response == Gtk.ResponseType.YES:
                 self.on_scan_for_images()
         else:
             # Update image info dialog.
@@ -181,7 +181,7 @@ class Indicator(object):
 
     def on_quit(self, widget, data=None):
         """Exit the application."""
-        gtk.main_quit()
+        Gtk.main_quit()
 
     def on_preferences(self, widget, data=None):
         """Display preferences window."""
@@ -193,14 +193,14 @@ class Indicator(object):
         message = ("This will <b>permanently</b> remove the current background "
             "image (%s) from your harddisk.") % (current_bg)
 
-        dialog = gtk.MessageDialog(parent=None, flags=0,
-            type=gtk.MESSAGE_WARNING, buttons=gtk.BUTTONS_YES_NO,
+        dialog = Gtk.MessageDialog(parent=None, flags=0,
+            type=Gtk.MessageType.WARNING, buttons=Gtk.ButtonsType.YES_NO,
             message_format=None)
         dialog.set_markup(message)
         dialog.format_secondary_text("Continue?")
         response = dialog.run()
 
-        if response == gtk.RESPONSE_YES:
+        if response == Gtk.ResponseType.YES:
             logging.info("Removing %s" % (current_bg))
             os.remove(current_bg)
             dialog.destroy()
@@ -240,7 +240,7 @@ class ImageInformation(object):
     def __init__(self, nextwall):
         self.nextwall = nextwall
 
-        self.builder = gtk.Builder()
+        self.builder = Gtk.Builder()
         self.builder.add_from_file(os.path.join(module_path(), 'glade/image_info.glade'))
 
         # Get some GTK objects.
@@ -255,8 +255,8 @@ class ImageInformation(object):
         self.builder.connect_signals(self)
 
         # Add items to the "New brightness" combobox.
-        #print gobject.type_name(gobject.TYPE_STRING)
-        cell = gtk.CellRendererText()
+        #print GObject.type_name(GObject.TYPE_STRING)
+        cell = Gtk.CellRendererText()
         self.combobox_brightness.pack_start(cell, True)
         self.combobox_brightness.add_attribute(cell, 'text', 0)
         self.combobox_brightness.append_text('Night')
@@ -287,7 +287,7 @@ class ImageInformation(object):
         if thumb_path:
             self.thumbnail.set_from_file(thumb_path)
         else:
-            self.thumbnail.set_from_stock(gtk.STOCK_MISSING_IMAGE, gtk.ICON_SIZE_DIALOG)
+            self.thumbnail.set_from_stock(Gtk.STOCK_MISSING_IMAGE, Gtk.IconSize.DIALOG)
 
         # Get the image's width and height in pixels.
         img = Image.open(self.current_bg)
@@ -320,7 +320,7 @@ class Preferences(object):
     def __init__(self, nextwall):
         self.nextwall = nextwall
 
-        self.builder = gtk.Builder()
+        self.builder = Gtk.Builder()
         self.builder.add_from_file(os.path.join(module_path(), 'glade/preferences.glade'))
 
         # Connect the window signals to the handlers.
@@ -379,12 +379,12 @@ class Preferences(object):
             latitude = float(latitude)
             longitude = float(longitude)
         except:
-            dialog = gtk.MessageDialog(parent=None, flags=0,
-                type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
+            dialog = Gtk.MessageDialog(parent=None, flags=0,
+                type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK,
                 message_format="Latitude and longitude")
             dialog.format_secondary_text("The values you entered for latitude "
                 "and longitude are not correct. Please correct the values.")
-            dialog.set_position(gtk.WIN_POS_CENTER)
+            dialog.set_position(Gtk.WindowPosition.CENTER)
             dialog.run()
             dialog.destroy()
             return
@@ -395,12 +395,12 @@ class Preferences(object):
         # Make sure that both latitude and longitude are set if the fit time
         # of day checkbox is checked.
         if self.checkbutton_fit_time.get_active() and not lat_lon_set:
-            dialog = gtk.MessageDialog(parent=None, flags=0,
-                type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK,
+            dialog = Gtk.MessageDialog(parent=None, flags=0,
+                type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK,
                 message_format="Latitude and longitude")
             dialog.format_secondary_text("Latitude and longitude must be set "
                 "for the fit time of day feature to work. Please set these values.")
-            dialog.set_position(gtk.WIN_POS_CENTER)
+            dialog.set_position(Gtk.WindowPosition.CENTER)
             dialog.run()
             dialog.destroy()
             return
@@ -417,7 +417,7 @@ class Preferences(object):
 
 class About(object):
     def __init__(self):
-        builder = gtk.Builder()
+        builder = Gtk.Builder()
         builder.add_from_file(os.path.join(module_path(), 'glade/about.glade'))
 
         about = builder.get_object('about_dialog')
@@ -435,7 +435,7 @@ class ScanWallpapersDialog(object):
         self.nextwall = nextwall
         self.nextwall.scan_for_images = True
 
-        self.builder = gtk.Builder()
+        self.builder = Gtk.Builder()
         self.builder.add_from_file(os.path.join(module_path(), 'glade/scan_backgrounds.glade'))
 
         # Connect the window signals to the handlers.
@@ -480,7 +480,7 @@ class PopulateDB(threading.Thread):
         self.total = len(images)
 
         if self.total == 0:
-            gobject.idle_add(self.progress_bar.set_text, "No image files found")
+            GObject.idle_add(self.progress_bar.set_text, "No image files found")
             return False
 
         # Get the image kurtosis of each file and save it to the
@@ -493,7 +493,7 @@ class PopulateDB(threading.Thread):
 
             self.current = i
             logging.info("Found %s" % (image))
-            gobject.idle_add(self.update_progressbar)
+            GObject.idle_add(self.update_progressbar)
             self.parent.nextwall.get_image_kurtosis(image)
 
         logging.info("Image files successfully scanned.")
