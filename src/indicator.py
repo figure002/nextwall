@@ -89,7 +89,7 @@ class Indicator(object):
 
         # Create an Application Indicator icon
         ind = AppIndicator.Indicator.new(
-            "nextwall",
+            "nextwall-%s" % hashlib.md5(self.nextwall.path).hexdigest()[:6],
             "nextwall",
             AppIndicator.IndicatorCategory.OTHER)
         ind.set_status(AppIndicator.IndicatorStatus.ACTIVE)
