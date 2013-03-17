@@ -20,14 +20,14 @@ script by Davyd Madeley. NextWall has the following features:
 First make sure you have all dependencies installed:
 
 * gnome
-* python >= 2.6 && python < 3
-* libappindicator-dev
-* python-appindicator
+* python >= 2.7 && python < 3
+* python-gi
+* gir1.2-appindicator3-0.1
 * imagemagick
 
 On Debian (based) systems, run this command to install all dependencies:
 
-    sudo apt-get install python libappindicator-dev python-appindicator imagemagick
+    sudo apt-get install python python-gi gir1.2-appindicator3-0.1 imagemagick
 
 Then you can configure the nextwall build. You'll need CMake for that:
 
@@ -69,11 +69,6 @@ created in the top level directory of the nextwall package:
 And run the uninstall command (you may need to run this as root):
 
     make uninstall
-
-Alternatively, you can remove the files listed in the install_manifest.txt file
-which has the same result as the `make uninstall` command.
-
-    xargs -d "\n" rm < install_manifest.txt
 
 
 ## Usage Tips
