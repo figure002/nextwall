@@ -36,7 +36,6 @@ import xdg.BaseDirectory as basedir
 from gi.repository import GObject, GConf
 
 import std
-import indicator
 
 GObject.threads_init()
 
@@ -129,7 +128,7 @@ class NextWall(object):
         self.applet = False # Display Application Indicator
         self.fit_time = False # Fit time of day
         self.path = "/usr/share/backgrounds/" # Default backgrounds folder
-        #self.gconf_client = gconf.client_get_default() # GConf client
+        self.gconf_client = GConf.Client.get_default() # GConf client
         self.longitude = 0.0
         self.latitude = 0.0
 
@@ -212,6 +211,7 @@ class NextWall(object):
         # Decide what to do next.
         if args.applet:
             # Show the applet.
+            import indicator
             indicator.Indicator(self)
         else:
             # Change the background.

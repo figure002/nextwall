@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
-  <requires lib="gtk+" version="2.16"/>
-  <!-- interface-naming-policy project-wide -->
+  <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkAdjustment" id="adjustment_round">
+    <property name="lower">-1</property>
+    <property name="upper">5</property>
+    <property name="value">-1</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkListStore" id="liststore_property"/>
   <object class="GtkWindow" id="preferences_dialog">
     <property name="width_request">400</property>
     <property name="visible">True</property>
+    <property name="can_focus">False</property>
     <property name="title" translatable="yes">Preferences</property>
     <property name="window_position">center</property>
     <property name="icon_name">nextwall</property>
     <child>
       <object class="GtkTable" id="table">
         <property name="visible">True</property>
+        <property name="can_focus">False</property>
         <property name="border_width">10</property>
         <property name="n_rows">6</property>
         <property name="n_columns">2</property>
@@ -19,6 +28,7 @@
         <child>
           <object class="GtkLabel" id="label_select_folder">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="xalign">0</property>
             <property name="yalign">1</property>
             <property name="label" translatable="yes">Select wallpapers folder:</property>
@@ -32,6 +42,7 @@
         <child>
           <object class="GtkFileChooserButton" id="chooser_backgrounds_folder">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="action">select-folder</property>
             <property name="title" translatable="yes">Select Backgrounds Folder</property>
           </object>
@@ -47,6 +58,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">False</property>
+            <property name="xalign">0.5</property>
             <property name="draw_indicator">True</property>
           </object>
           <packing>
@@ -62,6 +74,7 @@
             <property name="visible">True</property>
             <property name="can_focus">True</property>
             <property name="receives_default">False</property>
+            <property name="xalign">0.5</property>
             <property name="draw_indicator">True</property>
           </object>
           <packing>
@@ -74,6 +87,7 @@
         <child>
           <object class="GtkHButtonBox" id="hbuttonbox_left">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="layout_style">start</property>
             <child>
               <object class="GtkButton" id="button_about">
@@ -82,7 +96,7 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_button_about_clicked"/>
+                <signal name="clicked" handler="on_button_about_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -99,6 +113,7 @@
         <child>
           <object class="GtkHButtonBox" id="hbuttonbox_right">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="spacing">5</property>
             <property name="layout_style">end</property>
             <child>
@@ -108,7 +123,7 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_button_cancel_clicked"/>
+                <signal name="clicked" handler="on_button_cancel_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -123,7 +138,7 @@
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="use_stock">True</property>
-                <signal name="clicked" handler="on_button_ok_clicked"/>
+                <signal name="clicked" handler="on_button_ok_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -142,6 +157,7 @@
         <child>
           <object class="GtkLabel" id="label_lat">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="label" translatable="yes">Latitude:</property>
           </object>
           <packing>
@@ -152,6 +168,7 @@
         <child>
           <object class="GtkLabel" id="label_lon">
             <property name="visible">True</property>
+            <property name="can_focus">False</property>
             <property name="label" translatable="yes">Longitude:</property>
           </object>
           <packing>
@@ -187,13 +204,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkListStore" id="liststore_property"/>
-  <object class="GtkAdjustment" id="adjustment_round">
-    <property name="value">-1</property>
-    <property name="lower">-1</property>
-    <property name="upper">5</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
   </object>
 </interface>
