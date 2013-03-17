@@ -38,7 +38,7 @@ __copyright__ = ("Copyright 2004, Davyd Madeley\n"
     "Copyright 2010, 2011, Serrano Pereira")
 __credits__ = ["Serrano Pereira <serrano.pereira@gmail.com>"]
 __license__ = "GPL3"
-__version__ = "0.2.2"
+__version__ = "0.3"
 __maintainer__ = "Serrano Pereira"
 __email__ = "serrano.pereira@gmail.com"
 __status__ = "Production"
