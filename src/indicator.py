@@ -31,7 +31,7 @@ from gi.repository import GObject
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-import appindicator
+from gi.repository import AppIndicator3 as AppIndicator
 
 __author__ = "Serrano Pereira"
 __copyright__ = ("Copyright 2004, Davyd Madeley\n"
@@ -88,10 +88,11 @@ class Indicator(object):
         self.nextwall = nextwall
 
         # Create an Application Indicator icon
-        ind = appindicator.Indicator("nextwall",
-            "nextwall", # Icon name
-            appindicator.CATEGORY_OTHER)
-        ind.set_status(appindicator.STATUS_ACTIVE)
+        ind = AppIndicator.Indicator.new(
+            "nextwall",
+            "nextwall",
+            AppIndicator.IndicatorCategory.OTHER)
+        ind.set_status(AppIndicator.IndicatorStatus.ACTIVE)
 
         # Create GTK menu
         menu = Gtk.Menu()
@@ -253,15 +254,6 @@ class ImageInformation(object):
 
         # Connect the window signals to the handlers.
         self.builder.connect_signals(self)
-
-        # Add items to the "New brightness" combobox.
-        #print GObject.type_name(GObject.TYPE_STRING)
-        cell = Gtk.CellRendererText()
-        self.combobox_brightness.pack_start(cell, True)
-        self.combobox_brightness.add_attribute(cell, 'text', 0)
-        self.combobox_brightness.append_text('Night')
-        self.combobox_brightness.append_text('Twilight')
-        self.combobox_brightness.append_text('Day')
 
     def show(self, widget=None, data=None):
         """Show the dialog."""

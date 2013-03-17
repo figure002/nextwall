@@ -37,7 +37,6 @@ from gi.repository import GConf
 from gi.repository import GObject
 
 import std
-import indicator
 
 GObject.threads_init()
 
@@ -213,6 +212,7 @@ class NextWall(object):
         # Decide what to do next.
         if args.applet:
             # Show the applet.
+            import indicator
             indicator.Indicator(self)
         else:
             # Change the background.
