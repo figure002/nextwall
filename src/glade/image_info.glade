@@ -5,11 +5,13 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-go-forward</property>
+    <property name="icon-size">2</property>
   </object>
   <object class="GtkImage" id="image_previous">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-go-back</property>
+    <property name="icon-size">2</property>
   </object>
   <object class="GtkWindow" id="image_info_dialog">
     <property name="width_request">450</property>
@@ -184,6 +186,7 @@
                 <property name="valign">center</property>
                 <property name="margin_right">5</property>
                 <property name="image">image_previous</property>
+                <property name="relief">none</property>
                 <property name="focus_on_click">False</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="on_previous" swapped="no"/>
@@ -215,6 +218,7 @@
                 <property name="valign">center</property>
                 <property name="margin_left">5</property>
                 <property name="image">image_next</property>
+                <property name="relief">none</property>
                 <property name="focus_on_click">False</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="on_next" swapped="no"/>
