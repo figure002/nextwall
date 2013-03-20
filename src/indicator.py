@@ -305,6 +305,18 @@ class ImageInformation(object):
         # Hide the dialog.
         self.dialog.hide()
 
+    def on_next(self, button):
+        """Change the wallpaper."""
+        self.nextwall.change_background()
+        self.update()
+
+    def on_previous(self, button):
+        """Load the previous wallpaper.
+
+        TODO: Make this method load the previous wallpaper.
+        """
+        pass
+
     def make_thumbnail(self, factory, filename):
         """Create a thumbnail for an image file.
 
