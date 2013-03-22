@@ -586,7 +586,7 @@ class NextWall(object):
         # Make sure the random background item isn't the same as the
         # current background.
         sames = 0
-        while path.decode('utf-8') == current_bg:
+        while path == current_bg.decode('utf-8'):
             # Stop the loop if we find the same image 3 times.
             if sames == 3:
                 logging.info("Not enough image files. Select a different folder or scan for image files.")
