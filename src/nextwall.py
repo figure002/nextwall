@@ -541,6 +541,9 @@ class NextWall(object):
         matching_ids = [x[0] for x in matching_ids]
         #print matching_ids
 
+        # Shuffle the list for extra randomness.
+        random.shuffle(matching_ids)
+
         # Get a new random wallpaper from the database.
         random_id = random.choice(matching_ids)
         cursor.execute("SELECT path FROM wallpapers WHERE id = ?;", [random_id])
