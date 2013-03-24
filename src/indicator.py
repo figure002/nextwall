@@ -378,8 +378,8 @@ class Preferences(object):
         # Get some GTK objects.
         self.dialog = self.builder.get_object('preferences_dialog')
         self.chooser_backgrounds_folder = self.builder.get_object('chooser_backgrounds_folder')
-        self.checkbutton_recursion = self.builder.get_object('checkbutton_recursion')
-        self.checkbutton_fit_time = self.builder.get_object('checkbutton_fit_time')
+        self.switch_recursion = self.builder.get_object('switch_recursion')
+        self.switch_fit_time = self.builder.get_object('switch_fit_time')
         self.entry_lat = self.builder.get_object('entry_lat')
         self.entry_lon = self.builder.get_object('entry_lon')
 
@@ -390,13 +390,13 @@ class Preferences(object):
         # Set the path for the folder chooser.
         self.chooser_backgrounds_folder.set_current_folder(self.nextwall.path)
 
-        # Enable/disable recusion checkbutton.
+        # Enable/disable recusion switch.
         if self.nextwall.recursive:
-            self.checkbutton_recursion.set_active(True)
+            self.switch_recursion.set_active(True)
 
-        # Enable/disable fit time checkbutton.
+        # Enable/disable fit time switch.
         if self.nextwall.fit_time:
-            self.checkbutton_fit_time.set_active(True)
+            self.switch_fit_time.set_active(True)
 
         # Set latitude and longitude values.
         self.entry_lat.set_text(str(self.nextwall.latitude))
@@ -408,13 +408,13 @@ class Preferences(object):
         self.nextwall.set_backgrounds_folder( self.chooser_backgrounds_folder.get_filename() )
 
         # Set recursion.
-        if self.checkbutton_recursion.get_active():
+        if self.switch_recursion.get_active():
             self.nextwall.recursive = True
         else:
             self.nextwall.recursive = False
 
         # Set match time.
-        if self.checkbutton_fit_time.get_active():
+        if self.switch_fit_time.get_active():
             self.nextwall.set_fit_time(True)
         else:
             self.nextwall.set_fit_time(False)
@@ -443,7 +443,7 @@ class Preferences(object):
 
         # Make sure that both latitude and longitude are set if the fit time
         # of day checkbox is checked.
-        if self.checkbutton_fit_time.get_active() and not lat_lon_set:
+        if self.switch_fit_time.get_active() and not lat_lon_set:
             dialog = Gtk.MessageDialog(parent=None, flags=0,
                 type=Gtk.MessageType.ERROR, buttons=Gtk.ButtonsType.OK,
                 message_format="Latitude and longitude")

@@ -14,6 +14,7 @@
     <property name="visible">True</property>
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">Preferences</property>
+    <property name="resizable">False</property>
     <property name="window_position">center</property>
     <property name="icon_name">nextwall</property>
     <child>
@@ -22,7 +23,7 @@
         <property name="can_focus">False</property>
         <property name="border_width">10</property>
         <property name="n_rows">6</property>
-        <property name="n_columns">2</property>
+        <property name="n_columns">4</property>
         <property name="column_spacing">10</property>
         <property name="row_spacing">10</property>
         <child>
@@ -31,10 +32,11 @@
             <property name="can_focus">False</property>
             <property name="xalign">0</property>
             <property name="yalign">1</property>
-            <property name="label" translatable="yes">Select wallpapers folder:</property>
+            <property name="label" translatable="yes">Wallpapers folder</property>
             <property name="justify">right</property>
           </object>
           <packing>
+            <property name="right_attach">2</property>
             <property name="x_options">GTK_FILL</property>
             <property name="y_options">GTK_SHRINK</property>
           </packing>
@@ -47,41 +49,9 @@
             <property name="title" translatable="yes">Select Backgrounds Folder</property>
           </object>
           <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
+            <property name="left_attach">2</property>
+            <property name="right_attach">4</property>
             <property name="y_options">GTK_SHRINK</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkCheckButton" id="checkbutton_recursion">
-            <property name="label" translatable="yes">Enable recursion (look in subfolders)</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="xalign">0.5</property>
-            <property name="draw_indicator">True</property>
-          </object>
-          <packing>
-            <property name="right_attach">2</property>
-            <property name="top_attach">1</property>
-            <property name="bottom_attach">2</property>
-            <property name="y_options">GTK_FILL</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkCheckButton" id="checkbutton_fit_time">
-            <property name="label" translatable="yes">Select backgrounds that fit the time of day</property>
-            <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">False</property>
-            <property name="xalign">0.5</property>
-            <property name="draw_indicator">True</property>
-          </object>
-          <packing>
-            <property name="right_attach">2</property>
-            <property name="top_attach">2</property>
-            <property name="bottom_attach">3</property>
-            <property name="y_options">GTK_FILL</property>
           </packing>
         </child>
         <child>
@@ -106,6 +76,7 @@
             </child>
           </object>
           <packing>
+            <property name="right_attach">3</property>
             <property name="top_attach">5</property>
             <property name="bottom_attach">6</property>
           </packing>
@@ -148,8 +119,8 @@
             </child>
           </object>
           <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
+            <property name="left_attach">2</property>
+            <property name="right_attach">4</property>
             <property name="top_attach">5</property>
             <property name="bottom_attach">6</property>
           </packing>
@@ -158,9 +129,11 @@
           <object class="GtkLabel" id="label_lat">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Latitude:</property>
+            <property name="halign">start</property>
+            <property name="label" translatable="yes">Latitude</property>
           </object>
           <packing>
+            <property name="right_attach">3</property>
             <property name="top_attach">3</property>
             <property name="bottom_attach">4</property>
           </packing>
@@ -169,9 +142,11 @@
           <object class="GtkLabel" id="label_lon">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Longitude:</property>
+            <property name="halign">start</property>
+            <property name="label" translatable="yes">Longitude</property>
           </object>
           <packing>
+            <property name="right_attach">3</property>
             <property name="top_attach">4</property>
             <property name="bottom_attach">5</property>
           </packing>
@@ -183,8 +158,8 @@
             <property name="invisible_char">•</property>
           </object>
           <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
+            <property name="left_attach">3</property>
+            <property name="right_attach">4</property>
             <property name="top_attach">3</property>
             <property name="bottom_attach">4</property>
           </packing>
@@ -196,10 +171,64 @@
             <property name="invisible_char">•</property>
           </object>
           <packing>
-            <property name="left_attach">1</property>
-            <property name="right_attach">2</property>
+            <property name="left_attach">3</property>
+            <property name="right_attach">4</property>
             <property name="top_attach">4</property>
             <property name="bottom_attach">5</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSwitch" id="switch_recursion">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="halign">end</property>
+          </object>
+          <packing>
+            <property name="left_attach">3</property>
+            <property name="right_attach">4</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+            <property name="y_options">GTK_SHRINK</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="label1">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">0</property>
+            <property name="label" translatable="yes">Look in subfolders</property>
+          </object>
+          <packing>
+            <property name="right_attach">3</property>
+            <property name="top_attach">1</property>
+            <property name="bottom_attach">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="label2">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="xalign">0</property>
+            <property name="label" translatable="yes">Select wallpapers that fit the time of day</property>
+          </object>
+          <packing>
+            <property name="right_attach">3</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkSwitch" id="switch_fit_time">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="halign">end</property>
+          </object>
+          <packing>
+            <property name="left_attach">3</property>
+            <property name="right_attach">4</property>
+            <property name="top_attach">2</property>
+            <property name="bottom_attach">3</property>
+            <property name="y_options">GTK_SHRINK</property>
           </packing>
         </child>
       </object>
