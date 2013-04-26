@@ -270,6 +270,9 @@ class ImageInformation(object):
         # Get the current background.
         self.current_bg = self.nextwall.get_background_uri()
 
+        if not os.path.exists(self.current_bg):
+            return
+
         # Get the image brightness for the current background.
         kurtosis, self.brightness = self.nextwall.get_image_brightness(self.current_bg, get=True)
 
