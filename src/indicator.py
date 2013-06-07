@@ -297,15 +297,14 @@ class ImageInformation(object):
         # Set brightness.
         self.combobox_brightness.set_active(self.brightness)
 
-    def on_button_ok_clicked(self, widget, data=None):
-        """Save settings and close the dialog."""
-        # Get the selected brightness value.
+    def on_apply(self, widget=None, data=None):
+        """Apply the settings."""
         active = self.combobox_brightness.get_active()
-
-        # Set the new brightness value.
         self.nextwall.set_defined_brightness(self.current_bg, active)
 
-        # Hide the dialog.
+    def on_ok(self, widget=None, data=None):
+        """Apply the settings and hide the dialog."""
+        self.on_apply()
         self.dialog.hide()
 
     def on_next(self, button):
