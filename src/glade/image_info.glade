@@ -7,12 +7,6 @@
     <property name="stock">gtk-go-forward</property>
     <property name="icon-size">2</property>
   </object>
-  <object class="GtkImage" id="image_previous">
-    <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="stock">gtk-go-back</property>
-    <property name="icon-size">2</property>
-  </object>
   <object class="GtkWindow" id="image_info_dialog">
     <property name="width_request">450</property>
     <property name="can_focus">False</property>
@@ -196,25 +190,6 @@
           <object class="GtkBox" id="box_thumb">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <child>
-              <object class="GtkButton" id="button_previous">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-                <property name="receives_default">False</property>
-                <property name="valign">center</property>
-                <property name="margin_right">5</property>
-                <property name="image">image_previous</property>
-                <property name="relief">none</property>
-                <property name="focus_on_click">False</property>
-                <property name="always_show_image">True</property>
-                <signal name="clicked" handler="on_previous" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
             <child>
               <object class="GtkImage" id="image_thumb">
                 <property name="visible">True</property>
