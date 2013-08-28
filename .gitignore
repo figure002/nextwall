@@ -1,3 +1,7 @@
+*~
 *.pyc
+*.swp
+*.o
 build/
 dist/
+Session.vim
