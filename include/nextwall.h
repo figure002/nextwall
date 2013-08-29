@@ -1,12 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sqlite3.h>
+#include "cfgpath.h"        /* Get user paths */
 
 #define MAXLINE 1000
 #define NEXTWALL_DB_VERSION 0.2
 
-//char *sql_errmsg = 0;
-static int rc;
+char cfgpath[MAX_PATH]; /* Path to user configurations directory */
+char dbfile[MAX_PATH]; /* Path to database file */
+char default_wallpaper_path[MAX_PATH] = "/usr/share/backgrounds/";
+char *wallpaper_path;
+int c, rc;
+int recursion = 0, fit_tod = 0;
+double longitude = 0.0, latitude = 0.0;
 
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);
@@ -27,14 +33,13 @@ static int callback(void *notused, int argc, char **argv, char **colnames) {
 int handle_sqlite_response(int rc) {
     if (rc != SQLITE_OK) {
         fprintf(stderr, "SQL error: %s\n", "Unknown");
-        //sqlite3_free(sql_errmsg);
         exit(1);
     }
-    //sqlite3_free(sql_errmsg);
     return 0;
 }
 
-/* Create an empty database with the necessary tables. */
+/* Create an empty database with the necessary tables.
+Returns 0 on success, -1 on failure. */
 int nextwall_make_db(sqlite3 *db) {
     char *sql;
     char sqlstr[MAXLINE];
@@ -46,18 +51,21 @@ int nextwall_make_db(sqlite3 *db) {
         "defined_brightness INTEGER," \
         "rating INTEGER);";
     rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
-    handle_sqlite_response(rc);
+    if (rc != SQLITE_OK)
+        return -1;
 
     sql = "CREATE TABLE info (" \
         "id INTEGER PRIMARY KEY," \
         "name VARCHAR," \
         "value VARCHAR);";
     rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
-    handle_sqlite_response(rc);
+    if (rc != SQLITE_OK)
+        return -1;
 
     sprintf(sqlstr, "INSERT INTO info VALUES (null, 'version', %f);", NEXTWALL_DB_VERSION);
     rc = sqlite3_exec(db, sqlstr, NULL, NULL, NULL);
-    handle_sqlite_response(rc);
+    if (rc != SQLITE_OK)
+        return -1;
 
     return 0;
 }

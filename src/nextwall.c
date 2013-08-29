@@ -4,34 +4,114 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sqlite3.h>
-#include "cfgpath.h"        /* Get user paths */
-#include "nextwall.h"       /* NextWall routines */
+#include <argp.h>
+#include "nextwall.h"
 
-char cfgpath[MAX_PATH];     /* Path to user configurations directory */
-char dbfile[MAX_PATH];      /* Path to database file */
+const char *argp_program_version = "0.4.0";
+const char *argp_program_bug_address = "<serrano.pereira@gmail.com>";
 
-int main(int argc, char *argv[]) {
+/* Program documentation. */
+static char doc[] = "nextwall -- a wallpaper rotator";
+
+/* A description of the arguments we accept. */
+static char args_doc[] = "PATH";
+
+/* The options we understand. */
+static struct argp_option options[] = {
+    {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories" },
+    {"time", 't', 0, 0, "Find wallpapers that fit the time of day" },
+    { 0 }
+};
+
+/* Used by main to communicate with parse_opt. */
+struct arguments {
+    char *args[1];
+    int recursion, time;
+};
+
+/* Parse a single option. */
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    /* Get the input argument from argp_parse, which we
+       know is a pointer to our arguments structure. */
+    struct arguments *arguments = state->input;
+
+    switch (key)
+    {
+        case 'r':
+            arguments->recursion = 1;
+            break;
+        case 't':
+            arguments->time = 1;
+            break;
+
+        case ARGP_KEY_ARG:
+            if (state->arg_num >= 1) {
+                 /* Too many arguments. */
+                 argp_usage(state);
+            }
+            arguments->args[state->arg_num] = arg;
+            break;
+
+        case ARGP_KEY_END:
+            if (state->arg_num == 0) {
+                /* Use the default wallpapers path if none specified. */
+                arguments->args[0] = default_wallpaper_path;
+            }
+            break;
+
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+/* Our argp parser. */
+static struct argp argp = { options, parse_opt, args_doc, doc };
+
+int main(int argc, char **argv) {
+    struct arguments arguments;
     struct stat sts;
-    sqlite3 *db;
     int rc = -1;
+    sqlite3 *db;
+
+    /* Default argument values. */
+    arguments.recursion = 0;
+    arguments.time = 0;
+
+    /* Parse arguments; every option seen by parse_opt will
+       be reflected in arguments. */
+    argp_parse (&argp, argc, argv, 0, 0, &arguments);
+
+    /* Set the wallpaper path */
+    wallpaper_path = arguments.args[0];
+
+    if ( stat(wallpaper_path, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
+        fprintf(stderr, "The wallpaper path %s doesn't exist.\n", wallpaper_path);
+        return 1;
+    }
+
+    /*printf("ARG1 = %s\n"
+        "RECURSION = %s\nTOD = %s\n",
+        arguments.args[0],
+        arguments.recursion ? "yes" : "no",
+        arguments.time ? "yes" : "no");*/
 
     /* Set data directory */
     get_user_data_folder(cfgpath, sizeof(cfgpath), "nextwall_test");
-
-    /* Set the database file path */
-    strcpy(dbfile, cfgpath);
-    strcat(dbfile, "nextwall.db");
 
     if (cfgpath[0] == 0) {
         fprintf(stderr, "Unable to find home directory.\n");
         return 1;
     }
 
+    /* Set the database file path */
+    strcpy(dbfile, cfgpath);
+    strcat(dbfile, "nextwall.db");
+
     // TODO: Check for `identify'
 
-    // Create the data directory.
+    /* Create the data directory if it doesn't exist. */
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        // Fail to get info about the file. Directory may not exist.
         printf("Creating directory %s\n", cfgpath);
         if ( mkdir(cfgpath, 0755) == 0 ) {
             printf("Directory created.\n");
@@ -45,13 +125,12 @@ int main(int argc, char *argv[]) {
     // Create the database file if it doesn't exist.
     if ( stat(dbfile, &sts) != 0 ) {
         printf("Creating database... ");
-        if ( (rc = sqlite3_open(dbfile, &db)) == 0 ) {
-            nextwall_make_db(db);
+        if ( (rc = sqlite3_open(dbfile, &db)) == 0 && nextwall_make_db(db) == 0 ) {
             printf("Done\n");
         }
         else {
             printf("Failed\n");
-            fprintf(stderr, "Creating database failed: %s\n", sqlite3_errmsg(db));
+            fprintf(stderr, "Creating database failed.\n");
             return 1;
         }
     }
@@ -69,7 +148,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("Saving data to %s\n", dbfile);
     sqlite3_close(db);
 
     return 0;
