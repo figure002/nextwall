@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include "cfgpath.h"        /* Get user paths */
+#include "nextwall.h"       /* NextWall routines */
 
 char cfgpath[MAX_PATH];     /* Path to user configurations directory */
 char dbfile[MAX_PATH];      /* Path to database file */
@@ -15,7 +16,7 @@ int main(int argc, char *argv[]) {
     int rc = -1;
 
     /* Set data directory */
-    get_user_data_folder(cfgpath, sizeof(cfgpath), "nextwall");
+    get_user_data_folder(cfgpath, sizeof(cfgpath), "nextwall_test");
 
     /* Set the database file path */
     strcpy(dbfile, cfgpath);
@@ -25,6 +26,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Unable to find home directory.\n");
         return 1;
     }
+
+    // TODO: Check for `identify'
 
     // Create the data directory.
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
@@ -41,23 +44,26 @@ int main(int argc, char *argv[]) {
 
     // Create the database file if it doesn't exist.
     if ( stat(dbfile, &sts) != 0 ) {
-        printf("Creating database...\n");
+        printf("Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 ) {
-            // TODO: Routines for creating database tables.
-            printf("Created database successfully\n");
+            nextwall_make_db(db);
+            printf("Done\n");
         }
         else {
-            fprintf(stderr, "Failed to create database: %s\n", sqlite3_errmsg(db));
+            printf("Failed\n");
+            fprintf(stderr, "Creating database failed: %s\n", sqlite3_errmsg(db));
             return 1;
         }
     }
 
     // Open database connection.
-    if ( rc != 0 ) {
+    if ( rc != SQLITE_OK ) {
+        printf("Opening database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 ) {
-            printf("Opened database successfully\n");
+            printf("Done\n");
         }
         else {
+            printf("Failed\n");
             fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }
