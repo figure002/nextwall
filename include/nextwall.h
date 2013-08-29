@@ -8,11 +8,10 @@
 
 char cfgpath[MAX_PATH]; /* Path to user configurations directory */
 char dbfile[MAX_PATH]; /* Path to database file */
-char default_wallpaper_path[MAX_PATH] = "/usr/share/backgrounds/";
+char default_wallpaper_path[] = "/usr/share/backgrounds/";
 char *wallpaper_path;
 int c, rc;
-int recursion = 0, fit_tod = 0;
-double longitude = 0.0, latitude = 0.0;
+double latitude = 51.48, longitude = 0.0;
 
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);

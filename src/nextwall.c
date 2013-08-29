@@ -18,15 +18,18 @@ static char args_doc[] = "PATH";
 
 /* The options we understand. */
 static struct argp_option options[] = {
-    {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories" },
-    {"time", 't', 0, 0, "Find wallpapers that fit the time of day" },
+    {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories"},
+    {"time", 't', 0, 0, "Find wallpapers that fit the time of day"},
+    {"scan", 's', 0, 0, "Scan for images files in PATH"},
+    {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your current location"},
     { 0 }
 };
 
 /* Used by main to communicate with parse_opt. */
 struct arguments {
-    char *args[1];
-    int recursion, time;
+    char *args[1]; /* PATH argument */
+    int recursion, time, scan;
+    char *location;
 };
 
 /* Parse a single option. */
@@ -34,6 +37,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     /* Get the input argument from argp_parse, which we
        know is a pointer to our arguments structure. */
     struct arguments *arguments = state->input;
+    char tmp[50];
+    char *lat, *lon;
+    int rc;
 
     switch (key)
     {
@@ -42,6 +48,31 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 't':
             arguments->time = 1;
+            break;
+        case 's':
+            arguments->scan = 1;
+            break;
+        case 'l':
+            arguments->location = arg;
+
+            strcpy(tmp, arg);
+            if (strstr(tmp, ":") == NULL) {
+                fprintf(stderr, "Incorrect value for location\n");
+                argp_usage(state);
+            }
+            lat = strtok(tmp, ":");
+            lon = strtok(NULL, ":");
+
+            rc = sscanf(lat, "%lf", &latitude); /* parse string to double */
+            if (rc == 0) {
+                fprintf(stderr, "Incorrect value for latitude\n");
+                argp_usage(state);
+            }
+            rc = sscanf(lon, "%lf", &longitude); /* parse string to double */
+            if (rc == 0) {
+                fprintf(stderr, "Incorrect value for longitude\n");
+                argp_usage(state);
+            }
             break;
 
         case ARGP_KEY_ARG:
@@ -77,6 +108,8 @@ int main(int argc, char **argv) {
     /* Default argument values. */
     arguments.recursion = 0;
     arguments.time = 0;
+    arguments.scan = 0;
+    arguments.location = "51.48:0.0";
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
@@ -90,11 +123,16 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /*printf("ARG1 = %s\n"
-        "RECURSION = %s\nTOD = %s\n",
+    printf("PATH = %s\n"
+        "RECURSION = %s\nTIME = %s\n"
+        "SCAN = %s\n"
+        "LAT = %f\nLON = %f\n",
         arguments.args[0],
         arguments.recursion ? "yes" : "no",
-        arguments.time ? "yes" : "no");*/
+        arguments.time ? "yes" : "no",
+        arguments.scan ? "yes" : "no",
+        latitude,
+        longitude);
 
     /* Set data directory */
     get_user_data_folder(cfgpath, sizeof(cfgpath), "nextwall_test");
