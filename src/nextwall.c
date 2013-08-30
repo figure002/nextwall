@@ -150,9 +150,9 @@ int main(int argc, char **argv) {
 
     /* Create the data directory if it doesn't exist. */
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        printf("Creating directory %s\n", cfgpath);
+        fprintf(stderr, "Creating directory %s\n", cfgpath);
         if ( mkdir(cfgpath, 0755) == 0 ) {
-            printf("Directory created.\n");
+            fprintf(stderr, "Directory created.\n");
         }
         else {
             fprintf(stderr, "Failed to create directory.\n");
@@ -162,12 +162,12 @@ int main(int argc, char **argv) {
 
     // Create the database file if it doesn't exist.
     if ( stat(dbfile, &sts) != 0 ) {
-        printf("Creating database... ");
+        fprintf(stderr, "Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 && nextwall_make_db(db) == 0 ) {
-            printf("Done\n");
+            fprintf(stderr, "Done\n");
         }
         else {
-            printf("Failed\n");
+            fprintf(stderr, "Failed\n");
             fprintf(stderr, "Creating database failed.\n");
             return 1;
         }
@@ -175,12 +175,12 @@ int main(int argc, char **argv) {
 
     // Open database connection.
     if ( rc != SQLITE_OK ) {
-        printf("Opening database... ");
+        fprintf(stderr, "Opening database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 ) {
-            printf("Done\n");
+            fprintf(stderr, "Done\n");
         }
         else {
-            printf("Failed\n");
+            fprintf(stderr, "Failed\n");
             fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }
