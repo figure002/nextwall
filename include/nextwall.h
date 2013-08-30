@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sqlite3.h>
+#include <dirent.h>
 #include "cfgpath.h"        /* Get user paths */
 
 #define MAXLINE 1000
@@ -69,4 +70,31 @@ int nextwall_make_db(sqlite3 *db) {
     return 0;
 }
 
+void nextwall_scan_dir(const char *name, int recursive) {
+    DIR *dir;
+    struct dirent *entry;
+
+    if (!(dir = opendir(name)))
+        return;
+    if (!(entry = readdir(dir)))
+        return;
+
+    do {
+        if (entry->d_type == DT_DIR) {
+            if (!recursive)
+                continue;
+            char path[1024];
+            int len = snprintf(path, sizeof(path)-1, "%s/%s", name, entry->d_name);
+            path[len] = 0;
+            if (strcmp(entry->d_name, ".") == 0  || strcmp(entry->d_name, "..") == 0 || \
+                strcmp(entry->d_name, ".thumbs") == 0)
+                continue;
+            nextwall_scan_dir(path, recursive);
+        }
+        else {
+            printf("%s/%s\n", name, entry->d_name);
+        }
+    } while ( (entry = readdir(dir)) );
+    closedir(dir);
+}
 

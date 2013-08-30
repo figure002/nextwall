@@ -186,8 +186,16 @@ int main(int argc, char **argv) {
         }
     }
 
-    sqlite3_close(db);
+    /* Search directory for wallpapers */
+    if (arguments.scan) {
+        nextwall_scan_dir(wallpaper_path, arguments.recursion);
+        goto Return;
+    }
 
-    return 0;
+    goto Return;
+
+    Return:
+        sqlite3_close(db);
+        return 0;
 }
 
