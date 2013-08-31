@@ -6,7 +6,7 @@
 #include <magic.h>
 #include "cfgpath.h"        /* Get user paths */
 
-#define MAXLINE 2000
+#define BUFFER_SIZE 512
 #define NEXTWALL_DB_VERSION 0.2
 
 char cfgpath[MAX_PATH]; /* Path to user configurations directory */
@@ -19,10 +19,10 @@ double latitude = 51.48, longitude = 0.0;
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);
 int handle_sqlite_response(int rc);
-void nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
+int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
 int nextwall_is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
-int nextwall_save_image_info(sqlite3 *db, const char *path);
+int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -37,7 +37,7 @@ int handle_sqlite_response(int rc) {
 Returns 0 on success, -1 on failure. */
 int nextwall_make_db(sqlite3 *db) {
     char *sql;
-    char sqlstr[MAXLINE];
+    char sqlstr[BUFFER_SIZE];
 
     sql = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
@@ -65,18 +65,29 @@ int nextwall_make_db(sqlite3 *db) {
     return 0;
 }
 
-void nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
+int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
     DIR *dir;
     struct dirent *entry;
+    int found = 0;
+    char sql[BUFFER_SIZE] = "\0";
+    sqlite3_stmt *stmt;
+    const char *tail = 0;
 
     /* Initialize Magic Number Recognition Library */
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     magic_load(magic, NULL);
 
+    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+
     if (!(dir = opendir(name)))
-        return;
+        return found;
     if (!(entry = readdir(dir)))
-        return;
+        return found;
+
+    /* Prepare INSERT statement */
+    sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, null, null, null);");
+    sqlite3_prepare_v2(db, sql, BUFFER_SIZE, &stmt, &tail);
+
 
     do {
         char tmp[PATH_MAX];
@@ -90,14 +101,16 @@ void nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
             if (strcmp(entry->d_name, ".") == 0  || strcmp(entry->d_name, "..") == 0 || \
                 strcmp(entry->d_name, ".thumbs") == 0)
                 continue;
-            nextwall_scan_dir(db, path, recursive);
+            found += nextwall_scan_dir(db, path, recursive+1);
         }
         else if (strstr(magic_file(magic, path), "image")) {
             if (nextwall_is_known_image(db, path))
                 continue;
 
-            if (nextwall_save_image_info(db, path) == 0) {
-                fprintf(stderr, "  Found %s\n", path);
+            if (nextwall_save_image_info(stmt, path) == 0) {
+                fprintf(stderr, "  Found %s\r", path);
+                fflush(stderr);
+                ++found;
             }
             else {
                 fprintf(stderr, "Failed to save image info for %s\n", path);
@@ -109,13 +122,18 @@ void nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
     goto Return;
 
 Return:
+    if (recursive < 2) {
+        sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
+        sqlite3_finalize(stmt);
+    }
     magic_close(magic);
     closedir(dir);
+    return found;
 }
 
 int nextwall_is_known_image(sqlite3 *db, const char *path) {
     char query[] = "SELECT kurtosis FROM wallpapers WHERE path='%s';";
-    char sql[MAXLINE];
+    char sql[strlen(query)+strlen(path)];
     known_image = 0;
 
     snprintf(sql, sizeof(sql), query, path);
@@ -132,14 +150,13 @@ int known_image_callback(void *notused, int argc, char **argv, char **colnames) 
     return 0;
 }
 
-int nextwall_save_image_info(sqlite3 *db, const char *path) {
-    char query[] = "INSERT INTO wallpapers VALUES (null, '%s', null, null, null);";
-    char sql[MAXLINE];
-
-    snprintf(sql, sizeof(sql), query, path);
-    rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
-    if (rc != SQLITE_OK)
+int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
+    sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE)
         return -1;
+    sqlite3_clear_bindings(stmt);
+    sqlite3_reset(stmt);
     return 0;
 }
 

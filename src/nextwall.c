@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
     int rc = -1;
+    int found;
     sqlite3 *db;
 
     /* Default argument values. */
@@ -188,9 +189,9 @@ int main(int argc, char **argv) {
 
     /* Search directory for wallpapers */
     if (arguments.scan) {
-        fprintf(stderr, "Scanning for new wallpapers... ");
-        nextwall_scan_dir(db, wallpaper_path, arguments.recursion);
-        fprintf(stderr, "Done\n");
+        fprintf(stderr, "Scanning for new wallpapers...\n");
+        found = nextwall_scan_dir(db, wallpaper_path, arguments.recursion);
+        fprintf(stderr, "\nDone (found %d new wallpapers)\n", found);
         goto Return;
     }
 
