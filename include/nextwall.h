@@ -13,8 +13,8 @@
 
 char cfgpath[MAX_PATH]; /* Path to user configurations directory */
 char dbfile[MAX_PATH]; /* Path to database file */
-char default_wallpaper_path[] = "/usr/share/backgrounds/";
-char *wallpaper_path;
+char default_wallpaper_dir[] = "/usr/share/backgrounds/";
+char *wallpaper_dir, *wallpaper_path;
 int c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
 long wallpaper_list[LIST_MAX];
@@ -27,7 +27,8 @@ int nextwall_is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
 int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
 int nextwall(sqlite3 *db, const char *path);
-int nextwall_callback(void *notused, int argc, char **argv, char **colnames);
+int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
+int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -167,23 +168,39 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
 
 int nextwall(sqlite3 *db, const char *path) {
     char sql[BUFFER_SIZE] = "\0";
+    //sqlite3_stmt *stmt;
+    //const char *tail = 0;
+    int id;
 
     snprintf(sql, sizeof(sql), "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
-    rc = sqlite3_exec(db, sql, nextwall_callback, NULL, NULL);
+    rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
         exit(1);
     }
 
+    if (max_walls == 0)
+        return -1;
     srand(time(NULL));
-    if (max_walls > 0) {
-        return rand() % max_walls;
+    id = rand() % max_walls;
+
+    snprintf(sql, sizeof(sql), "SELECT path FROM wallpapers WHERE id=%d;", id);
+    rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to execute query: %s\n", sql);
+        exit(1);
     }
-    return -1;
+
+    return id;
 }
 
-int nextwall_callback(void *notused, int argc, char **argv, char **colnames) {
+int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
     max_walls++;
     wallpaper_list[max_walls] = (long)argv[0];
+    return 0;
+}
+
+int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
+    wallpaper_path = argv[0];
     return 0;
 }

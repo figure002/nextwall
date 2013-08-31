@@ -86,7 +86,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case ARGP_KEY_END:
             if (state->arg_num == 0) {
                 /* Use the default wallpapers path if none specified. */
-                arguments->args[0] = default_wallpaper_path;
+                arguments->args[0] = default_wallpaper_dir;
             }
             break;
 
@@ -103,8 +103,7 @@ int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
     int rc = -1;
-    int found;
-    int wallpaper;
+    int found, id;
     sqlite3 *db;
 
     /* Default argument values. */
@@ -118,10 +117,10 @@ int main(int argc, char **argv) {
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     /* Set the wallpaper path */
-    wallpaper_path = arguments.args[0];
+    wallpaper_dir = arguments.args[0];
 
-    if ( stat(wallpaper_path, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        fprintf(stderr, "The wallpaper path %s doesn't exist.\n", wallpaper_path);
+    if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
+        fprintf(stderr, "The wallpaper path %s doesn't exist.\n", wallpaper_dir);
         return 1;
     }
 
@@ -177,12 +176,7 @@ int main(int argc, char **argv) {
 
     // Open database connection.
     if ( rc != SQLITE_OK ) {
-        fprintf(stderr, "Opening database... ");
-        if ( (rc = sqlite3_open(dbfile, &db)) == 0 ) {
-            fprintf(stderr, "Done\n");
-        }
-        else {
-            fprintf(stderr, "Failed\n");
+        if ( (rc = sqlite3_open(dbfile, &db)) != 0 ) {
             fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }
@@ -191,13 +185,18 @@ int main(int argc, char **argv) {
     /* Search directory for wallpapers */
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...\n");
-        found = nextwall_scan_dir(db, wallpaper_path, arguments.recursion);
+        found = nextwall_scan_dir(db, wallpaper_dir, arguments.recursion);
         fprintf(stderr, "\nDone (found %d new wallpapers)\n", found);
         goto Return;
     }
 
-    wallpaper = nextwall(db, wallpaper_path);
-    printf("wallpaper: %d\n", wallpaper);
+    id = nextwall(db, wallpaper_dir);
+    if (id != -1) {
+        printf("wallpaper: %s\n", wallpaper_path);
+    }
+    else {
+        fprintf(stderr, "No wallpapers found for this directory. Try the --scan option.\n");
+    }
 
     goto Return;
 
