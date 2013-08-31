@@ -104,6 +104,7 @@ int main(int argc, char **argv) {
     struct stat sts;
     int rc = -1;
     int found;
+    int wallpaper;
     sqlite3 *db;
 
     /* Default argument values. */
@@ -194,6 +195,9 @@ int main(int argc, char **argv) {
         fprintf(stderr, "\nDone (found %d new wallpapers)\n", found);
         goto Return;
     }
+
+    wallpaper = nextwall(db, wallpaper_path);
+    printf("wallpaper: %d\n", wallpaper);
 
     goto Return;
 

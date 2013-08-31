@@ -4,17 +4,20 @@
 #include <dirent.h>
 #include <limits.h>
 #include <magic.h>
+#include <time.h>
 #include "cfgpath.h"        /* Get user paths */
 
 #define BUFFER_SIZE 512
+#define LIST_MAX 1000
 #define NEXTWALL_DB_VERSION 0.2
 
 char cfgpath[MAX_PATH]; /* Path to user configurations directory */
 char dbfile[MAX_PATH]; /* Path to database file */
 char default_wallpaper_path[] = "/usr/share/backgrounds/";
 char *wallpaper_path;
-int c, rc, known_image;
+int c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
+long wallpaper_list[LIST_MAX];
 
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);
@@ -23,6 +26,8 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
 int nextwall_is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
 int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
+int nextwall(sqlite3 *db, const char *path);
+int nextwall_callback(void *notused, int argc, char **argv, char **colnames);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -160,3 +165,25 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
     return 0;
 }
 
+int nextwall(sqlite3 *db, const char *path) {
+    char sql[BUFFER_SIZE] = "\0";
+
+    snprintf(sql, sizeof(sql), "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
+    rc = sqlite3_exec(db, sql, nextwall_callback, NULL, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to execute query: %s\n", sql);
+        exit(1);
+    }
+
+    srand(time(NULL));
+    if (max_walls > 0) {
+        return rand() % max_walls;
+    }
+    return -1;
+}
+
+int nextwall_callback(void *notused, int argc, char **argv, char **colnames) {
+    max_walls++;
+    wallpaper_list[max_walls] = (long)argv[0];
+    return 0;
+}
