@@ -113,7 +113,7 @@ int main(int argc, char **argv) {
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
-    argp_parse (&argp, argc, argv, 0, 0, &arguments);
+    argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     /* Set the wallpaper path */
     wallpaper_path = arguments.args[0];
@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    printf("PATH = %s\n"
+    /*printf("PATH = %s\n"
         "RECURSION = %s\nTIME = %s\n"
         "SCAN = %s\n"
         "LAT = %f\nLON = %f\n",
@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
         arguments.time ? "yes" : "no",
         arguments.scan ? "yes" : "no",
         latitude,
-        longitude);
+        longitude);*/
 
     /* Set data directory */
     get_user_data_folder(cfgpath, sizeof(cfgpath), "nextwall_test");
@@ -188,14 +188,16 @@ int main(int argc, char **argv) {
 
     /* Search directory for wallpapers */
     if (arguments.scan) {
-        nextwall_scan_dir(wallpaper_path, arguments.recursion);
+        fprintf(stderr, "Scanning for new wallpapers... ");
+        nextwall_scan_dir(db, wallpaper_path, arguments.recursion);
+        fprintf(stderr, "Done\n");
         goto Return;
     }
 
     goto Return;
 
-    Return:
-        sqlite3_close(db);
-        return 0;
+Return:
+    sqlite3_close(db);
+    return 0;
 }
 
