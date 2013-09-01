@@ -17,7 +17,7 @@ char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char *wallpaper_dir, *wallpaper_path;
 int c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
-long wallpaper_list[LIST_MAX];
+int wallpaper_list[LIST_MAX];
 
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);
@@ -168,8 +168,6 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
 
 int nextwall(sqlite3 *db, const char *path) {
     char sql[BUFFER_SIZE] = "\0";
-    //sqlite3_stmt *stmt;
-    //const char *tail = 0;
     int id;
 
     snprintf(sql, sizeof(sql), "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
@@ -179,24 +177,26 @@ int nextwall(sqlite3 *db, const char *path) {
         exit(1);
     }
 
+    /* Get random index for the wallpaper ID list. */
     if (max_walls == 0)
         return -1;
     srand(time(NULL));
     id = rand() % max_walls;
 
-    snprintf(sql, sizeof(sql), "SELECT path FROM wallpapers WHERE id=%d;", id);
+    /* Set the wallpaper path. */
+    snprintf(sql, sizeof(sql), "SELECT path FROM wallpapers WHERE id=%d;", wallpaper_list[id]);
     rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
         exit(1);
     }
 
-    return id;
+    return wallpaper_list[id];
 }
 
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
-    max_walls++;
-    wallpaper_list[max_walls] = (long)argv[0];
+    wallpaper_list[max_walls] = atoi(argv[0]);
+    ++max_walls;
     return 0;
 }
 

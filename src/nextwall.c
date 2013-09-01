@@ -190,12 +190,11 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    id = nextwall(db, wallpaper_dir);
-    if (id != -1) {
-        printf("wallpaper: %s\n", wallpaper_path);
+    if ( (id = nextwall(db, wallpaper_dir)) != -1 ) {
+        printf("id: %d, wallpaper: %s\n", id, wallpaper_path);
     }
     else {
-        fprintf(stderr, "No wallpapers found for this directory. Try the --scan option.\n");
+        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
     }
 
     goto Return;
