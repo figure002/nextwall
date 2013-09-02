@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
     int rc = -1;
-    int found, id;
+    int found, i, id;
     sqlite3 *db;
 
     /* Default argument values. */
@@ -190,11 +190,34 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    if ( (id = nextwall(db, wallpaper_dir)) != -1 ) {
-        printf("id: %d, wallpaper: %s\n", id, wallpaper_path);
+    /* Get the path of the current wallpaper */
+    get_background_uri(current_wallpaper);
+    fprintf(stderr, "Before: %s\n", current_wallpaper);
+
+    /* Set wallpaper_path */
+    if ( (id = nextwall(db, wallpaper_dir)) == -1 ) {
+        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
+        goto Return;
+    }
+
+    /* Make sure we select a different wallpaper */
+    for (i = 0; wallpaper_path == current_wallpaper; i++) {
+        if (i == 3) {
+            fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.");
+            goto Return;
+        }
+        id = nextwall(db, wallpaper_dir);
+    }
+
+    /* Set the new wallpaper */
+    fprintf(stderr, "Setting wallpaper to %s ... ", wallpaper_path);
+    if (set_background_uri(wallpaper_path)) {
+        fprintf(stderr, "Done\n");
+        get_background_uri(current_wallpaper);
+        fprintf(stderr, "After: %s\n", current_wallpaper);
     }
     else {
-        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
+        fprintf(stderr, "Failed\n");
     }
 
     goto Return;

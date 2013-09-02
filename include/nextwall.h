@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <magic.h>
 #include <time.h>
+#include <gio/gio.h>
 #include "cfgpath.h"        /* Get user paths */
 
 #define BUFFER_SIZE 512
@@ -14,6 +15,7 @@
 char cfgpath[MAX_PATH]; /* Path to user configurations directory */
 char dbfile[MAX_PATH]; /* Path to database file */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
+char current_wallpaper[PATH_MAX];
 char *wallpaper_dir, *wallpaper_path;
 int c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
@@ -29,6 +31,8 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
 int nextwall(sqlite3 *db, const char *path);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
+int set_background_uri(const char *path);
+int get_background_uri(char *dest);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -204,3 +208,27 @@ int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
     wallpaper_path = argv[0];
     return 0;
 }
+
+int set_background_uri(const char *path) {
+    char pathc[PATH_MAX];
+    GSettings *gso;
+
+    if (!strstr(path, "file://"))
+        sprintf(pathc, "file://%s", path);
+    else
+        strcpy(pathc, path);
+
+    gso = g_settings_new("org.gnome.desktop.background");
+    return g_settings_set_string(gso, "picture-uri", pathc);
+}
+
+int get_background_uri(char *dest) {
+    GSettings *gso;
+    const char *uri;
+
+    gso = g_settings_new("org.gnome.desktop.background");
+    uri = g_variant_get_string(g_settings_get_value(gso, "picture-uri"), NULL);
+    strcpy(dest, uri+7);
+    return 0;
+}
+
