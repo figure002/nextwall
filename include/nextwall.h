@@ -4,8 +4,8 @@
 #include <dirent.h>
 #include <limits.h>
 #include <magic.h>
-#include <time.h>
 #include <argp.h>
+#include <fcntl.h> /* for open() */
 #include <gio/gio.h>
 #include "cfgpath.h"
 
@@ -103,7 +103,7 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
     do {
         char tmp[PATH_MAX];
         char path[PATH_MAX];
-        snprintf(tmp, sizeof(tmp), "%s/%s", name, entry->d_name);
+        snprintf(tmp, sizeof tmp, "%s/%s", name, entry->d_name);
         realpath(tmp, path);
 
         if (entry->d_type == DT_DIR) {
@@ -147,7 +147,7 @@ int nextwall_is_known_image(sqlite3 *db, const char *path) {
     char sql[strlen(query)+strlen(path)];
     known_image = 0;
 
-    snprintf(sql, sizeof(sql), query, path);
+    snprintf(sql, sizeof sql, query, path);
     rc = sqlite3_exec(db, sql, known_image_callback, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
@@ -173,9 +173,10 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
 
 int nextwall(sqlite3 *db, const char *path) {
     char sql[BUFFER_SIZE] = "\0";
-    int id;
+    int i;
+    unsigned seed;
 
-    snprintf(sql, sizeof(sql), "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
+    snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
     rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
@@ -185,18 +186,23 @@ int nextwall(sqlite3 *db, const char *path) {
     /* Get random index for the wallpaper ID list. */
     if (max_walls == 0)
         return -1;
-    srand(time(NULL));
-    id = rand() % max_walls;
+
+    /* Set the seed for the random number generator */
+    read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
+    srand(seed);
+
+    /* Get random index for wallpaper_list */
+    i = rand() % max_walls;
 
     /* Set the wallpaper path. */
-    snprintf(sql, sizeof(sql), "SELECT path FROM wallpapers WHERE id=%d;", wallpaper_list[id]);
+    snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;", wallpaper_list[i]);
     rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
         exit(1);
     }
 
-    return wallpaper_list[id];
+    return wallpaper_list[i];
 }
 
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
