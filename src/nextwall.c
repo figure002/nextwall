@@ -1,10 +1,7 @@
-#include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <sqlite3.h>
-#include <argp.h>
 #include "nextwall.h"
 
 const char *argp_program_version = "0.4.0";
@@ -105,6 +102,10 @@ int main(int argc, char **argv) {
     int rc = -1;
     int found, i, id;
     sqlite3 *db;
+    GSettings *settings;
+
+    /* Create a new GSettings object */
+    settings = g_settings_new("org.gnome.desktop.background");
 
     /* Default argument values. */
     arguments.recursion = 0;
@@ -191,8 +192,7 @@ int main(int argc, char **argv) {
     }
 
     /* Get the path of the current wallpaper */
-    get_background_uri(current_wallpaper);
-    fprintf(stderr, "Before: %s\n", current_wallpaper);
+    get_background_uri(settings, current_wallpaper);
 
     /* Set wallpaper_path */
     if ( (id = nextwall(db, wallpaper_dir)) == -1 ) {
@@ -210,19 +210,13 @@ int main(int argc, char **argv) {
     }
 
     /* Set the new wallpaper */
-    fprintf(stderr, "Setting wallpaper to %s ... ", wallpaper_path);
-    if (set_background_uri(wallpaper_path)) {
-        fprintf(stderr, "Done\n");
-        get_background_uri(current_wallpaper);
-        fprintf(stderr, "After: %s\n", current_wallpaper);
-    }
-    else {
-        fprintf(stderr, "Failed\n");
-    }
+    fprintf(stderr, "Setting wallpaper to %s ...\n", wallpaper_path);
+    set_background_uri(settings, wallpaper_path);
 
     goto Return;
 
 Return:
+    g_object_unref(settings);
     sqlite3_close(db);
     return 0;
 }

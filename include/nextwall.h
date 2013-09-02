@@ -5,8 +5,9 @@
 #include <limits.h>
 #include <magic.h>
 #include <time.h>
+#include <argp.h>
 #include <gio/gio.h>
-#include "cfgpath.h"        /* Get user paths */
+#include "cfgpath.h"
 
 #define BUFFER_SIZE 512
 #define LIST_MAX 1000
@@ -31,8 +32,8 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
 int nextwall(sqlite3 *db, const char *path);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
-int set_background_uri(const char *path);
-int get_background_uri(char *dest);
+void set_background_uri(GSettings *settings, const char *path);
+int get_background_uri(GSettings *settings, char *dest);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -209,25 +210,23 @@ int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
     return 0;
 }
 
-int set_background_uri(const char *path) {
+void set_background_uri(GSettings *settings, const char *path) {
     char pathc[PATH_MAX];
-    GSettings *gso;
 
     if (!strstr(path, "file://"))
         sprintf(pathc, "file://%s", path);
     else
         strcpy(pathc, path);
 
-    gso = g_settings_new("org.gnome.desktop.background");
-    return g_settings_set_string(gso, "picture-uri", pathc);
+    g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
+    g_settings_sync(); /* Make sure the changes are written to disk */
+    g_assert_cmpstr(g_settings_get_string(settings, "picture-uri"), ==, pathc);
 }
 
-int get_background_uri(char *dest) {
-    GSettings *gso;
+int get_background_uri(GSettings *settings, char *dest) {
     const char *uri;
 
-    gso = g_settings_new("org.gnome.desktop.background");
-    uri = g_variant_get_string(g_settings_get_value(gso, "picture-uri"), NULL);
+    uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
     strcpy(dest, uri+7);
     return 0;
 }
