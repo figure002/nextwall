@@ -198,20 +198,22 @@ int main(int argc, char **argv) {
     }
 
     /* Get local brightness */
-    local_brightness = get_local_brightness();
-    switch (local_brightness) {
-        case 0:
-            fprintf(stderr, "Selecting wallpaper for night.\n");
-            break;
-        case 1:
-            fprintf(stderr, "Selecting wallpapers for twilight.\n");
-            break;
-        case 2:
-            fprintf(stderr, "Selecting wallpaper for day.\n");
-            break;
-        default:
-            fprintf(stderr, "Error: Could not determine the local brightness value.\n");
-            goto Return;
+    if (arguments.time) {
+        local_brightness = get_local_brightness();
+        switch (local_brightness) {
+            case 0:
+                fprintf(stderr, "Selecting wallpaper for night.\n");
+                break;
+            case 1:
+                fprintf(stderr, "Selecting wallpapers for twilight.\n");
+                break;
+            case 2:
+                fprintf(stderr, "Selecting wallpaper for day.\n");
+                break;
+            default:
+                fprintf(stderr, "Error: Could not determine the local brightness value.\n");
+                goto Return;
+        }
     }
 
     /* Set wallpaper_path */

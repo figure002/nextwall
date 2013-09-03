@@ -22,7 +22,8 @@ char cfgpath[PATH_MAX]; /* Path to user configurations directory */
 char dbfile[PATH_MAX]; /* Path to database file */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char current_wallpaper[PATH_MAX];
-char *wallpaper_dir, *wallpaper_path;
+char *wallpaper_dir;
+char wallpaper_path[PATH_MAX];
 int c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
 int wallpaper_list[LIST_MAX];
@@ -221,7 +222,7 @@ int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
 }
 
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
-    wallpaper_path = argv[0];
+    strncpy(wallpaper_path, argv[0], sizeof wallpaper_path);
     return 0;
 }
 
@@ -297,7 +298,7 @@ int get_local_brightness(void) {
     }
 
     if (rs == 0 && civ == 0) {
-        if (sunrise < htime || htime < sunset)
+        if (sunrise < htime && htime < sunset)
             return 2; // Day
         else if (htime < civ_start || htime > civ_end)
             return 0; // Night
