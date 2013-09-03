@@ -126,17 +126,6 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /*printf("PATH = %s\n"
-        "RECURSION = %s\nTIME = %s\n"
-        "SCAN = %s\n"
-        "LAT = %f\nLON = %f\n",
-        arguments.args[0],
-        arguments.recursion ? "yes" : "no",
-        arguments.time ? "yes" : "no",
-        arguments.scan ? "yes" : "no",
-        latitude,
-        longitude);*/
-
     /* Set data directory */
     get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
@@ -148,13 +137,6 @@ int main(int argc, char **argv) {
     /* Set the database file path */
     strcpy(dbfile, cfgpath);
     strcat(dbfile, "nextwall.db");
-
-    /* Set local_brightness value if wallpaper must fit time of day */
-    if (arguments.time) {
-        /* Get the local time */
-    }
-
-    // TODO: Check for `identify'
 
     /* Create the data directory if it doesn't exist. */
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
