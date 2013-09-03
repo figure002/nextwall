@@ -18,19 +18,23 @@
 #define LIST_MAX 1000
 #define NEXTWALL_DB_VERSION 0.2
 
+#define eprintf(format, ...) do { \
+    if (verbose) \
+        fprintf(stderr, format, ##__VA_ARGS__); \
+} while(0)
+
 char cfgpath[PATH_MAX]; /* Path to user configurations directory */
 char dbfile[PATH_MAX]; /* Path to database file */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char current_wallpaper[PATH_MAX];
 char *wallpaper_dir;
 char wallpaper_path[PATH_MAX];
-int c, rc, known_image, max_walls = 0;
+int verbose = 0, c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
 int wallpaper_list[LIST_MAX];
 
 /* function prototypes */
 int nextwall_make_db(sqlite3 *db);
-int handle_sqlite_response(int rc);
 int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
 int nextwall_is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
@@ -41,15 +45,6 @@ int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
 int get_local_brightness(void);
-
-/* Print the SQLite error message if there was an error. */
-int handle_sqlite_response(int rc) {
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", "Unknown");
-        exit(1);
-    }
-    return 0;
-}
 
 /* Create an empty database with the necessary tables.
 Returns 0 on success, -1 on failure. */
@@ -131,7 +126,7 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
                 ++found;
             }
             else {
-                fprintf(stderr, "Failed to save image info for %s\n", path);
+                fprintf(stderr, "Error: Failed to save image info for %s\n", path);
                 goto Return;
             }
         }
@@ -157,7 +152,7 @@ int nextwall_is_known_image(sqlite3 *db, const char *path) {
     snprintf(sql, sizeof sql, query, path);
     rc = sqlite3_exec(db, sql, known_image_callback, NULL, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to execute query: %s\n", sql);
+        fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
     }
     return known_image;
@@ -190,7 +185,7 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
 
     rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to execute query: %s\n", sql);
+        fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
     }
 
@@ -208,7 +203,7 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;", wallpaper_list[i]);
     rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Failed to execute query: %s\n", sql);
+        fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
     }
 
@@ -271,14 +266,14 @@ int get_local_brightness(void) {
         case 0:
             sunrise += gmt_offset_h;
             sunset += gmt_offset_h;
-            fprintf(stderr, "Sun rises %.2fh, sets %.2fh %s\n", sunrise, sunset, ltime.tm_zone);
+            eprintf("Sun rises %.2fh, sets %.2fh %s\n", sunrise, sunset, ltime.tm_zone);
             break;
         case +1:
-            fprintf(stderr, "Sun above horizon\n");
+            eprintf("Sun above horizon\n");
             return 2; // Day
             break;
         case -1:
-            fprintf(stderr, "Sun below horizon\n");
+            eprintf("Sun below horizon\n");
             return 0; // Night
             break;
     }
@@ -287,13 +282,13 @@ int get_local_brightness(void) {
         case 0:
             civ_start += gmt_offset_h;
             civ_end += gmt_offset_h;
-            fprintf(stderr, "Civil twilight starts %.2fh, ends %.2fh %s\n", civ_start, civ_end, ltime.tm_zone);
+            eprintf("Civil twilight starts %.2fh, ends %.2fh %s\n", civ_start, civ_end, ltime.tm_zone);
             break;
         case +1:
-            fprintf(stderr, "Never darker than civil twilight\n");
+            eprintf("Never darker than civil twilight\n");
             break;
         case -1:
-            fprintf(stderr, "Never as bright as civil twilight\n");
+            eprintf("Never as bright as civil twilight\n");
             break;
     }
 

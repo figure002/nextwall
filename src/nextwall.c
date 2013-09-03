@@ -1,6 +1,6 @@
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "cfgpath.h"
 #include "nextwall.h"
@@ -19,6 +19,7 @@ static struct argp_option options[] = {
     {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories"},
     {"time", 't', 0, 0, "Find wallpapers that fit the time of day"},
     {"scan", 's', 0, 0, "Scan for images files in PATH"},
+    {"verbose", 'v', 0, 0, "Increase verbosity"},
     {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your current location"},
     { 0 }
 };
@@ -26,7 +27,7 @@ static struct argp_option options[] = {
 /* Used by main to communicate with parse_opt. */
 struct arguments {
     char *args[1]; /* PATH argument */
-    int recursion, time, scan;
+    int recursion, time, scan, verbose;
     char *location;
 };
 
@@ -49,6 +50,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 's':
             arguments->scan = 1;
+            break;
+        case 'v':
+            arguments->verbose = verbose = 1;
             break;
         case 'l':
             arguments->location = arg;
@@ -112,6 +116,7 @@ int main(int argc, char **argv) {
     arguments.recursion = 0;
     arguments.time = 0;
     arguments.scan = 0;
+    arguments.verbose = 0;
     arguments.location = "51.48:0.0";
 
     /* Parse arguments; every option seen by parse_opt will
@@ -130,7 +135,7 @@ int main(int argc, char **argv) {
     get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
     if (cfgpath[0] == 0) {
-        fprintf(stderr, "Unable to find home directory.\n");
+        fprintf(stderr, "Error: Unable to find home directory.\n");
         return 1;
     }
 
@@ -140,25 +145,25 @@ int main(int argc, char **argv) {
 
     /* Create the data directory if it doesn't exist. */
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        fprintf(stderr, "Creating directory %s\n", cfgpath);
+        eprintf("Creating directory %s\n", cfgpath);
         if ( mkdir(cfgpath, 0755) == 0 ) {
-            fprintf(stderr, "Directory created.\n");
+            eprintf("Directory created.\n");
         }
         else {
-            fprintf(stderr, "Failed to create directory.\n");
+            fprintf(stderr, "Error: Failed to create directory %s\n", cfgpath);
             return 1;
         }
     }
 
     // Create the database file if it doesn't exist.
     if ( stat(dbfile, &sts) != 0 ) {
-        fprintf(stderr, "Creating database... ");
+        eprintf("Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 && nextwall_make_db(db) == 0 ) {
-            fprintf(stderr, "Done\n");
+            eprintf("Done\n");
         }
         else {
-            fprintf(stderr, "Failed\n");
-            fprintf(stderr, "Creating database failed.\n");
+            eprintf("Failed\n");
+            fprintf(stderr, "Error: Creating database failed.\n");
             return 1;
         }
     }
@@ -166,7 +171,7 @@ int main(int argc, char **argv) {
     // Open database connection.
     if ( rc != SQLITE_OK ) {
         if ( (rc = sqlite3_open(dbfile, &db)) != 0 ) {
-            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+            fprintf(stderr, "Error: Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }
     }
@@ -184,13 +189,13 @@ int main(int argc, char **argv) {
         local_brightness = get_local_brightness();
         switch (local_brightness) {
             case 0:
-                fprintf(stderr, "Selecting wallpaper for night.\n");
+                eprintf("Selecting wallpaper for night.\n");
                 break;
             case 1:
-                fprintf(stderr, "Selecting wallpapers for twilight.\n");
+                eprintf("Selecting wallpapers for twilight.\n");
                 break;
             case 2:
-                fprintf(stderr, "Selecting wallpaper for day.\n");
+                eprintf("Selecting wallpaper for day.\n");
                 break;
             default:
                 fprintf(stderr, "Error: Could not determine the local brightness value.\n");
@@ -217,7 +222,7 @@ int main(int argc, char **argv) {
     }
 
     /* Set the new wallpaper */
-    fprintf(stderr, "Setting wallpaper to %s\n", wallpaper_path);
+    eprintf("Setting wallpaper to %s\n", wallpaper_path);
     set_background_uri(settings, wallpaper_path);
 
     goto Return;
