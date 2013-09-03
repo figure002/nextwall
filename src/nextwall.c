@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
         longitude);*/
 
     /* Set data directory */
-    get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall_test");
+    get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
     if (cfgpath[0] == 0) {
         fprintf(stderr, "Unable to find home directory.\n");
