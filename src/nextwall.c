@@ -226,9 +226,9 @@ int main(int argc, char **argv) {
     get_background_uri(settings, current_wallpaper);
 
     /* Make sure we select a different wallpaper */
-    for (i = 0; wallpaper_path == current_wallpaper; i++) {
+    for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
         if (i == 3) {
-            fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.");
+            fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.\n");
             goto Return;
         }
         id = nextwall(db, wallpaper_dir, local_brightness);
