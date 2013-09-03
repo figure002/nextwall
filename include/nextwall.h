@@ -1,20 +1,21 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sqlite3.h>
 #include <dirent.h>
 #include <limits.h>
 #include <magic.h>
 #include <argp.h>
+#include <time.h>
 #include <fcntl.h> /* for open() */
 #include <gio/gio.h>
-#include "cfgpath.h"
 
 #define BUFFER_SIZE 512
 #define LIST_MAX 1000
 #define NEXTWALL_DB_VERSION 0.2
 
-char cfgpath[MAX_PATH]; /* Path to user configurations directory */
-char dbfile[MAX_PATH]; /* Path to database file */
+char cfgpath[PATH_MAX]; /* Path to user configurations directory */
+char dbfile[PATH_MAX]; /* Path to database file */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char current_wallpaper[PATH_MAX];
 char *wallpaper_dir, *wallpaper_path;
@@ -29,11 +30,12 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
 int nextwall_is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
 int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
-int nextwall(sqlite3 *db, const char *path);
+int nextwall(sqlite3 *db, const char *path, int brightness);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
+int get_local_brightness(struct tm *t, double rise, double set, double civ_start, double civ_end);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -171,19 +173,22 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
     return 0;
 }
 
-int nextwall(sqlite3 *db, const char *path) {
+int nextwall(sqlite3 *db, const char *path, int brightness) {
     char sql[BUFFER_SIZE] = "\0";
     int i;
     unsigned seed;
 
-    snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
+    if (brightness >= 0)
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND defined_brightness=%d;", path, brightness);
+    else
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
+
     rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to execute query: %s\n", sql);
         exit(1);
     }
 
-    /* Get random index for the wallpaper ID list. */
     if (max_walls == 0)
         return -1;
 
@@ -235,5 +240,18 @@ int get_background_uri(GSettings *settings, char *dest) {
     uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
     strcpy(dest, uri+7);
     return 0;
+}
+
+/* Returns 0 for night, 1 for twilight, or 2 for day, depending on
+   local time t.*/
+int get_local_brightness(struct tm *t, double rise, double set, double civ_start, double civ_end) {
+    double time = (double)(*t).tm_hour + (double)(*t).tm_min / 60.0;
+
+    if (rise < time || time < set)
+        return 2; // Day
+    else if (time < civ_start || time > civ_end)
+        return 0; // Night
+    else
+        return 1; // Twilight
 }
 
