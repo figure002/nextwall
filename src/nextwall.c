@@ -1,11 +1,8 @@
-#define _GNU_SOURCE /* for tm_gmtoff and tm_zone */
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 
 #include "cfgpath.h"
-#include "sunriset.h"
 #include "nextwall.h"
 
 const char *argp_program_version = "0.4.0";
@@ -103,12 +100,8 @@ static struct argp argp = { options, parse_opt, args_doc, doc };
 int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
-    struct tm ltime;
-    time_t now;
-    double sunrise, sunset, civ_start, civ_end;
     int rc = -1, local_brightness = -1;
-    int year, month, day, gmt_offset_h;
-    int found, i, id, rs, civ;
+    int found, i, id;
     sqlite3 *db;
     GSettings *settings;
 
@@ -159,62 +152,6 @@ int main(int argc, char **argv) {
     /* Set local_brightness value if wallpaper must fit time of day */
     if (arguments.time) {
         /* Get the local time */
-        time(&now);
-        localtime_r(&now, &ltime);
-        year = ltime.tm_year + 1900;
-        month = ltime.tm_mon + 1;
-        day = ltime.tm_mday;
-        gmt_offset_h = ltime.tm_gmtoff / 3600; // GMT offset with local time zone
-
-        /* Set local sunrise, sunset, and civil twilight times */
-        rs = sun_rise_set(year, month, day, longitude, latitude, &sunrise, &sunset);
-        civ  = civil_twilight(year, month, day, longitude, latitude, &civ_start, &civ_end);
-
-        /* Set local brightness value */
-        switch (rs) {
-            case 0:
-                sunrise += gmt_offset_h;
-                sunset += gmt_offset_h;
-                fprintf(stderr, "Sun rises %.2fh, sets %.2fh %s\n", sunrise, sunset, ltime.tm_zone);
-                break;
-            case +1:
-                fprintf(stderr, "Sun above horizon\n");
-                local_brightness = 2; // Day
-                break;
-            case -1:
-                fprintf(stderr, "Sun below horizon\n");
-                local_brightness = 0; // Night
-                break;
-        }
-
-        switch (civ) {
-            case 0:
-                civ_start += gmt_offset_h;
-                civ_end += gmt_offset_h;
-                fprintf(stderr, "Civil twilight starts %.2fh, ends %.2fh %s\n", civ_start, civ_end, ltime.tm_zone);
-                break;
-            case +1:
-                fprintf(stderr, "Never darker than civil twilight\n");
-                break;
-            case -1:
-                fprintf(stderr, "Never as bright as civil twilight\n");
-                break;
-        }
-
-        if (rs == 0 && civ == 0)
-            local_brightness = get_local_brightness(&ltime, sunrise, sunset, civ_start, civ_end);
-
-        switch (local_brightness) {
-            case 0:
-                fprintf(stderr, "Selecting wallpaper for night.\n");
-                break;
-            case 1:
-                fprintf(stderr, "Selecting wallpapers for twilight.\n");
-                break;
-            case 2:
-                fprintf(stderr, "Selecting wallpaper for day.\n");
-                break;
-        }
     }
 
     // TODO: Check for `identify'
@@ -260,14 +197,31 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    /* Get the path of the current wallpaper */
-    get_background_uri(settings, current_wallpaper);
+    /* Get local brightness */
+    local_brightness = get_local_brightness();
+    switch (local_brightness) {
+        case 0:
+            fprintf(stderr, "Selecting wallpaper for night.\n");
+            break;
+        case 1:
+            fprintf(stderr, "Selecting wallpapers for twilight.\n");
+            break;
+        case 2:
+            fprintf(stderr, "Selecting wallpaper for day.\n");
+            break;
+        default:
+            fprintf(stderr, "Error: Could not determine the local brightness value.\n");
+            goto Return;
+    }
 
     /* Set wallpaper_path */
     if ( (id = nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
         fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
         goto Return;
     }
+
+    /* Get the path of the current wallpaper */
+    get_background_uri(settings, current_wallpaper);
 
     /* Make sure we select a different wallpaper */
     for (i = 0; wallpaper_path == current_wallpaper; i++) {

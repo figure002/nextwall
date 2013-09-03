@@ -1,3 +1,5 @@
+#define _GNU_SOURCE /* for tm_gmtoff and tm_zone */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,6 +11,8 @@
 #include <time.h>
 #include <fcntl.h> /* for open() */
 #include <gio/gio.h>
+
+#include "sunriset.h"
 
 #define BUFFER_SIZE 512
 #define LIST_MAX 1000
@@ -35,7 +39,7 @@ int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
-int get_local_brightness(struct tm *t, double rise, double set, double civ_start, double civ_end);
+int get_local_brightness(void);
 
 /* Print the SQLite error message if there was an error. */
 int handle_sqlite_response(int rc) {
@@ -243,15 +247,65 @@ int get_background_uri(GSettings *settings, char *dest) {
 }
 
 /* Returns 0 for night, 1 for twilight, or 2 for day, depending on
-   local time t.*/
-int get_local_brightness(struct tm *t, double rise, double set, double civ_start, double civ_end) {
-    double time = (double)(*t).tm_hour + (double)(*t).tm_min / 60.0;
+   local time t. Returns -1 if brightness could not be defined. */
+int get_local_brightness(void) {
+    struct tm ltime;
+    time_t now;
+    double htime, sunrise, sunset, civ_start, civ_end;
+    int year, month, day, gmt_offset_h, rs, civ;
 
-    if (rise < time || time < set)
-        return 2; // Day
-    else if (time < civ_start || time > civ_end)
-        return 0; // Night
-    else
-        return 1; // Twilight
+    time(&now);
+    localtime_r(&now, &ltime);
+    year = ltime.tm_year + 1900;
+    month = ltime.tm_mon + 1;
+    day = ltime.tm_mday;
+    gmt_offset_h = ltime.tm_gmtoff / 3600; // GMT offset with local time zone
+    htime = (double)ltime.tm_hour + (double)ltime.tm_min / 60.0; // Current time in hours
+
+    /* Set local sunrise, sunset, and civil twilight times */
+    rs = sun_rise_set(year, month, day, longitude, latitude, &sunrise, &sunset);
+    civ  = civil_twilight(year, month, day, longitude, latitude, &civ_start, &civ_end);
+
+    switch (rs) {
+        case 0:
+            sunrise += gmt_offset_h;
+            sunset += gmt_offset_h;
+            fprintf(stderr, "Sun rises %.2fh, sets %.2fh %s\n", sunrise, sunset, ltime.tm_zone);
+            break;
+        case +1:
+            fprintf(stderr, "Sun above horizon\n");
+            return 2; // Day
+            break;
+        case -1:
+            fprintf(stderr, "Sun below horizon\n");
+            return 0; // Night
+            break;
+    }
+
+    switch (civ) {
+        case 0:
+            civ_start += gmt_offset_h;
+            civ_end += gmt_offset_h;
+            fprintf(stderr, "Civil twilight starts %.2fh, ends %.2fh %s\n", civ_start, civ_end, ltime.tm_zone);
+            break;
+        case +1:
+            fprintf(stderr, "Never darker than civil twilight\n");
+            break;
+        case -1:
+            fprintf(stderr, "Never as bright as civil twilight\n");
+            break;
+    }
+
+    if (rs == 0 && civ == 0) {
+        if (sunrise < htime || htime < sunset)
+            return 2; // Day
+        else if (htime < civ_start || htime > civ_end)
+            return 0; // Night
+        else
+            return 1; // Twilight
+    }
+    else {
+        return -1;
+    }
 }
 
