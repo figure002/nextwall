@@ -45,6 +45,7 @@ int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
 int get_local_brightness(void);
+char *hours_to_hm(double hours, char *s);
 
 /* Create an empty database with the necessary tables.
 Returns 0 on success, -1 on failure. */
@@ -249,6 +250,7 @@ int get_local_brightness(void) {
     time_t now;
     double htime, sunrise, sunset, civ_start, civ_end;
     int year, month, day, gmt_offset_h, rs, civ;
+    char sr_s[6], ss_s[6], civ_start_s[6], civ_end_s[6];
 
     time(&now);
     localtime_r(&now, &ltime);
@@ -266,7 +268,7 @@ int get_local_brightness(void) {
         case 0:
             sunrise += gmt_offset_h;
             sunset += gmt_offset_h;
-            eprintf("Sun rises %.2fh, sets %.2fh %s\n", sunrise, sunset, ltime.tm_zone);
+            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s), hours_to_hm(sunset, ss_s), ltime.tm_zone);
             break;
         case +1:
             eprintf("Sun above horizon\n");
@@ -282,7 +284,7 @@ int get_local_brightness(void) {
         case 0:
             civ_start += gmt_offset_h;
             civ_end += gmt_offset_h;
-            eprintf("Civil twilight starts %.2fh, ends %.2fh %s\n", civ_start, civ_end, ltime.tm_zone);
+            eprintf("Civil twilight starts %s, ends %s %s\n", hours_to_hm(civ_start, civ_start_s), hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
             break;
         case +1:
             eprintf("Never darker than civil twilight\n");
@@ -303,5 +305,14 @@ int get_local_brightness(void) {
     else {
         return -1;
     }
+}
+
+char *hours_to_hm(double hours, char *str) {
+    char hm[6];
+    double h = floor(hours);
+    double m = (hours - h) * 60.0;
+    snprintf(hm, sizeof hm, "%.0f:%.0f", h, m);
+    strcpy(str, hm);
+    return str;
 }
 
