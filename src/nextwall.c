@@ -178,9 +178,9 @@ int main(int argc, char **argv) {
 
     /* Search directory for wallpapers */
     if (arguments.scan) {
-        fprintf(stderr, "Scanning for new wallpapers...\n");
+        fprintf(stderr, "Scanning for new wallpapers...");
         found = nextwall_scan_dir(db, wallpaper_dir, arguments.recursion);
-        fprintf(stderr, "\nDone (found %d new wallpapers)\n", found);
+        fprintf(stderr, " Done (found %d new wallpapers)\n", found);
         goto Return;
     }
 
