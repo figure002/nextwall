@@ -82,6 +82,10 @@ int nextwall_make_db(sqlite3 *db) {
     if (rc != SQLITE_OK)
         return -1;
 
+    rc = sqlite3_exec(db, "CREATE UNIQUE INDEX wallpaper_path ON wallpapers (path);", NULL, NULL, NULL);
+    if (rc != SQLITE_OK)
+        return -1;
+
     return 0;
 }
 

@@ -102,8 +102,8 @@ def make_db(connection):
     cursor.execute("CREATE TABLE wallpapers (\
         id INTEGER PRIMARY KEY, \
         path TEXT, \
-        kurtosis FLOAT, \
-        defined_brightness INTEGER, \
+        kurtosis_o FLOAT, \
+        brightness INTEGER, \
         rating INTEGER \
         )")
 
@@ -278,7 +278,7 @@ class NextWall(object):
         # connection, because this can be called from a new thread.
         connection = sqlite.connect(DBFILE)
         cursor = connection.cursor()
-        cursor.execute("SELECT kurtosis FROM wallpapers WHERE path=?", [file])
+        cursor.execute("SELECT kurtosis_o FROM wallpapers WHERE path=?", [file])
         kurtosis = cursor.fetchone()
         cursor.close()
         connection.close()
@@ -331,17 +331,17 @@ class NextWall(object):
         """Setter for fit time of day feature."""
         self.fit_time = boolean
 
-    def set_defined_brightness(self, file, brightness):
+    def set_brightness(self, file, brightness):
         if brightness not in (0,1,2):
             raise ValueError("The brightness value must be one of 0, 1, or 2.")
         cursor = self.connection.cursor()
-        cursor.execute("UPDATE wallpapers SET defined_brightness=? WHERE path=?;", [brightness, file])
+        cursor.execute("UPDATE wallpapers SET brightness=? WHERE path=?;", [brightness, file])
         self.connection.commit()
         cursor.close()
 
-    def get_defined_brightness(self, file):
+    def get_brightness(self, file):
         cursor = self.connection.cursor()
-        cursor.execute("SELECT defined_brightness FROM wallpapers WHERE path=?;", [file])
+        cursor.execute("SELECT brightness FROM wallpapers WHERE path=?;", [file])
         brightness = cursor.fetchone()
         cursor.close()
         if not brightness:
@@ -383,7 +383,7 @@ class NextWall(object):
         kurtosis = self.get_image_kurtosis(file)
         if kurtosis == None:
             return None
-        brightness = self.get_defined_brightness(file)
+        brightness = self.get_brightness(file)
 
         if brightness == None:
             if kurtosis < KURTOSIS_THRESHOLD[0]:
@@ -485,8 +485,8 @@ class NextWall(object):
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis < ? \
-                    AND defined_brightness IS NULL;" % self.path,
+                    AND kurtosis_o < ? \
+                    AND brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[0]]
                     )
             # Night
@@ -494,8 +494,8 @@ class NextWall(object):
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis > ? \
-                    AND defined_brightness IS NULL;" % self.path,
+                    AND kurtosis_o > ? \
+                    AND brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[1]]
                     )
             # Twilight
@@ -503,9 +503,9 @@ class NextWall(object):
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis > ? \
-                    AND kurtosis < ? \
-                    AND defined_brightness IS NULL;" % self.path,
+                    AND kurtosis_o > ? \
+                    AND kurtosis_o < ? \
+                    AND brightness IS NULL;" % self.path,
                     [KURTOSIS_THRESHOLD[0], KURTOSIS_THRESHOLD[1]]
                     )
 
@@ -522,7 +522,7 @@ class NextWall(object):
             cursor.execute("SELECT id \
                 FROM wallpapers \
                 WHERE path LIKE \"%s%%\" \
-                AND defined_brightness = ?;" % self.path,
+                AND brightness = ?;" % self.path,
                 [brightness]
                 )
 

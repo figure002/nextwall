@@ -180,7 +180,8 @@ int main(int argc, char **argv) {
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...");
         found = nextwall_scan_dir(db, wallpaper_dir, arguments.recursion);
-        fprintf(stderr, " Done (found %d new wallpapers)\n", found);
+        fprintf(stderr, " Done\n");
+        fprintf(stderr, "Found %d new wallpapers\n", found);
         goto Return;
     }
 

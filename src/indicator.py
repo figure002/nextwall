@@ -300,7 +300,7 @@ class ImageInformation(object):
     def on_apply(self, widget=None, data=None):
         """Apply the settings."""
         active = self.combobox_brightness.get_active()
-        self.nextwall.set_defined_brightness(self.current_bg, active)
+        self.nextwall.set_brightness(self.current_bg, active)
 
     def on_ok(self, widget=None, data=None):
         """Apply the settings and hide the dialog."""
