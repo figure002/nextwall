@@ -36,11 +36,11 @@ int wallpaper_list[LIST_MAX];
 double kurtosis_values[4];
 
 /* function prototypes */
-int nextwall_make_db(sqlite3 *db);
-int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive);
-int nextwall_is_known_image(sqlite3 *db, const char *path);
+int make_db(sqlite3 *db);
+int scan_dir(sqlite3 *db, const char *name, int recursive);
+int is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
-int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path);
+int save_image_info(sqlite3_stmt *stmt, const char *path);
 int nextwall(sqlite3 *db, const char *path, int brightness);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
@@ -48,21 +48,20 @@ void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
 int get_local_brightness(void);
 char *hours_to_hm(double hours, char *s);
-int get_image_info(const char *path);
+int get_image_info(const char *path, double *hue, double *saturation, double *lightness);
 
 /* Create an empty database with the necessary tables.
 Returns 0 on success, -1 on failure. */
-int nextwall_make_db(sqlite3 *db) {
+int make_db(sqlite3 *db) {
     char *sql;
     char sqlstr[BUFFER_SIZE];
 
     sql = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
         "path TEXT," \
-        "kurtosis_r FLOAT," \
-        "kurtosis_g FLOAT," \
-        "kurtosis_b FLOAT," \
-        "kurtosis_o FLOAT," \
+        "hue FLOAT," \
+        "saturation FLOAT," \
+        "lightness FLOAT," \
         "brightness INTEGER" \
         ");";
     rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
@@ -89,7 +88,7 @@ int nextwall_make_db(sqlite3 *db) {
     return 0;
 }
 
-int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
+int scan_dir(sqlite3 *db, const char *name, int recursive) {
     DIR *dir;
     struct dirent *entry;
     int found = 0;
@@ -109,7 +108,7 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
         return found;
 
     /* Prepare INSERT statement */
-    sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, @KRT_R, @KRT_G, @KRT_B, @KRT_O, null);");
+    sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, @HUE, @SAT, @LGT, @BRI);");
     sqlite3_prepare_v2(db, sql, BUFFER_SIZE, &stmt, &tail);
 
 
@@ -125,13 +124,13 @@ int nextwall_scan_dir(sqlite3 *db, const char *name, int recursive) {
             if (strcmp(entry->d_name, ".") == 0  || strcmp(entry->d_name, "..") == 0 || \
                 strcmp(entry->d_name, ".thumbs") == 0)
                 continue;
-            found += nextwall_scan_dir(db, path, recursive+1);
+            found += scan_dir(db, path, recursive+1);
         }
         else if (strstr(magic_file(magic, path), "image")) {
-            if (nextwall_is_known_image(db, path))
+            if (is_known_image(db, path))
                 continue;
 
-            if (nextwall_save_image_info(stmt, path) == 0) {
+            if (save_image_info(stmt, path) == 0) {
                 ++found;
                 if (found % 10 == 0) {
                     fprintf(stderr, ".");
@@ -157,7 +156,7 @@ Return:
     return found;
 }
 
-int nextwall_is_known_image(sqlite3 *db, const char *path) {
+int is_known_image(sqlite3 *db, const char *path) {
     char query[] = "SELECT id FROM wallpapers WHERE path='%s';";
     char sql[strlen(query)+strlen(path)];
     known_image = 0;
@@ -176,17 +175,19 @@ int known_image_callback(void *notused, int argc, char **argv, char **colnames) 
     return 0;
 }
 
-int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
-    /* Set the kurtosis values for this image */
-    if (get_image_info(path) == -1)
+int save_image_info(sqlite3_stmt *stmt, const char *path) {
+    double h,s,l;
+
+    // Get the lightness for this image
+    if (get_image_info(path, &h, &s, &l) == -1)
         return -1;
 
-    /* Bind values to prepared statement */
+    // Bind values to prepared statement
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_double(stmt, 2, kurtosis_values[0]);
-    sqlite3_bind_double(stmt, 3, kurtosis_values[1]);
-    sqlite3_bind_double(stmt, 4, kurtosis_values[2]);
-    sqlite3_bind_double(stmt, 5, kurtosis_values[3]);
+    sqlite3_bind_double(stmt, 2, h);
+    sqlite3_bind_double(stmt, 3, s);
+    sqlite3_bind_double(stmt, 4, l);
+    sqlite3_bind_null(stmt, 5);
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE)
@@ -196,36 +197,42 @@ int nextwall_save_image_info(sqlite3_stmt *stmt, const char *path) {
     return 0;
 }
 
-/* Return image info for image `path` */
-int get_image_info(const char *path) {
+/* Returns the image information */
+int get_image_info(const char *path, double *hue, double *saturation, double *lightness) {
     MagickBooleanType status;
     MagickWand *magick_wand;
-    const char *info, *p;
-    char s[20] = "\0";
-    int i, j;
+    PixelWand *pixel_wand;
+    //Quantum red, green, blue;
+    //size_t qrange = 0;
 
-    /* Use ImageMagick to get image information */
     MagickWandGenesis();
     magick_wand = NewMagickWand();
+    pixel_wand = NewPixelWand();
+
+    // Read the image
     status = MagickReadImage(magick_wand, path);
     if (status == MagickFalse)
         return -1;
-    info = MagickIdentifyImage(magick_wand);
+
+    // Resize the image to 1x1 pixel (results in average color)
+    MagickResizeImage(magick_wand, 1, 1, MitchellFilter, 1);
+
+    // Get pixel color
+    status = MagickGetImagePixelColor(magick_wand, 0, 0, pixel_wand);
+    if (status == MagickFalse) {
+        return -1;
+    }
+
+    // Get the color and brightness values
+    PixelGetHSL(pixel_wand, hue, saturation, lightness);
+    //red = PixelGetRedQuantum(pixel_wand);
+    //green = PixelGetGreenQuantum(pixel_wand);
+    //blue = PixelGetBlueQuantum(pixel_wand);
+    //MagickGetQuantumRange(&qrange);
+    //printf("R: %f, G: %f, B: %f, L: %.2f\n", red/(double)qrange, green/(double)qrange, blue/(double)qrange, *lightness);
+
     magick_wand = DestroyMagickWand(magick_wand);
     MagickWandTerminus();
-
-    /* Save the kurtosis values */
-    p = info;
-    for (i = 0; (p = strstr(p, "kurtosis")); i++ ) {
-        p += 10; // Moves the pointer to the kurtosis value
-        for (j = 0; p[0] == '-' || p[0] == '.' || isdigit(p[0]); j++, p++) {
-            s[j] = p[0];
-        }
-        s[j] = '\0';
-
-        /* Save kurtosis value for blue, green, red, and overall */
-        sscanf(s, "%lf", &kurtosis_values[i]);
-    }
 
     return 0;
 }
@@ -235,8 +242,12 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     int i;
     unsigned seed;
 
-    if (brightness >= 0)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND brightness=%d;", path, brightness);
+    if (brightness == 0)
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness <= 0.30;", path);
+    else if (brightness == 1)
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness > 0.30 AND lightness < 0.50;", path);
+    else if (brightness == 2)
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness >= 0.50;", path);
     else
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
 
@@ -367,7 +378,7 @@ char *hours_to_hm(double hours, char *dest) {
     char hm[6];
     double h = floor(hours);
     double m = (hours - h) * 60.0;
-    snprintf(hm, sizeof hm, "%.0f:%.0f", h, m);
+    snprintf(hm, sizeof hm, "%02.0f:%02.0f", h, m);
     strcpy(dest, hm);
     return dest;
 }

@@ -158,7 +158,7 @@ int main(int argc, char **argv) {
     // Create the database file if it doesn't exist.
     if ( stat(dbfile, &sts) != 0 ) {
         eprintf("Creating database... ");
-        if ( (rc = sqlite3_open(dbfile, &db)) == 0 && nextwall_make_db(db) == 0 ) {
+        if ( (rc = sqlite3_open(dbfile, &db)) == 0 && make_db(db) == 0 ) {
             eprintf("Done\n");
         }
         else {
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     /* Search directory for wallpapers */
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...");
-        found = nextwall_scan_dir(db, wallpaper_dir, arguments.recursion);
+        found = scan_dir(db, wallpaper_dir, arguments.recursion);
         fprintf(stderr, " Done\n");
         fprintf(stderr, "Found %d new wallpapers\n", found);
         goto Return;
