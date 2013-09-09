@@ -1,3 +1,23 @@
+/*
+  This file is part of nextwall - a wallpaper rotator with some sense of time.
+
+   Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
+   Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
+
+   Nextwall is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Nextwall is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -5,16 +25,17 @@
 #include "cfgpath.h"
 #include "nextwall.h"
 
+/* Set up the arguments parser */
 const char *argp_program_version = "0.4.0";
 const char *argp_program_bug_address = "<serrano.pereira@gmail.com>";
 
-/* Program documentation. */
+/* Program documentation */
 static char doc[] = "nextwall -- a wallpaper rotator";
 
-/* A description of the arguments we accept. */
+/* A description of the arguments we accept */
 static char args_doc[] = "PATH";
 
-/* The options we understand. */
+/* The options we understand */
 static struct argp_option options[] = {
     {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories"},
     {"time", 't', 0, 0, "Find wallpapers that fit the time of day"},
@@ -24,14 +45,14 @@ static struct argp_option options[] = {
     { 0 }
 };
 
-/* Used by main to communicate with parse_opt. */
+/* Used by main to communicate with parse_opt */
 struct arguments {
     char *args[1]; /* PATH argument */
     int recursion, time, scan, verbose;
     char *location;
 };
 
-/* Parse a single option. */
+/* Parse a single option */
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     /* Get the input argument from argp_parse, which we
        know is a pointer to our arguments structure. */
@@ -65,12 +86,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             lat = strtok(tmp, ":");
             lon = strtok(NULL, ":");
 
-            rc = sscanf(lat, "%lf", &latitude); /* parse string to double */
+            rc = sscanf(lat, "%lf", &latitude); // parse string to double
             if (rc == 0) {
                 fprintf(stderr, "Incorrect value for latitude\n");
                 argp_usage(state);
             }
-            rc = sscanf(lon, "%lf", &longitude); /* parse string to double */
+            rc = sscanf(lon, "%lf", &longitude); // parse string to double
             if (rc == 0) {
                 fprintf(stderr, "Incorrect value for longitude\n");
                 argp_usage(state);
@@ -79,7 +100,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_ARG:
             if (state->arg_num >= 1) {
-                 /* Too many arguments. */
+                 // Too many arguments.
                  argp_usage(state);
             }
             arguments->args[state->arg_num] = arg;
@@ -87,7 +108,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_END:
             if (state->arg_num == 0) {
-                /* Use the default wallpapers path if none specified. */
+                // Use the default wallpapers path if none specified.
                 arguments->args[0] = default_wallpaper_dir;
             }
             break;
@@ -98,7 +119,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-/* Our argp parser. */
+/* Our argp parser */
 static struct argp argp = { options, parse_opt, args_doc, doc };
 
 int main(int argc, char **argv) {
@@ -109,10 +130,10 @@ int main(int argc, char **argv) {
     sqlite3 *db;
     GSettings *settings;
 
-    /* Create a new GSettings object */
+    // Create a new GSettings object
     settings = g_settings_new("org.gnome.desktop.background");
 
-    /* Default argument values. */
+    // Default argument values
     arguments.recursion = 0;
     arguments.time = 0;
     arguments.scan = 0;
@@ -123,7 +144,7 @@ int main(int argc, char **argv) {
        be reflected in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    /* Set the wallpaper path */
+    // Set the wallpaper path
     wallpaper_dir = arguments.args[0];
 
     if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
@@ -131,7 +152,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /* Set data directory */
+    // Set data directory
     get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
     if (cfgpath[0] == 0) {
@@ -139,15 +160,15 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    /* Set the database file path */
+    // Set the database file path
     strcpy(dbfile, cfgpath);
     strcat(dbfile, "nextwall.db");
 
-    /* Set the ANN file path */
+    // Set the ANN file path
     strcpy(annfile, cfgpath);
     strcat(annfile, "nextwall.net");
 
-    /* Create the data directory if it doesn't exist. */
+    // Create the data directory if it doesn't exist.
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
         eprintf("Creating directory %s\n", cfgpath);
         if ( mkdir(cfgpath, 0755) == 0 ) {
@@ -180,7 +201,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Search directory for wallpapers */
+    // Search directory for wallpapers
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...");
         found = scan_dir(db, wallpaper_dir, arguments.recursion);
@@ -189,9 +210,9 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    /* Get local brightness */
+    // Get local brightness
     if (arguments.time) {
-        local_brightness = get_local_brightness();
+        local_brightness = get_local_brightness(latitude, longitude);
         switch (local_brightness) {
             case 0:
                 eprintf("Selecting wallpaper for night.\n");
@@ -208,16 +229,16 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Set wallpaper_path */
+    // Set wallpaper_path
     if ( (id = nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
         fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
         goto Return;
     }
 
-    /* Get the path of the current wallpaper */
+    // Get the path of the current wallpaper
     get_background_uri(settings, current_wallpaper);
 
-    /* Make sure we select a different wallpaper */
+    // Make sure we select a different wallpaper
     for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
         if (i == 3) {
             fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.\n");
@@ -226,7 +247,7 @@ int main(int argc, char **argv) {
         id = nextwall(db, wallpaper_dir, local_brightness);
     }
 
-    /* Set the new wallpaper */
+    // Set the new wallpaper
     eprintf("Setting wallpaper to %s\n", wallpaper_path);
     set_background_uri(settings, wallpaper_path);
 

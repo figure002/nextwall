@@ -1,4 +1,24 @@
-#define _GNU_SOURCE /* for tm_gmtoff and tm_zone */
+/*
+  This file is part of nextwall - a wallpaper rotator with some sense of time.
+
+   Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
+   Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
+
+   Nextwall is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Nextwall is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#define _GNU_SOURCE // for tm_gmtoff and tm_zone
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -9,37 +29,53 @@
 #include <magic.h>
 #include <argp.h>
 #include <time.h>
-#include <fcntl.h> /* for open() */
+#include <fcntl.h> // for open()
 #include <gio/gio.h>
 #include <wand/MagickWand.h>
 #include <floatfann.h>
 
 #include "sunriset.h"
 
+/* Default size for strings */
 #define BUFFER_SIZE 512
-#define LIST_MAX 1000
-#define NEXTWALL_DB_VERSION 0.3
 
+/* The maximum number of wallpapers in the wallpaper list */
+#define LIST_MAX 1000
+
+/* The nextwall database version */
+#define NEXTWALL_DB_VERSION 0.4
+
+/* Wrapper for fprintf() for verbose messages */
 #define eprintf(format, ...) do { \
     if (verbose) \
         fprintf(stderr, format, ##__VA_ARGS__); \
 } while(0)
 
-char cfgpath[PATH_MAX]; /* Path to user configurations directory */
-char dbfile[PATH_MAX]; /* Path to database file */
-char annfile[PATH_MAX]; /* Path to ANN file */
+/* Path to user configurations directory */
+char cfgpath[PATH_MAX];
+
+/* Path to database file */
+char dbfile[PATH_MAX];
+
+/* Path to ANN file */
+char annfile[PATH_MAX];
+
+/* Default wallpaper directory */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
+
 char current_wallpaper[PATH_MAX];
 char *wallpaper_dir;
 char wallpaper_path[PATH_MAX];
-int verbose = 0, c, rc, known_image, max_walls = 0;
 double latitude = 51.48, longitude = 0.0;
-int wallpaper_list[LIST_MAX];
 double kurtosis_values[4];
+int verbose = 0, max_walls = 0;
+int c, rc, known_image;
+int wallpaper_list[LIST_MAX];
 
-/* function prototypes */
+
+/* Function prototypes */
 int make_db(sqlite3 *db);
-int scan_dir(sqlite3 *db, const char *name, int recursive);
+int scan_dir(sqlite3 *db, const char *base, int recursive);
 int is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
 int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
@@ -47,15 +83,20 @@ int nextwall(sqlite3 *db, const char *path, int brightness);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 void set_background_uri(GSettings *settings, const char *path);
-int get_background_uri(GSettings *settings, char *dest);
-int get_local_brightness(void);
+void get_background_uri(GSettings *settings, char *dest);
+int get_local_brightness(double lat, double lon);
 char *hours_to_hm(double hours, char *s);
 int get_image_info(const char *path, double *kurtosis, double *lightness);
 int get_brightness(struct fann *ann, double kurtosis, double lightness);
 static int numcmp(const void *a, const void *b);
 
-/* Create an empty database with the necessary tables.
-Returns 0 on success, -1 on failure. */
+
+/**
+  Create a new nextwall database.
+
+  @param[in] db The database handler.
+  @return Returns 0 on success, -1 on failure.
+ */
 int make_db(sqlite3 *db) {
     char *sql;
     char sqlstr[BUFFER_SIZE];
@@ -79,19 +120,34 @@ int make_db(sqlite3 *db) {
     if (rc != SQLITE_OK)
         return -1;
 
-    sprintf(sqlstr, "INSERT INTO info VALUES (null, 'version', %f);", NEXTWALL_DB_VERSION);
+    sprintf(sqlstr, "INSERT INTO info VALUES (null, 'version', %f);",
+            NEXTWALL_DB_VERSION);
     rc = sqlite3_exec(db, sqlstr, NULL, NULL, NULL);
     if (rc != SQLITE_OK)
         return -1;
 
-    rc = sqlite3_exec(db, "CREATE UNIQUE INDEX wallpaper_path ON wallpapers (path);", NULL, NULL, NULL);
+    rc = sqlite3_exec(db, "CREATE UNIQUE INDEX wallpaper_path ON wallpapers (path);",
+            NULL, NULL, NULL);
     if (rc != SQLITE_OK)
         return -1;
 
     return 0;
 }
 
-int scan_dir(sqlite3 *db, const char *name, int recursive) {
+/**
+  Scan the directory for new wallpapers.
+
+  The path of each image file that is found in the directory is saved along
+  with additional information (e.g. kurtosis, lightness) to the database. It
+  will use the Artificial Neural Network to define the brightness value of each
+  image.
+
+  @param[in] db The database handler.
+  @param[in] name The base directory.
+  @param[in] recursive If set to 1, the base directory is scanned recursively.
+  @return The number of new wallpapers that were found.
+ */
+int scan_dir(sqlite3 *db, const char *base, int recursive) {
     DIR *dir;
     struct dirent *entry;
     int found = 0;
@@ -109,7 +165,7 @@ int scan_dir(sqlite3 *db, const char *name, int recursive) {
     if (recursive < 2)
         sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
 
-    if (!(dir = opendir(name)))
+    if (!(dir = opendir(base)))
         return found;
     if (!(entry = readdir(dir)))
         return found;
@@ -118,11 +174,10 @@ int scan_dir(sqlite3 *db, const char *name, int recursive) {
     sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, @KUR, @LGT, @BRI);");
     sqlite3_prepare_v2(db, sql, BUFFER_SIZE, &stmt, &tail);
 
-
     do {
         char tmp[PATH_MAX];
         char path[PATH_MAX];
-        snprintf(tmp, sizeof tmp, "%s/%s", name, entry->d_name);
+        snprintf(tmp, sizeof tmp, "%s/%s", base, entry->d_name);
         realpath(tmp, path);
 
         if (entry->d_type == DT_DIR) {
@@ -164,6 +219,13 @@ Return:
     return found;
 }
 
+/**
+  Check if a wallpaper is already present in the nextwall database.
+
+  @param[in] db The database handler.
+  @param[in] path The absolute path of the wallpaper to check.
+  @return Returns 1 if the wallpaper is known, 0 otherwise.
+ */
 int is_known_image(sqlite3 *db, const char *path) {
     char query[] = "SELECT id FROM wallpapers WHERE path='%s';";
     char sql[strlen(query)+strlen(path)];
@@ -178,11 +240,28 @@ int is_known_image(sqlite3 *db, const char *path) {
     return known_image;
 }
 
+/**
+  Callback function for is_known_image().
+
+  It sets the boolean `known_image` to 1 if the wallpaper is already present
+  in the database.
+ */
 int known_image_callback(void *notused, int argc, char **argv, char **colnames) {
     known_image = 1;
     return 0;
 }
 
+/**
+  Saves the wallpaper information to the nextwall database.
+
+  Saves the wallpaper path along with the kurtosis, lightness, and brightness
+  value for the wallpaper.
+
+  @param[in] The prepared insert statement.
+  @param[in] The Artificial Neural Network.
+  @param[in] The absolute path of the wallpaper file.
+  @return Returns 0 on success, -1 otherwise.
+ */
 int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
     double kurtosis, lightness;
     int brightness;
@@ -208,8 +287,18 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
     return 0;
 }
 
-/* Use the ANN to return the brightness value for a kurtosis-lightness
-   pair */
+/**
+  Calculate the brightness value.
+
+  Uses the Artificial Neural Network to define the brightness value
+  for a given kurtosis and lightness.
+
+  @param[in] The Artificial Neural Network.
+  @param[in] The kurtosis value of the wallpaper.
+  @param[in] The lightness value of the wallpaper.
+  @return Returns the brightness value (0 for dark, 1 for intermediate, 2 for
+          light). Returns -1 on failure.
+ */
 int get_brightness(struct fann *ann, double kurtosis, double lightness) {
     fann_type *out;
     fann_type input[2];
@@ -235,7 +324,14 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
     return -1;
 }
 
-/* Compare floats */
+/**
+  Compare two floats.
+
+  @param[in] pa First float value.
+  @param[in] pa Second float value.
+  @return Returns -1, 0, or 1 if `pa` is less, equal, or greater than pb
+          respectively.
+ */
 static int numcmp(const void *pa, const void *pb) {
     float a = *(const float*)pa;
     float b = *(const float*)pb;
@@ -247,14 +343,19 @@ static int numcmp(const void *pa, const void *pb) {
         return 0;
 }
 
-/* Returns the image information */
+/**
+  Returns the kurtosis and lightness value for an image file.
+
+  @param[in] path Absolute path of the image file.
+  @param[out] kurtosis The kurtosis value.
+  @param[out] lightness The lightness value.
+  @return Retuns 0 on success, -1 on failure.
+ */
 int get_image_info(const char *path, double *kurtosis, double *lightness) {
     MagickBooleanType status;
     MagickWand *magick_wand;
     PixelWand *pixel_wand;
     double hue, saturation, skewness;
-    //Quantum red, green, blue;
-    //size_t qrange = 0;
 
     MagickWandGenesis();
     magick_wand = NewMagickWand();
@@ -266,7 +367,8 @@ int get_image_info(const char *path, double *kurtosis, double *lightness) {
         return -1;
 
     // Get the kurtosis value
-    MagickGetImageChannelKurtosis(magick_wand, DefaultChannels, kurtosis, &skewness);
+    MagickGetImageChannelKurtosis(magick_wand, DefaultChannels, kurtosis,
+            &skewness);
 
     // Resize the image to 1x1 pixel (results in average color)
     MagickResizeImage(magick_wand, 1, 1, LanczosFilter, 1);
@@ -277,13 +379,8 @@ int get_image_info(const char *path, double *kurtosis, double *lightness) {
         return -1;
     }
 
-    // Get the color and brightness values
+    // Get the lightness value
     PixelGetHSL(pixel_wand, &hue, &saturation, lightness);
-    //red = PixelGetRedQuantum(pixel_wand);
-    //green = PixelGetGreenQuantum(pixel_wand);
-    //blue = PixelGetBlueQuantum(pixel_wand);
-    //MagickGetQuantumRange(&qrange);
-    //printf("R: %f, G: %f, B: %f, L: %.2f\n", red/(double)qrange, green/(double)qrange, blue/(double)qrange, *lightness);
 
     magick_wand = DestroyMagickWand(magick_wand);
     MagickWandTerminus();
@@ -291,19 +388,39 @@ int get_image_info(const char *path, double *kurtosis, double *lightness) {
     return 0;
 }
 
+/**
+  Select a random wallpaper from the nextwall database.
+
+  It sets the value of `wallpaper_path` to the absolute path of the randomly
+  selected wallpaper.
+
+  @param[in] db The database handler.
+  @param[in] path The base directory from which to select wallpapers.
+  @param[in] brightness If set to 0, 1, or 2, wallpapers matching this
+             brightness value are returned.
+  @return Returns the ID of a randomly selected wallpaper on success, -1
+          otherwise.
+ */
 int nextwall(sqlite3 *db, const char *path, int brightness) {
     char sql[BUFFER_SIZE] = "\0";
     int i;
     unsigned seed;
 
     if (brightness == 0)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=0 OR (brightness IS NULL AND lightness <= 0.30));", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                "LIKE \"%s%%\" AND (brightness=0 OR (brightness IS NULL " \
+                "AND lightness <= 0.30));", path);
     else if (brightness == 1)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=1 OR (brightness IS NULL AND lightness > 0.30 AND lightness < 0.50));", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                "LIKE \"%s%%\" AND (brightness=1 OR (brightness IS NULL " \
+                "AND lightness > 0.30 AND lightness < 0.50));", path);
     else if (brightness == 2)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=2 OR (brightness IS NULL AND lightness >= 0.50));", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                "LIKE \"%s%%\" AND (brightness=2 OR (brightness IS NULL " \
+                "AND lightness >= 0.50));", path);
     else
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                "LIKE \"%s%%\";", path);
 
     rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
     if (rc != SQLITE_OK) {
@@ -322,7 +439,8 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     i = rand() % max_walls;
 
     /* Set the wallpaper path. */
-    snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;", wallpaper_list[i]);
+    snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;",
+            wallpaper_list[i]);
     rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
@@ -332,17 +450,35 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     return wallpaper_list[i];
 }
 
+/**
+  Callback for nextwall() which populates `wallpaper_list`.
+
+  This functions populates `wallpaper_list` with a list of candidate wallpaper
+  IDs.
+ */
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
     wallpaper_list[max_walls] = atoi(argv[0]);
     ++max_walls;
     return 0;
 }
 
+/**
+  Callback for nextwall() which sets `wallpaper_path` to the path of the
+  randomly selected wallpaper.
+ */
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
     strncpy(wallpaper_path, argv[0], sizeof wallpaper_path);
     return 0;
 }
 
+/**
+  Set the desktop background.
+
+  This function depends on GSettings.
+
+  @param[in] settings GSettings object with desktop background schema.
+  @param[in] path The wallpaper path to set.
+ */
 void set_background_uri(GSettings *settings, const char *path) {
     char pathc[PATH_MAX];
 
@@ -356,17 +492,33 @@ void set_background_uri(GSettings *settings, const char *path) {
     g_assert_cmpstr(g_settings_get_string(settings, "picture-uri"), ==, pathc);
 }
 
-int get_background_uri(GSettings *settings, char *dest) {
+/**
+  Get the current desktop background.
+
+  This function depends on GSettings.
+
+  @param[in] settings GSettings object with desktop background schema.
+  @param[out] dest Is set to the URI of the current desktop background.
+ */
+void get_background_uri(GSettings *settings, char *dest) {
     const char *uri;
 
     uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
     strcpy(dest, uri+7);
-    return 0;
 }
 
-/* Returns 0 for night, 1 for twilight, or 2 for day, depending on
-   local time t. Returns -1 if brightness could not be defined. */
-int get_local_brightness(void) {
+/**
+  Return the local brightness value.
+
+  This function uses sunriset.h to calculate sunrise, sunset, and civil
+  twilight times.
+
+  @param[in] lat The latitude of the current location.
+  @param[in] lon The longitude of the current location.
+  @return Returns 0 for night, 1 for twilight, or 2 for day, depending on
+          local time. Returns -1 if brightness could not be defined.
+ */
+int get_local_brightness(double lat, double lon) {
     struct tm ltime;
     time_t now;
     double htime, sunrise, sunset, civ_start, civ_end;
@@ -382,8 +534,8 @@ int get_local_brightness(void) {
     htime = (double)ltime.tm_hour + (double)ltime.tm_min / 60.0; // Current time in hours
 
     /* Set local sunrise, sunset, and civil twilight times */
-    rs = sun_rise_set(year, month, day, longitude, latitude, &sunrise, &sunset);
-    civ  = civil_twilight(year, month, day, longitude, latitude, &civ_start, &civ_end);
+    rs = sun_rise_set(year, month, day, lon, lat, &sunrise, &sunset);
+    civ  = civil_twilight(year, month, day, lon, lat, &civ_start, &civ_end);
 
     switch (rs) {
         case 0:
@@ -428,6 +580,12 @@ int get_local_brightness(void) {
     }
 }
 
+/**
+  Converts hours to the format hh:mm.
+
+  @param[in] hours Hours as a floating point number.
+  @param[out] dest Time in the format hh:mm.
+ */
 char *hours_to_hm(double hours, char *dest) {
     char hm[6];
     double h = floor(hours);

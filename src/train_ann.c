@@ -1,3 +1,31 @@
+/*
+  This file is part of nextwall - a wallpaper rotator with some sense of time.
+
+   Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
+   Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
+
+   Nextwall is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   Nextwall is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/**
+   Trainer for the Artificial Neural Network (ANN).
+
+   Obtains predefined brightness values from a selectively populated nextwall
+   database. It uses these values to write training data to a file (*.dat),
+   and uses that training data to build the ANN (*.net).
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h>
@@ -5,28 +33,38 @@
 #include <sqlite3.h>
 #include <fann.h>
 
+/* Number of input values for the ANN */
 #define NUM_INPUT 2
+
+/* Number of output values for the ANN */
 #define NUM_OUTPUT 3
 
+
+/* Function prototypes */
 int file_exists(const char * filename);
 int get_num_training_pairs(sqlite3 *db);
 int ntp_callback(void *notused, int argc, char **argv, char **colnames);
 int make_data_file(sqlite3 *db);
 int mdf_callback(void *notused, int argc, char **argv, char **colnames);
 
+
+/* Pointer to the data file */
 FILE *fp;
+
+/* The total number of training pairs */
 int num_training_pairs = 0;
 
+/* Set up the arguments parser */
 const char *argp_program_version = "0.4.0";
 const char *argp_program_bug_address = "<serrano.pereira@gmail.com>";
 
-/* Program documentation. */
+/* Program documentation */
 static char doc[] = "train_ann -- ANN trainer for nextwall";
 
-/* A description of the arguments we accept. */
+/* A description of the arguments we accept */
 static char args_doc[] = "DB_FILE";
 
-/* The options we understand. */
+/* The options we understand */
 static struct argp_option options[] = {
     {"layers", 'l', "N", 0, "Number of neuron layers"},
     {"neurons", 'n', "N", 0, "Number of hidden neurons"},
@@ -36,15 +74,15 @@ static struct argp_option options[] = {
     { 0 }
 };
 
-/* Used by main to communicate with parse_opt. */
+/* Used by main to communicate with parse_opt */
 struct arguments {
-    char *args[2]; /* DB_FILE and DATA_FILE arguments */
+    char *args[1]; /* DB_FILE argument */
     char *output;
     unsigned int layers, neurons, epochs;
     float error;
 };
 
-/* Parse a single option. */
+/* Parse a single option */
 static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     /* Get the input argument from argp_parse, which we
        know is a pointer to our arguments structure. */
@@ -70,7 +108,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_ARG:
             if (state->arg_num >= 1) {
-                 /* Too many arguments. */
+                 /* Too many arguments */
                  argp_usage(state);
             }
             arguments->args[state->arg_num] = arg;
@@ -89,9 +127,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     return 0;
 }
 
-/* Our argp parser. */
+/* Our argp parser */
 static struct argp argp = { options, parse_opt, args_doc, doc };
-
 
 
 int main(int argc, char **argv) {
@@ -100,18 +137,18 @@ int main(int argc, char **argv) {
     const unsigned int epochs_between_reports = 1000;
     sqlite3 *db;
 
-    /* Default argument values. */
+    // Default argument values
     arguments.error = 0.001;
     arguments.epochs = 500000;
     arguments.layers = 3;
     arguments.neurons = 8;
-    arguments.output = "brightness";
+    arguments.output = "nextwall";
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    /* Set the paths */
+    // Set the file paths
     char *dbfile = arguments.args[0];
     sprintf(datafile, "%s.dat", arguments.output);
     sprintf(netfile, "%s.net", arguments.output);
@@ -157,7 +194,13 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-int file_exists(const char * filename) {
+/**
+  Check if a file exists and is readable.
+
+  @param[in] filename The path to the file.
+  @return 1 if the file exists, 0 otherwise.
+ */
+int file_exists(const char *filename) {
     FILE *f;
     if ( (f = fopen(filename, "r")) != NULL ) {
         fclose(f);
@@ -166,6 +209,11 @@ int file_exists(const char * filename) {
     return 0;
 }
 
+/**
+  Set the total number of training pairs.
+
+  @param[in] db The SQLite database handler.
+ */
 int get_num_training_pairs(sqlite3 *db) {
     int rc;
     char sql[] = "SELECT COUNT(id) FROM wallpapers WHERE brightness IS NOT NULL;";
@@ -178,11 +226,21 @@ int get_num_training_pairs(sqlite3 *db) {
     return 0;
 }
 
+/**
+  Callback function for get_num_training_pairs().
+
+  Sets `num_training_pairs` to the total number of training pairs.
+ */
 int ntp_callback(void *notused, int argc, char **argv, char **colnames) {
     num_training_pairs = atoi(argv[0]);
     return 0;
 }
 
+/**
+  Create the training data file.
+
+  @param[in] db The SQLite database handler.
+ */
 int make_data_file(sqlite3 *db) {
     int rc;
     char sql[] = "SELECT kurtosis, lightness, brightness FROM wallpapers WHERE brightness IS NOT NULL;";
@@ -195,6 +253,11 @@ int make_data_file(sqlite3 *db) {
     return 0;
 }
 
+/**
+  Callback function for make_data_file().
+
+  Writes the training pairs to the file handler `fp`.
+ */
 int mdf_callback(void *notused, int argc, char **argv, char **colnames) {
     int b;
 
@@ -215,5 +278,4 @@ int mdf_callback(void *notused, int argc, char **argv, char **colnames) {
 
     return 0;
 }
-
 
