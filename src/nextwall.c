@@ -143,6 +143,10 @@ int main(int argc, char **argv) {
     strcpy(dbfile, cfgpath);
     strcat(dbfile, "nextwall.db");
 
+    /* Set the ANN file path */
+    strcpy(annfile, cfgpath);
+    strcat(annfile, "nextwall.net");
+
     /* Create the data directory if it doesn't exist. */
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
         eprintf("Creating directory %s\n", cfgpath);

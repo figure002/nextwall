@@ -12,6 +12,7 @@
 #include <fcntl.h> /* for open() */
 #include <gio/gio.h>
 #include <wand/MagickWand.h>
+#include <floatfann.h>
 
 #include "sunriset.h"
 
@@ -26,6 +27,7 @@
 
 char cfgpath[PATH_MAX]; /* Path to user configurations directory */
 char dbfile[PATH_MAX]; /* Path to database file */
+char annfile[PATH_MAX]; /* Path to ANN file */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char current_wallpaper[PATH_MAX];
 char *wallpaper_dir;
@@ -40,7 +42,7 @@ int make_db(sqlite3 *db);
 int scan_dir(sqlite3 *db, const char *name, int recursive);
 int is_known_image(sqlite3 *db, const char *path);
 int known_image_callback(void *notused, int argc, char **argv, char **colnames);
-int save_image_info(sqlite3_stmt *stmt, const char *path);
+int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 int nextwall(sqlite3 *db, const char *path, int brightness);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
@@ -48,7 +50,9 @@ void set_background_uri(GSettings *settings, const char *path);
 int get_background_uri(GSettings *settings, char *dest);
 int get_local_brightness(void);
 char *hours_to_hm(double hours, char *s);
-int get_image_info(const char *path, double *hue, double *saturation, double *lightness);
+int get_image_info(const char *path, double *kurtosis, double *lightness);
+int get_brightness(struct fann *ann, double kurtosis, double lightness);
+static int numcmp(const void *a, const void *b);
 
 /* Create an empty database with the necessary tables.
 Returns 0 on success, -1 on failure. */
@@ -59,8 +63,7 @@ int make_db(sqlite3 *db) {
     sql = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
         "path TEXT," \
-        "hue FLOAT," \
-        "saturation FLOAT," \
+        "kurtosis FLOAT," \
         "lightness FLOAT," \
         "brightness INTEGER" \
         ");";
@@ -96,19 +99,23 @@ int scan_dir(sqlite3 *db, const char *name, int recursive) {
     sqlite3_stmt *stmt;
     const char *tail = 0;
 
-    /* Initialize Magic Number Recognition Library */
+    // Initialize Magic Number Recognition Library
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     magic_load(magic, NULL);
 
-    sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    // Initialize ANN
+    struct fann *ann = fann_create_from_file(annfile);
+
+    if (recursive < 2)
+        sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
 
     if (!(dir = opendir(name)))
         return found;
     if (!(entry = readdir(dir)))
         return found;
 
-    /* Prepare INSERT statement */
-    sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, @HUE, @SAT, @LGT, @BRI);");
+    // Prepare INSERT statement
+    sprintf(sql, "INSERT INTO wallpapers VALUES (null, @PATH, @KUR, @LGT, @BRI);");
     sqlite3_prepare_v2(db, sql, BUFFER_SIZE, &stmt, &tail);
 
 
@@ -130,7 +137,7 @@ int scan_dir(sqlite3 *db, const char *name, int recursive) {
             if (is_known_image(db, path))
                 continue;
 
-            if (save_image_info(stmt, path) == 0) {
+            if (save_image_info(stmt, ann, path) == 0) {
                 ++found;
                 if (found % 10 == 0) {
                     fprintf(stderr, ".");
@@ -151,6 +158,7 @@ Return:
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
         sqlite3_finalize(stmt);
     }
+    fann_destroy(ann);
     magic_close(magic);
     closedir(dir);
     return found;
@@ -175,19 +183,22 @@ int known_image_callback(void *notused, int argc, char **argv, char **colnames) 
     return 0;
 }
 
-int save_image_info(sqlite3_stmt *stmt, const char *path) {
-    double h,s,l;
+int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
+    double kurtosis, lightness;
+    int brightness;
 
     // Get the lightness for this image
-    if (get_image_info(path, &h, &s, &l) == -1)
+    if (get_image_info(path, &kurtosis, &lightness) == -1)
         return -1;
+
+    // Get image brigthness
+    brightness = get_brightness(ann, kurtosis, lightness);
 
     // Bind values to prepared statement
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_double(stmt, 2, h);
-    sqlite3_bind_double(stmt, 3, s);
-    sqlite3_bind_double(stmt, 4, l);
-    sqlite3_bind_null(stmt, 5);
+    sqlite3_bind_double(stmt, 2, kurtosis);
+    sqlite3_bind_double(stmt, 3, lightness);
+    sqlite3_bind_int(stmt, 4, brightness);
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE)
@@ -197,11 +208,51 @@ int save_image_info(sqlite3_stmt *stmt, const char *path) {
     return 0;
 }
 
+/* Use the ANN to return the brightness value for a kurtosis-lightness
+   pair */
+int get_brightness(struct fann *ann, double kurtosis, double lightness) {
+    fann_type *out;
+    fann_type input[2];
+    float diff[3];
+    int i;
+
+    input[0] = kurtosis;
+    input[1] = lightness;
+    out = fann_run(ann, input);
+
+    diff[0] = 1.0 - out[0];
+    diff[1] = 1.0 - out[1];
+    diff[2] = 1.0 - out[2];
+
+    qsort(diff, 3, sizeof (float), numcmp);
+
+    for (i = 0; i < 3; i++) {
+        if ((1.0 - out[i]) == diff[0]) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/* Compare floats */
+static int numcmp(const void *pa, const void *pb) {
+    float a = *(const float*)pa;
+    float b = *(const float*)pb;
+    if (a < b)
+        return -1;
+    else if (a > b)
+        return 1;
+    else
+        return 0;
+}
+
 /* Returns the image information */
-int get_image_info(const char *path, double *hue, double *saturation, double *lightness) {
+int get_image_info(const char *path, double *kurtosis, double *lightness) {
     MagickBooleanType status;
     MagickWand *magick_wand;
     PixelWand *pixel_wand;
+    double hue, saturation, skewness;
     //Quantum red, green, blue;
     //size_t qrange = 0;
 
@@ -214,8 +265,11 @@ int get_image_info(const char *path, double *hue, double *saturation, double *li
     if (status == MagickFalse)
         return -1;
 
+    // Get the kurtosis value
+    MagickGetImageChannelKurtosis(magick_wand, DefaultChannels, kurtosis, &skewness);
+
     // Resize the image to 1x1 pixel (results in average color)
-    MagickResizeImage(magick_wand, 1, 1, MitchellFilter, 1);
+    MagickResizeImage(magick_wand, 1, 1, LanczosFilter, 1);
 
     // Get pixel color
     status = MagickGetImagePixelColor(magick_wand, 0, 0, pixel_wand);
@@ -224,7 +278,7 @@ int get_image_info(const char *path, double *hue, double *saturation, double *li
     }
 
     // Get the color and brightness values
-    PixelGetHSL(pixel_wand, hue, saturation, lightness);
+    PixelGetHSL(pixel_wand, &hue, &saturation, lightness);
     //red = PixelGetRedQuantum(pixel_wand);
     //green = PixelGetGreenQuantum(pixel_wand);
     //blue = PixelGetBlueQuantum(pixel_wand);
@@ -243,11 +297,11 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     unsigned seed;
 
     if (brightness == 0)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness <= 0.30;", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=0 OR (brightness IS NULL AND lightness <= 0.30));", path);
     else if (brightness == 1)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness > 0.30 AND lightness < 0.50;", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=1 OR (brightness IS NULL AND lightness > 0.30 AND lightness < 0.50));", path);
     else if (brightness == 2)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND lightness >= 0.50;", path);
+        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\" AND (brightness=2 OR (brightness IS NULL AND lightness >= 0.50));", path);
     else
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path LIKE \"%s%%\";", path);
 

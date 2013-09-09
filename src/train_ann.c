@@ -5,6 +5,9 @@
 #include <sqlite3.h>
 #include <fann.h>
 
+#define NUM_INPUT 2
+#define NUM_OUTPUT 3
+
 int file_exists(const char * filename);
 int get_num_training_pairs(sqlite3 *db);
 int ntp_callback(void *notused, int argc, char **argv, char **colnames);
@@ -94,8 +97,6 @@ static struct argp argp = { options, parse_opt, args_doc, doc };
 int main(int argc, char **argv) {
     struct arguments arguments;
     char datafile[PATH_MAX], netfile[PATH_MAX];
-    const unsigned int num_input = 4;
-    const unsigned int num_output = 3;
     const unsigned int epochs_between_reports = 1000;
     sqlite3 *db;
 
@@ -134,14 +135,14 @@ int main(int argc, char **argv) {
 
     // Write training data to file
     get_num_training_pairs(db);
-    fprintf(fp, "%d 4 3\n", num_training_pairs);
+    fprintf(fp, "%d %d %d\n", num_training_pairs, NUM_INPUT, NUM_OUTPUT);
     make_data_file(db);
     fclose(fp);
     sqlite3_close(db);
 
     // Create the ANN
-    struct fann *ann = fann_create_standard(arguments.layers, num_input,
-        arguments.neurons, num_output);
+    struct fann *ann = fann_create_standard(arguments.layers, NUM_INPUT,
+        arguments.neurons, NUM_OUTPUT);
 
     fann_set_activation_function_hidden(ann, FANN_SIGMOID_SYMMETRIC);
     fann_set_activation_function_output(ann, FANN_SIGMOID_SYMMETRIC);
@@ -184,7 +185,7 @@ int ntp_callback(void *notused, int argc, char **argv, char **colnames) {
 
 int make_data_file(sqlite3 *db) {
     int rc;
-    char sql[] = "SELECT kurtosis_r, kurtosis_g, kurtosis_b, kurtosis_o, brightness FROM wallpapers WHERE brightness IS NOT NULL;";
+    char sql[] = "SELECT kurtosis, lightness, brightness FROM wallpapers WHERE brightness IS NOT NULL;";
 
     rc = sqlite3_exec(db, sql, mdf_callback, NULL, NULL);
     if (rc != SQLITE_OK) {
@@ -197,9 +198,9 @@ int make_data_file(sqlite3 *db) {
 int mdf_callback(void *notused, int argc, char **argv, char **colnames) {
     int b;
 
-    fprintf(fp, "%s %s %s %s\n", argv[0], argv[1], argv[2], argv[3]);
+    fprintf(fp, "%s %s\n", argv[0], argv[1]);
 
-    b = atoi(argv[4]);
+    b = atoi(argv[2]);
     if (b == 0)
         fprintf(fp, "1 0 0\n");
     else if (b == 1)

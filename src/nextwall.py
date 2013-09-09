@@ -102,7 +102,7 @@ def make_db(connection):
     cursor.execute("CREATE TABLE wallpapers (\
         id INTEGER PRIMARY KEY, \
         path TEXT, \
-        kurtosis_o FLOAT, \
+        lightness FLOAT, \
         brightness INTEGER, \
         rating INTEGER \
         )")
@@ -266,63 +266,38 @@ class NextWall(object):
         logging.info("Setting backgrounds folder to %s" % (path))
         self.path = path
 
-    def get_image_kurtosis(self, file):
-        """Return kurtosis, a measure of the peakedness of the
+    def get_image_lightness(self, file):
+        """Return lightness, a measure of the peakedness of the
         probability distribution of a real-valued random variable.
 
-        First check if the imaga kurtosis can be found in the database.
+        First check if the imaga lightness can be found in the database.
         If it's not in the database, calculate it using ImageMagick's
         'identify' and save the value to the database.
         """
-        # Try to get the image kurtosis from the database. We create a new
+        # Try to get the image lightness from the database. We create a new
         # connection, because this can be called from a new thread.
         connection = sqlite.connect(DBFILE)
         cursor = connection.cursor()
-        cursor.execute("SELECT kurtosis_o FROM wallpapers WHERE path=?", [file])
-        kurtosis = cursor.fetchone()
+        cursor.execute("SELECT lightness FROM wallpapers WHERE path=?", [file])
+        lightness = cursor.fetchone()
         cursor.close()
         connection.close()
 
-        if not kurtosis:
-            # If kurtosis not found in the database, calculate it.
-
-            # Use 'identify' to calculate the image kurtosis.
-            cmd = 'identify -verbose "%s" | grep kurtosis' % (file)
-            output = commands.getoutput(cmd)
-            output = output.splitlines()
-            items = len(output)
-
-            # Handle exceptions.
-            if items == 0:
-                return 0
-
-            # Get the last kurtosis calculation, which is the overall.
-            output = output[items-1].split()
-
-            # The second part is the kurtosis value.
-            kurtosis = output[1]
-
-            # Convert to float.
-            try:
-                kurtosis = float(kurtosis)
-            except:
-                return None
-
-            # Save the calculated kurtosis to the database.
-            self.save_to_db(file, kurtosis)
+        if not lightness:
+            return None
         else:
-            kurtosis = kurtosis[0]
+            lightness = lightness[0]
 
-        return float(kurtosis)
+        return float(lightness)
 
-    def save_to_db(self, file, kurtosis):
-        """Save the kurtosis value for `file` to the database."""
-        if not isinstance(kurtosis, float): return
+    def save_to_db(self, file, lightness):
+        """Save the lightness value for `file` to the database."""
+        if not isinstance(lightness, float): return
         # Here we create a new database connection, as this may be called from
         # a separate thread.
         connection = sqlite.connect(DBFILE)
         cursor = connection.cursor()
-        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?, null, null);", [file, kurtosis])
+        cursor.execute("INSERT INTO wallpapers VALUES (null, ?, ?, null, null);", [file, lightness])
         connection.commit()
         cursor.close()
         connection.close()
@@ -349,7 +324,7 @@ class NextWall(object):
         return brightness[0]
 
     def on_scan_for_images(self):
-        """Calculate the image kurtosis for each image in the selected
+        """Calculate the image lightness for each image in the selected
         folder and save it to the database.
         """
         images = self.get_image_files()
@@ -360,12 +335,12 @@ class NextWall(object):
         # Create a progress bar.
         pbar = std.ProgressBar(0, len(images), 30)
 
-        # Get the image kurtosis of each file and save it to the database.
+        # Get the image lightness of each file and save it to the database.
         for i, image in enumerate(images, start=1):
             pbar.updateAmount(i)
             sys.stdout.write("\r%s" % str(pbar))
             sys.stdout.flush()
-            self.get_image_kurtosis(image)
+            self.get_image_lightness(image)
 
         print
         logging.info("Database successfully populated.")
@@ -374,22 +349,22 @@ class NextWall(object):
         """Return the image brightness value for `file`.
 
         First checks if the user defined a brightness for this image. If not,
-        it used the kurtosis value to define the brightness value.
+        it used the lightness value to define the brightness value.
 
         Dark: return 0
         Medium: return 1
         Bright: return 2
         """
-        kurtosis = self.get_image_kurtosis(file)
-        if kurtosis == None:
+        lightness = self.get_image_lightness(file)
+        if lightness == None:
             return None
         brightness = self.get_brightness(file)
 
         if brightness == None:
-            if kurtosis < KURTOSIS_THRESHOLD[0]:
+            if lightness < KURTOSIS_THRESHOLD[0]:
                 # Bright
                 brightness = 2
-            elif kurtosis > KURTOSIS_THRESHOLD[1]:
+            elif lightness > KURTOSIS_THRESHOLD[1]:
                 # Dark
                 brightness = 0
             else:
@@ -397,7 +372,7 @@ class NextWall(object):
                 brightness = 1
 
         if get:
-            return (kurtosis, brightness)
+            return (lightness, brightness)
 
         return brightness
 
@@ -485,28 +460,24 @@ class NextWall(object):
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis_o < ? \
-                    AND brightness IS NULL;" % self.path,
-                    [KURTOSIS_THRESHOLD[0]]
+                    AND lightness >= 0.50 \
+                    AND brightness IS NULL;" % self.path
                     )
             # Night
             elif brightness == 0:
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis_o > ? \
-                    AND brightness IS NULL;" % self.path,
-                    [KURTOSIS_THRESHOLD[1]]
+                    AND lightness <= 0.30 \
+                    AND brightness IS NULL;" % self.path
                     )
             # Twilight
             elif brightness == 1:
                 cursor.execute("SELECT id \
                     FROM wallpapers \
                     WHERE path LIKE \"%s%%\" \
-                    AND kurtosis_o > ? \
-                    AND kurtosis_o < ? \
-                    AND brightness IS NULL;" % self.path,
-                    [KURTOSIS_THRESHOLD[0], KURTOSIS_THRESHOLD[1]]
+                    lightness > 0.30 AND lightness < 0.50 \
+                    AND brightness IS NULL;" % self.path
                     )
 
             matching_ids = cursor.fetchall()
