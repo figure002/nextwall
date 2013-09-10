@@ -1,0 +1,18 @@
+* Noteworthy changes in release 0.3.0 (2013-09-11) [alpha]
+
+Nextwall has been rewritten in C. It now uses an Artificial Neural Network
+(ANN) to define the brightness of a wallpaper. The ANN was trained with a
+trainer tool (`train_ann') which is also distributed with the package.
+
+Version 0.3.0 (11 September 2013)
+* Nextwall has been rewritten in C. It now uses an Artificial Neural Network
+  (ANN) to define the brightness of a wallpaper. The ANN was trained with a
+  trainer tool (`train_ann') which is also distributed with the package.
+* Distribution:
+  . Discarded CMake in favor of GNU Autotools to build a `configure' script
+    which checks for dependencies and builds the Makefiles.
+* There is now a `NEWS' file (this one), giving a history of user-visible
+  changes.
+* There is now a `ChangeLog' file, giving a history of changes made to the
+  source code.
+

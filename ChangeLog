@@ -1,0 +1,25 @@
+2013-09-11  Serrano Pereira  <serrano.pereira@gmail.com>
+
+	Rewrite in C.
+	* ChangeLog: New file.
+	* configure.ac: New file.
+	* INSTALL: Updated.
+	* Makefile.am: New file.
+	* NEWS: New file.
+	* README(.md): Updated.
+	* THANKS: New file.
+	* data/Makefile.am: New file.
+	* data/ann/nextwall.dat: New file.
+	* data/ann/nextwall.net: New file.
+	* include/cfgpath.h: New file.
+	* include/config.h.in: New file.
+	* include/gsettings.h: New file.
+	* include/image.h: New file.
+	* include/nextwall.h: New file.
+	* include/std.h: New file.
+	* include/sunriset.h: New file.
+	* src/nextwall.c: New file.
+	* src/Makefile.am: New file.
+	* src/util/train_ann.c: New file.
+	* src/util/Makefile: New file.
+

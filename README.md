@@ -4,10 +4,7 @@ This is the README file for nextwall - A wallpaper rotator for the GNOME
 desktop.
 
 *Nextwall* is a small application that changes the background of the GNOME
-desktop to a random image. It was originally written in Python and based on the
-[change-background.py](http://oracle.bridgewayconsulting.com.au/~danni/misc/change-background-py.html)
-script by Davyd Madeley. At version 0.3 it was completely rewritten in C.
-Nextwall has the following features:
+desktop to a random image. Nextwall has the following features:
 
 * Operates as a command-line tool. Run `nextwall --help` for usage information.
 * The fit time of day feature automatically sets backgrounds that fit the time
@@ -30,8 +27,8 @@ On Debian (based) systems, run this command to install the dependencies:
 
     sudo apt-get install libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
 
-Then you can configure, compile, and install `nextwall`. In the top level
-directory of the `nextwall` package, run the following commands:
+You can then build and install `nextwall`. See the INSTALL file for building
+and installation instructions. Generally it boils down to:
 
     ./configure
     make
@@ -46,14 +43,9 @@ commands can be excuted:
 	automake -a
 
 
-## Uninstall
-
-To uninstall `nextwall`, run the uninstall command (as root):
-
-    make uninstall
-
-
 ## Usage
+
+Execute `nextwall --help` to see usage information for `nextwall`.
 
 When running `nextwall` for the first time, you need to scan your wallpaper
 directory for wallpapers:
@@ -62,19 +54,16 @@ directory for wallpapers:
 
 Then `nextwall` can be used as follows:
 
-	nextwall -tl LAT:LON /path/to/wallpapers/
-
-To change your desktop background to a wallpaper that fits the current time
-of the day. Replace `LAT:LON` by the latitude:longitude of your location.
+	nextwall [OPTION...] PATH
 
 
-## Usage Tips
+### Usage Tips
 
 * You can use `watch` to temporarily change the background at a set interval.
-  For 60 seconds, run `watch -n 60 nextwall [options] [path]`
+  For 60 seconds, run `watch -n 60 nextwall [OPTION...] PATH`
 * You can also use the cron deamon to schedule execution of `nextwall`. For
   once an hour, run `crontab -e` and add this line:
-  ``0 * * * * DISPLAY=:0.0 /usr/local/bin/nextwall [options] [path]``
+  ``0 * * * * DISPLAY=:0.0 /usr/local/bin/nextwall [OPTION...] PATH``
 
 
 ## ANN trainer
@@ -111,9 +100,5 @@ This will create nextwall.net from an existing nextwall.dat file.
 
 ## License
 
-The source code for nextwall is licensed under the GNU General Public License
-Version 3, which you can find in the COPYING file.
-
-All graphical assets are licensed under the
-[Creative Commons Attribution 3.0 Unported License](http://creativecommons.org/licenses/by/3.0/).
+Nextwall is free software. See the file COPYING for copying conditions.
 
