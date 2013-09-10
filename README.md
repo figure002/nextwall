@@ -38,6 +38,14 @@ directory of the `nextwall` package, run the following commands:
     make
     make install
 
+If you're building `nextwall` from the Git repository, you need to use GNU
+Autotools to bring the package to autoconfiscated state before the above
+commands can be excuted:
+
+	aclocal
+	autoconf
+	automake -a
+
 
 ## Uninstall
 
