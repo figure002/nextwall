@@ -67,7 +67,7 @@ of the day. Replace `LAT:LON` by the latitude:longitude of your location.
   For 60 seconds, run `watch -n 60 nextwall [options] [path]`
 * You can also use the cron deamon to schedule execution of `nextwall`. For
   once an hour, run `crontab -e` and add this line:
-  ``0 * * * * DISPLAY=:0.0 nextwall [options] [path]``
+  ``0 * * * * DISPLAY=:0.0 /usr/local/bin/nextwall [options] [path]``
 
 
 ## ANN trainer
