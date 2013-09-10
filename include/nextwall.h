@@ -28,14 +28,14 @@
 #include <limits.h>
 #include <magic.h>
 #include <argp.h>
-#include <time.h>
 #include <fcntl.h> // for open()
-#include <gio/gio.h>
-#include <wand/MagickWand.h>
 #include <floatfann.h>
 
 #include "config.h"
 #include "sunriset.h"
+#include "std.h"
+#include "image.h"
+#include "gsettings.h"
 
 /* Default size for strings */
 #define BUFFER_SIZE 512
@@ -83,14 +83,8 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 int nextwall(sqlite3 *db, const char *path, int brightness);
 int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
-void set_background_uri(GSettings *settings, const char *path);
-void get_background_uri(GSettings *settings, char *dest);
 int get_local_brightness(double lat, double lon);
-char *hours_to_hm(double hours, char *s);
-int get_image_info(const char *path, double *kurtosis, double *lightness);
 int get_brightness(struct fann *ann, double kurtosis, double lightness);
-static int numcmp(const void *a, const void *b);
-int file_exists(const char *filename);
 
 
 /**
@@ -328,70 +322,6 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
 }
 
 /**
-  Compare two floats.
-
-  @param[in] pa First float value.
-  @param[in] pa Second float value.
-  @return Returns -1, 0, or 1 if `pa` is less, equal, or greater than pb
-          respectively.
- */
-static int numcmp(const void *pa, const void *pb) {
-    float a = *(const float*)pa;
-    float b = *(const float*)pb;
-    if (a < b)
-        return -1;
-    else if (a > b)
-        return 1;
-    else
-        return 0;
-}
-
-/**
-  Returns the kurtosis and lightness value for an image file.
-
-  @param[in] path Absolute path of the image file.
-  @param[out] kurtosis The kurtosis value.
-  @param[out] lightness The lightness value.
-  @return Retuns 0 on success, -1 on failure.
- */
-int get_image_info(const char *path, double *kurtosis, double *lightness) {
-    MagickBooleanType status;
-    MagickWand *magick_wand;
-    PixelWand *pixel_wand;
-    double hue, saturation, skewness;
-
-    MagickWandGenesis();
-    magick_wand = NewMagickWand();
-    pixel_wand = NewPixelWand();
-
-    // Read the image
-    status = MagickReadImage(magick_wand, path);
-    if (status == MagickFalse)
-        return -1;
-
-    // Get the kurtosis value
-    MagickGetImageChannelKurtosis(magick_wand, DefaultChannels, kurtosis,
-            &skewness);
-
-    // Resize the image to 1x1 pixel (results in average color)
-    MagickResizeImage(magick_wand, 1, 1, LanczosFilter, 1);
-
-    // Get pixel color
-    status = MagickGetImagePixelColor(magick_wand, 0, 0, pixel_wand);
-    if (status == MagickFalse) {
-        return -1;
-    }
-
-    // Get the lightness value
-    PixelGetHSL(pixel_wand, &hue, &saturation, lightness);
-
-    magick_wand = DestroyMagickWand(magick_wand);
-    MagickWandTerminus();
-
-    return 0;
-}
-
-/**
   Select a random wallpaper from the nextwall database.
 
   It sets the value of `wallpaper_path` to the absolute path of the randomly
@@ -478,42 +408,6 @@ int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
 }
 
 /**
-  Set the desktop background.
-
-  This function depends on GSettings.
-
-  @param[in] settings GSettings object with desktop background schema.
-  @param[in] path The wallpaper path to set.
- */
-void set_background_uri(GSettings *settings, const char *path) {
-    char pathc[PATH_MAX];
-
-    if (!strstr(path, "file://"))
-        sprintf(pathc, "file://%s", path);
-    else
-        strcpy(pathc, path);
-
-    g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
-    g_settings_sync(); /* Make sure the changes are written to disk */
-    g_assert_cmpstr(g_settings_get_string(settings, "picture-uri"), ==, pathc);
-}
-
-/**
-  Get the current desktop background.
-
-  This function depends on GSettings.
-
-  @param[in] settings GSettings object with desktop background schema.
-  @param[out] dest Is set to the URI of the current desktop background.
- */
-void get_background_uri(GSettings *settings, char *dest) {
-    const char *uri;
-
-    uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
-    strcpy(dest, uri+7);
-}
-
-/**
   Return the local brightness value.
 
   This function uses sunriset.h to calculate sunrise, sunset, and civil
@@ -584,35 +478,5 @@ int get_local_brightness(double lat, double lon) {
     else {
         return -1;
     }
-}
-
-/**
-  Converts hours to the format hh:mm.
-
-  @param[in] hours Hours as a floating point number.
-  @param[out] dest Time in the format hh:mm.
- */
-char *hours_to_hm(double hours, char *dest) {
-    char hm[6];
-    double h = floor(hours);
-    double m = (hours - h) * 60.0;
-    snprintf(hm, sizeof hm, "%02.0f:%02.0f", h, m);
-    strcpy(dest, hm);
-    return dest;
-}
-
-/**
-  Check if a file exists and is readable.
-
-  @param[in] filename The path to the file.
-  @return 1 if the file exists, 0 otherwise.
- */
-int file_exists(const char *filename) {
-    FILE *f;
-    if ( (f = fopen(filename, "r")) != NULL ) {
-        fclose(f);
-        return 1;
-    }
-    return 0;
 }
 
