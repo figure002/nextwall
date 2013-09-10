@@ -11,18 +11,15 @@ AC_CONFIG_HEADERS([include/config.h])
 AC_PROG_CC
 
 # Check modules.
-PKG_CHECK_MODULES([GIO], [gio-2.0 >= 2.22])
-PKG_CHECK_MODULES([IMAGEMAGICK], [MagickWand >= 6.6.0])
+PKG_CHECK_MODULES([GLIB], [glib-2.0])
+PKG_CHECK_MODULES([GIO], [gio-2.0])
+PKG_CHECK_MODULES([IMAGEMAGICK], [MagickWand])
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lfann':
-AC_CHECK_LIB([fann], [main])
-# FIXME: Replace `main' with a function in `-lm':
-AC_CHECK_LIB([m], [main])
-# FIXME: Replace `main' with a function in `-lmagic':
-AC_CHECK_LIB([magic], [main])
-# FIXME: Replace `main' with a function in `-lsqlite3':
-AC_CHECK_LIB([sqlite3], [main])
+AC_CHECK_LIB([fann], [fann_create_from_file])
+AC_CHECK_LIB([m], [floor])
+AC_CHECK_LIB([magic], [magic_open])
+AC_CHECK_LIB([sqlite3], [sqlite3_exec])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h unistd.h])
