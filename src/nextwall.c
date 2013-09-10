@@ -125,10 +125,12 @@ static struct argp argp = { options, parse_opt, args_doc, doc };
 int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
-    int rc = -1, local_brightness = -1;
-    int found, i, id;
+    int rc = -1, local_brightness = -1, ann_found = 0;
+    int found, i, j, id;
     sqlite3 *db;
     GSettings *settings;
+    char *annfiles[3];
+    char tmp[PATH_MAX];
 
     // Create a new GSettings object
     settings = g_settings_new("org.gnome.desktop.background");
@@ -165,8 +167,25 @@ int main(int argc, char **argv) {
     strcat(dbfile, "nextwall.db");
 
     // Set the ANN file path
-    strcpy(annfile, cfgpath);
-    strcat(annfile, "nextwall.net");
+    strcpy(tmp, cfgpath);
+    strcat(tmp, "nextwall.net");
+    annfiles[0] = tmp;
+    annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
+    annfiles[2] = "/usr/share/nextwall/nextwall.net";
+
+    for (j = 0; j < 3; j++) {
+        if (file_exists(annfiles[j])) {
+            annfile = annfiles[j];
+            ann_found = 1;
+            eprintf("Using ANN %s\n", annfile);
+            break;
+        }
+    }
+
+    if (!ann_found) {
+        fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
+        return 1;
+    }
 
     // Create the data directory if it doesn't exist.
     if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {

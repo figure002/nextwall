@@ -59,7 +59,7 @@ char cfgpath[PATH_MAX];
 char dbfile[PATH_MAX];
 
 /* Path to ANN file */
-char annfile[PATH_MAX];
+char *annfile;
 
 /* Default wallpaper directory */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
@@ -90,6 +90,7 @@ char *hours_to_hm(double hours, char *s);
 int get_image_info(const char *path, double *kurtosis, double *lightness);
 int get_brightness(struct fann *ann, double kurtosis, double lightness);
 static int numcmp(const void *a, const void *b);
+int file_exists(const char *filename);
 
 
 /**
@@ -598,5 +599,20 @@ char *hours_to_hm(double hours, char *dest) {
     snprintf(hm, sizeof hm, "%02.0f:%02.0f", h, m);
     strcpy(dest, hm);
     return dest;
+}
+
+/**
+  Check if a file exists and is readable.
+
+  @param[in] filename The path to the file.
+  @return 1 if the file exists, 0 otherwise.
+ */
+int file_exists(const char *filename) {
+    FILE *f;
+    if ( (f = fopen(filename, "r")) != NULL ) {
+        fclose(f);
+        return 1;
+    }
+    return 0;
 }
 
