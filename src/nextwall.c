@@ -38,6 +38,7 @@ static char args_doc[] = "PATH";
 /* The options we understand */
 static struct argp_option options[] = {
     {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories"},
+    {"brightness", 'b', "N", 0, "Force brightness value to night (0), twilight (1), or day (2)"},
     {"time", 't', 0, 0, "Find wallpapers that fit the time of day"},
     {"scan", 's', 0, 0, "Scan for images files in PATH"},
     {"verbose", 'v', 0, 0, "Increase verbosity"},
@@ -48,7 +49,7 @@ static struct argp_option options[] = {
 /* Used by main to communicate with parse_opt */
 struct arguments {
     char *args[1]; /* PATH argument */
-    int recursion, time, scan, verbose;
+    int recursion, brightness, time, scan, verbose;
     char *location;
 };
 
@@ -59,7 +60,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     struct arguments *arguments = state->input;
     char tmp[50];
     char *lat, *lon;
-    int rc;
+    int rc, b;
 
     switch (key)
     {
@@ -68,6 +69,20 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 't':
             arguments->time = 1;
+            break;
+        case 'b':
+            if (!isdigit(*arg)) {
+                argp_usage(state);
+                break;
+            }
+
+            b = atoi(arg);
+            if ( !(b == 0 || b == 1 || b == 2) ) {
+                argp_usage(state);
+                break;
+            }
+
+            arguments->brightness = b;
             break;
         case 's':
             arguments->scan = 1;
@@ -137,6 +152,7 @@ int main(int argc, char **argv) {
 
     // Default argument values
     arguments.recursion = 0;
+    arguments.brightness = -1;
     arguments.time = 0;
     arguments.scan = 0;
     arguments.verbose = 0;
@@ -231,7 +247,11 @@ int main(int argc, char **argv) {
 
     // Get local brightness
     if (arguments.time) {
-        local_brightness = get_local_brightness(latitude, longitude);
+        if (arguments.brightness == -1)
+            local_brightness = get_local_brightness(latitude, longitude);
+        else
+            local_brightness = arguments.brightness;
+
         switch (local_brightness) {
             case 0:
                 eprintf("Selecting wallpaper for night.\n");
