@@ -289,10 +289,8 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
                 }
                 else if ( strcmp(line, "q\n") == 0 ) {
                     fprintf(stderr, "Abort\n\n");
-                    g_object_unref(settings);
-                    magic_close(magic);
-                    closedir(dir);
-                    return -1;
+                    n_pairs = -1;
+                    goto Return;
                 }
                 else
                     fprintf(stderr, "Incorrect input. Try again: ");

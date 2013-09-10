@@ -342,16 +342,13 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
 
     if (brightness == 0)
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND (brightness=0 OR (brightness IS NULL " \
-                "AND lightness <= 0.30));", path);
+                "LIKE \"%s%%\" AND brightness=0;", path);
     else if (brightness == 1)
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND (brightness=1 OR (brightness IS NULL " \
-                "AND lightness > 0.30 AND lightness < 0.50));", path);
+                "LIKE \"%s%%\" AND brightness=1;", path);
     else if (brightness == 2)
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND (brightness=2 OR (brightness IS NULL " \
-                "AND lightness >= 0.50));", path);
+                "LIKE \"%s%%\" AND brightness=2;", path);
     else
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
                 "LIKE \"%s%%\";", path);
@@ -365,16 +362,16 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     if (max_walls == 0)
         return -1;
 
-    /* Set the seed for the random number generator */
+    // Set the seed for the random number generator
     bytes = read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
     if (bytes == -1)
         return -1;
     srand(seed);
 
-    /* Get random index for wallpaper_list */
+    // Get random index for wallpaper_list
     i = rand() % max_walls;
 
-    /* Set the wallpaper path. */
+    // Set the wallpaper path
     snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;",
             wallpaper_list[i]);
     rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
@@ -441,7 +438,8 @@ int get_local_brightness(double lat, double lon) {
         case 0:
             sunrise += gmt_offset_h;
             sunset += gmt_offset_h;
-            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s), hours_to_hm(sunset, ss_s), ltime.tm_zone);
+            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s),
+                    hours_to_hm(sunset, ss_s), ltime.tm_zone);
             break;
         case +1:
             eprintf("Sun above horizon\n");
@@ -457,7 +455,9 @@ int get_local_brightness(double lat, double lon) {
         case 0:
             civ_start += gmt_offset_h;
             civ_end += gmt_offset_h;
-            eprintf("Civil twilight starts %s, ends %s %s\n", hours_to_hm(civ_start, civ_start_s), hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
+            eprintf("Civil twilight starts %s, ends %s %s\n",
+                    hours_to_hm(civ_start, civ_start_s),
+                    hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
             break;
         case +1:
             eprintf("Never darker than civil twilight\n");

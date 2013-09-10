@@ -33,7 +33,7 @@ int numcmp(const void *a, const void *b);
   Check if a file exists and is readable.
 
   @param[in] filename The path to the file.
-  @return 1 if the file exists, 0 otherwise.
+  @return Returns 1 if the file exists, 0 otherwise.
  */
 int file_exists(const char *filename) {
     FILE *f;
@@ -49,6 +49,7 @@ int file_exists(const char *filename) {
 
   @param[in] hours Hours as a floating point number.
   @param[out] dest Time in the format hh:mm.
+  @return Pointer to the time in format hh:mm.
  */
 char *hours_to_hm(double hours, char *dest) {
     char hm[6];
@@ -60,7 +61,7 @@ char *hours_to_hm(double hours, char *dest) {
 }
 
 /**
-  Compare two floats.
+  Compare two floats `pa` and `pb`.
 
   @param[in] pa First float value.
   @param[in] pa Second float value.

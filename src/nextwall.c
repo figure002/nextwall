@@ -230,7 +230,7 @@ int main(int argc, char **argv) {
 
     // Open database connection.
     if ( rc != SQLITE_OK ) {
-        if ( (rc = sqlite3_open(dbfile, &db)) != 0 ) {
+        if ( (rc = sqlite3_open(dbfile, &db)) != SQLITE_OK ) {
             fprintf(stderr, "Error: Can't open database: %s\n", sqlite3_errmsg(db));
             return 1;
         }

@@ -29,8 +29,6 @@ void get_background_uri(GSettings *settings, char *dest);
 /**
   Set the desktop background.
 
-  This function depends on GSettings.
-
   @param[in] settings GSettings object with desktop background schema.
   @param[in] path The wallpaper path to set.
  */
@@ -43,14 +41,12 @@ void set_background_uri(GSettings *settings, const char *path) {
         strcpy(pathc, path);
 
     g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
-    g_settings_sync(); /* Make sure the changes are written to disk */
+    g_settings_sync(); // Make sure the changes are written to disk
     g_assert_cmpstr(g_settings_get_string(settings, "picture-uri"), ==, pathc);
 }
 
 /**
   Get the current desktop background.
-
-  This function depends on GSettings.
 
   @param[in] settings GSettings object with desktop background schema.
   @param[out] dest Is set to the URI of the current desktop background.
