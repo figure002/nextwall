@@ -46,6 +46,21 @@ To uninstall `nextwall`, run the uninstall command (as root):
     make uninstall
 
 
+## Usage
+
+When running `nextwall` for the first time, you need to scan your wallpaper
+directory for wallpapers:
+
+	nextwall -sr /path/to/wallpapers/
+
+Then `nextwall` can be used as follows:
+
+	nextwall -tl LAT:LON /path/to/wallpapers/
+
+To change your desktop background to a wallpaper that fits the current time
+of the day. Replace `LAT:LON` by the latitude:longitude of your location.
+
+
 ## Usage Tips
 
 * You can use `watch` to temporarily change the background at a set interval.
