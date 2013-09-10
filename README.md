@@ -3,14 +3,13 @@
 This is the README file for nextwall - A wallpaper rotator for the GNOME
 desktop.
 
-*Nextwall* is a small script that changes the background of the GNOME desktop
-to a random image. It was originally written in Python and based on the
+*Nextwall* is a small application that changes the background of the GNOME
+desktop to a random image. It was originally written in Python and based on the
 [change-background.py](http://oracle.bridgewayconsulting.com.au/~danni/misc/change-background-py.html)
 script by Davyd Madeley. At version 0.3 it was completely rewritten in C.
-NextWall has the following features:
+Nextwall has the following features:
 
-* Operates as a command-line tool. Run `nextwall --help` for
-  usage information.
+* Operates as a command-line tool. Run `nextwall --help` for usage information.
 * The fit time of day feature automatically sets backgrounds that fit the time
   of the day (dark backgrounds at night, bright backgrounds at day,
   intermediate at twilight). It uses an Artificial Neural Network to determine
