@@ -1,83 +1,90 @@
-# NextWall
+# nextwall
 
-This is the README file for NextWall (nextwall) - A wallpaper changer for the
-GNOME desktop.
+This is the README file for nextwall - A wallpaper rotator for the GNOME
+desktop.
 
-*NextWall* is a small script that changes the background of the GNOME desktop
-to a random image. It is based on the [change-background.py](http://oracle.bridgewayconsulting.com.au/~danni/misc/change-background-py.html)
-script by Davyd Madeley. NextWall has the following features:
+*Nextwall* is a small script that changes the background of the GNOME desktop
+to a random image. It was originally written in Python and based on the
+[change-background.py](http://oracle.bridgewayconsulting.com.au/~danni/misc/change-background-py.html)
+script by Davyd Madeley. At version 0.3 it was completely rewritten in C.
+NextWall has the following features:
 
-* Can operate as a command-line tool. Run <code>nextwall --help</code> for
+* Operates as a command-line tool. Run `nextwall --help` for
   usage information.
-* Can place itself in the GNOME-panel with support for Ubuntu's Application
-  Indicator.
 * The fit time of day feature automatically sets backgrounds that fit the time
-  of day (dark backgrounds at night, bright backgrounds at day, intermediate at
-  twilight).
+  of the day (dark backgrounds at night, bright backgrounds at day,
+  intermediate at twilight). It uses an Artificial Neural Network to determine
+  the brightness of a wallpaper.
+
 
 ## Setup
 
-First make sure you have all dependencies installed:
+To compile `nextwall` you need to have the following packages installed:
 
-* gnome
-* python >= 2.7 && python < 3
-* python-gi
-* gir1.2-appindicator3-0.1
-* imagemagick
+* libglib2.0-dev
+* libmagickwand-dev
+* libmagic-dev
+* libsqlite3-dev
+* libfann-dev
 
-On Debian (based) systems, run this command to install all dependencies:
+On Debian (based) systems, run this command to install the dependencies:
 
-    sudo apt-get install python python-gi gir1.2-appindicator3-0.1 imagemagick
+    sudo apt-get install libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
 
-Then you can configure the nextwall build. You'll need CMake for that:
+Then you can configure, compile, and install `nextwall`. In the top level
+directory of the `nextwall` package, run the following commands:
 
-    sudo apt-get install cmake cmake-curses-gui
-
-In the top level directory of the nextwall package, run the following commands:
-
-    mkdir build
-    cd build/
-    ccmake ..
-
-This will present you with a console based GUI with options for nextwall.
-First press 'c' to run the configure script. Review the options and change what
-you think is necessary. Pay special attention to the option `CMAKE_INSTALL_PREFIX`.
-This determines where on the system nextwall will be installed.
-`CMAKE_INSTALL_PREFIX = /usr` means that nextwall will be installed in
-`/usr/share/nextwall/`. When done setting the options, press 'c' to run the
-configure script again. Then press 'g' to generate the make files and exit.
-
-Once the make files have been generated, run the following command to install
-nextwall (you may need to run this as root):
-
+    ./configure
+    make
     make install
-
-This will also install icons for nextwall, so you need to update the system's
-icon cache by running the post-installation script (you may need to run this as
-root):
-
-    cmake/debian/postinst
 
 
 ## Uninstall
 
-To remove all installed nextwall files, change to the build folder which you
-created in the top level directory of the nextwall package:
-
-    cd build/
-
-And run the uninstall command (you may need to run this as root):
+To uninstall `nextwall`, run the uninstall command (as root):
 
     make uninstall
 
 
 ## Usage Tips
+
 * You can use `watch` to temporarily change the background at a set interval.
   For 60 seconds, run `watch -n 60 nextwall [options] [path]`
-* You can also use the cron deamon to schedule execution of NextWall. For once
-  an hour, run `sudo crontab -u $USER -e` and add this line:
+* You can also use the cron deamon to schedule execution of `nextwall`. For
+  once an hour, run `crontab -e` and add this line:
   ``0 * * * * DISPLAY=:0.0 nextwall [options] [path]``
 
+
+## ANN trainer
+
+Nextwall comes with a trainer for the Artificial Neural Network (ANN). You can
+build this trainer by running `make` in the directory `src/util/`:
+
+    cd src/util/
+	make
+
+Then run `./train_ann --help` to see usage information for the trainer. To use
+this trainer, first create a directory with image files that you want to train
+the ANN on. Then you can run the trainer as follows:
+
+    ./train_ann -p30 ~/Pictures/train/
+
+This assumes that the directory `~/Pictures/train/` contains at least 30 image
+files. Then follow the instructions on the screen to start training. Once
+completed, two files will be created:
+
+* nextwall.dat - The training data
+* nextwall.net - The artificial neural network
+
+The ANN is created from the training data. Now copy the ANN file (nextwall.net)
+to `~/.local/share/nextwall/` to make `nextwall` use this ANN.
+
+You can also create the ANN by using an existing training data file as
+follows:
+
+    ./train_ann -r ~/Pictures/train/
+
+This will create nextwall.net from an existing nextwall.dat file.
 
 ## License
 
@@ -86,3 +93,4 @@ Version 3, which you can find in the COPYING file.
 
 All graphical assets are licensed under the
 [Creative Commons Attribution 3.0 Unported License](http://creativecommons.org/licenses/by/3.0/).
+
