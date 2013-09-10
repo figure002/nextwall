@@ -2,8 +2,15 @@
 *.pyc
 *.swp
 *.o
-build/
-dist/
 Session.vim
 nextwall
 train_ann
+Makefile.in
+.deps/
+aclocal.m4
+autom4te.cache/
+configure
+depcomp
+install-sh
+missing
+
