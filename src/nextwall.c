@@ -26,8 +26,8 @@
 #include "nextwall.h"
 
 /* Set up the arguments parser */
-const char *argp_program_version = "0.4.0";
-const char *argp_program_bug_address = "<serrano.pereira@gmail.com>";
+const char *argp_program_version = PACKAGE_VERSION;
+const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 /* Program documentation */
 static char doc[] = "nextwall -- a wallpaper rotator";

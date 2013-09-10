@@ -34,6 +34,7 @@
 #include <wand/MagickWand.h>
 #include <floatfann.h>
 
+#include "config.h"
 #include "sunriset.h"
 
 /* Default size for strings */
@@ -154,6 +155,9 @@ int scan_dir(sqlite3 *db, const char *base, int recursive) {
     char sql[BUFFER_SIZE] = "\0";
     sqlite3_stmt *stmt;
     const char *tail = 0;
+    char tmp[PATH_MAX];
+    char path[PATH_MAX];
+    char *pathp;
 
     // Initialize Magic Number Recognition Library
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
@@ -175,10 +179,9 @@ int scan_dir(sqlite3 *db, const char *base, int recursive) {
     sqlite3_prepare_v2(db, sql, BUFFER_SIZE, &stmt, &tail);
 
     do {
-        char tmp[PATH_MAX];
-        char path[PATH_MAX];
         snprintf(tmp, sizeof tmp, "%s/%s", base, entry->d_name);
-        realpath(tmp, path);
+        if ( (pathp = realpath(tmp, path)) == NULL )
+            goto Return;
 
         if (entry->d_type == DT_DIR) {
             if (!recursive)
@@ -196,7 +199,6 @@ int scan_dir(sqlite3 *db, const char *base, int recursive) {
                 ++found;
                 if (found % 10 == 0) {
                     fprintf(stderr, ".");
-                    fflush(stderr);
                 }
             }
             else {
@@ -405,6 +407,7 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     char sql[BUFFER_SIZE] = "\0";
     int i;
     unsigned seed;
+    ssize_t bytes;
 
     if (brightness == 0)
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
@@ -432,7 +435,9 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
         return -1;
 
     /* Set the seed for the random number generator */
-    read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
+    bytes = read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
+    if (bytes == -1)
+        return -1;
     srand(seed);
 
     /* Get random index for wallpaper_list */

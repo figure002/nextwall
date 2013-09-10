@@ -33,6 +33,8 @@
 #include <sqlite3.h>
 #include <fann.h>
 
+#include "config.h"
+
 /* Number of input values for the ANN */
 #define NUM_INPUT 2
 
@@ -55,8 +57,8 @@ FILE *fp;
 int num_training_pairs = 0;
 
 /* Set up the arguments parser */
-const char *argp_program_version = "0.4.0";
-const char *argp_program_bug_address = "<serrano.pereira@gmail.com>";
+const char *argp_program_version = PACKAGE_VERSION;
+const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 /* Program documentation */
 static char doc[] = "train_ann -- ANN trainer for nextwall";
