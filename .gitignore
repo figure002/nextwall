@@ -1,5 +1,4 @@
 *~
-*.pyc
 *.swp
 *.o
 Session.vim
@@ -10,7 +9,11 @@ Makefile.in
 aclocal.m4
 autom4te.cache/
 configure
+config.log
+config.status
 depcomp
 install-sh
 missing
+config.h
+stamp-h1
 
