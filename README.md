@@ -92,7 +92,8 @@ completed, two files will be created:
 * nextwall.net - The artificial neural network
 
 The ANN is created from the training data. Now copy the ANN file (nextwall.net)
-to `~/.local/share/nextwall/` to make `nextwall` use this ANN.
+to `~/.local/share/nextwall/` to have `nextwall` use this ANN the next time
+it is executed with the `--scan` option.
 
 You can also create the ANN by using an existing training data file as
 follows:
