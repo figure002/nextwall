@@ -62,13 +62,13 @@ static char args_doc[] = "PATH";
 
 /* The options we understand */
 static struct argp_option options[] = {
-    {"reuse", 'r', 0, 0, "Use existing outfile.dat file to create the ANN"},
+    {"reuse", 'r', 0, 0, "Use existing training data file to create the ANN"},
     {"pairs", 'p', "N", 0, "Number of training pairs to generate"},
-    {"layers", 'l', "N", 0, "Number of neuron layers"},
-    {"neurons", 'n', "N", 0, "Number of hidden neurons"},
-    {"epochs", 't', "N", 0, "Maximum number of epochs"},
-    {"error", 'e', "N", 0, "Desired error"},
-    {"output", 'o', "outfile", 0, "Base name of output files"},
+    {"layers", 'l', "N", 0, "Number of neuron layers (default: 3)"},
+    {"neurons", 'n', "N", 0, "Number of hidden neurons (default: 8)"},
+    {"epochs", 't', "N", 0, "Maximum number of epochs (default: 500000)"},
+    {"error", 'e', "N", 0, "Desired error (default: 0.001)"},
+    {"output", 'o', "NAME", 0, "Base name of output files (default: nextwall)"},
     { 0 }
 };
 
@@ -112,16 +112,16 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_ARG:
             if (state->arg_num >= 1) {
-                 /* Too many arguments */
+                 // Too many arguments
                  argp_usage(state);
             }
             arguments->args[state->arg_num] = arg;
             break;
 
         case ARGP_KEY_END:
-            if (state->arg_num < 1) {
-                /* Too few arguments */
-                 argp_usage(state);
+            if (state->arg_num < 1 && arguments->reuse == 0) {
+                // Too few arguments
+                argp_usage(state);
             }
             break;
 
@@ -161,13 +161,14 @@ int main(int argc, char **argv) {
 
     if (!arguments.reuse) {
         if (arguments.pairs == -1) {
-            fprintf(stderr, "Error: Number of training pairs is not set, use --pairs\n");
+            fprintf(stderr, "Error: Number of training pairs is not set, " \
+                    "use --pairs\n");
             return -1;
         }
 
        // Open data file
         if ( (fp = fopen(datafile, "w")) == NULL ) {
-            printf("Failed to open %s for writing\n", datafile);
+            fprintf(stderr, "Failed to open %s for writing\n", datafile);
             exit(0);
         }
 
@@ -180,13 +181,15 @@ int main(int argc, char **argv) {
             return -1;
         }
         if (arguments.pairs != n_pairs) {
-            fprintf(stderr, "Error: Didn't find enough images. Set --pairs to a lower value.\n");
+            fprintf(stderr, "Error: Didn't find enough images. Set --pairs " \
+                    "to a lower value.\n");
             return -1;
         }
     }
 
     // Create the ANN
-    fprintf(stderr, "Creating the Artificial Neural Network with training data from %s...\n", datafile);
+    fprintf(stderr, "Creating the Artificial Neural Network with training " \
+            "data from %s...\n", datafile);
     struct fann *ann = fann_create_standard(arguments.layers, NUM_INPUT,
         arguments.neurons, NUM_OUTPUT);
 
@@ -240,8 +243,10 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
     if (!(entry = readdir(dir)))
         return -1;
 
-    fprintf(stderr, "Defining the image brightness for %d images. Each image will be displayed on your desktop.\n", max_pairs);
-    fprintf(stderr, "At any time you can enter 's' to skip an image, or 'q' to quit.\n\n");
+    fprintf(stderr, "Defining the image brightness for %d images. Each " \
+            "image will be displayed on your desktop.\n", max_pairs);
+    fprintf(stderr, "At any time you can enter 's' to skip an image, or " \
+            "'q' to quit.\n\n");
 
     do {
         snprintf(tmp, sizeof tmp, "%s/%s", base, entry->d_name);
@@ -258,10 +263,12 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
 
             set_background_uri(settings, path);
             fprintf(stderr, "Image: %s\n", path);
-            fprintf(stderr, "Is this image dark (0), intermediate (1), or light (2)? ");
+            fprintf(stderr, "Is this image dark (0), intermediate (1), or " \
+                    "light (2)? ");
 
             // Get image brightness value from user input.
-            while ( (read = getline(&line, &len, stdin)) != -1 && n_pairs < max_pairs ) {
+            while ( (read = getline(&line, &len, stdin)) != -1 && \
+                    n_pairs < max_pairs ) {
                 if ( strcmp(line, "0\n") == 0 ) {
                     fprintf(fp, "%f %f\n", kurtosis, lightness);
                     fprintf(fp, "1 0 0\n");
