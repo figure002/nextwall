@@ -80,9 +80,9 @@ the ANN on. Then you can run the trainer as follows:
 
     ./train_ann -p30 ~/Pictures/train/
 
-This will train the ANN on 30 image files from the directory `~/Pictures/train/`
-Then follow the instructions on the screen to start training. Once completed,
-two files will be created:
+This will train the ANN on 30 image files from the directory
+`~/Pictures/train/`. Then follow the instructions on the screen to start
+training. Once completed, two files will be created:
 
 * nextwall.dat - The training data
 * nextwall.net - The artificial neural network
@@ -96,6 +96,7 @@ You can update the ANN by using an existing training data file as follows:
     ./train_ann -r
 
 This will create/update nextwall.net from an existing nextwall.dat file.
+
 
 ## License
 

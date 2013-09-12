@@ -62,6 +62,7 @@ int get_image_info(const char *path, double *kurtosis, double *lightness) {
     // Get the lightness value
     PixelGetHSL(pixel_wand, &hue, &saturation, lightness);
 
+    pixel_wand = DestroyPixelWand(pixel_wand);
     magick_wand = DestroyMagickWand(magick_wand);
     MagickWandTerminus();
 
