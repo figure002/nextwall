@@ -27,7 +27,6 @@
 #include <dirent.h>
 #include <limits.h>
 #include <magic.h>
-#include <argp.h>
 #include <fcntl.h> // for open()
 #include <floatfann.h>
 
@@ -67,7 +66,7 @@ char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 char current_wallpaper[PATH_MAX];
 char *wallpaper_dir;
 char wallpaper_path[PATH_MAX];
-double latitude = 51.48, longitude = 0.0;
+double latitude = -1, longitude = -1;
 double kurtosis_values[4];
 int verbose = 0, max_walls = 0;
 int c, rc, known_image;

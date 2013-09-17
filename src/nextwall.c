@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <argp.h>
 
 #include "cfgpath.h"
 #include "nextwall.h"
@@ -30,19 +31,23 @@ const char *argp_program_version = PACKAGE_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 /* Program documentation */
-static char doc[] = "nextwall -- a wallpaper rotator";
+static char doc[] = "nextwall -- a wallpaper rotator with some sense of time";
 
 /* A description of the arguments we accept */
 static char args_doc[] = "PATH";
 
 /* The options we understand */
 static struct argp_option options[] = {
-    {"recursion", 'r', 0, 0, "Find wallpapers in subdirectories"},
-    {"brightness", 'b', "N", 0, "Force brightness value to night (0), twilight (1), or day (2)"},
-    {"time", 't', 0, 0, "Find wallpapers that fit the time of day"},
-    {"scan", 's', 0, 0, "Scan for images files in PATH"},
+    {"recursion", 'r', 0, 0, "Causes --scan to look in subdirectories"},
+    {"brightness", 'b', "N", 0, "Select wallpapers for night (0), twilight " \
+        "(1), or day (2)"},
+    {"time", 't', 0, 0, "Find wallpapers that fit the time of day. Must be " \
+        "used in combination with --location"},
+    {"scan", 's', 0, 0, "Scan for images files in PATH. Also see the " \
+        "--recursion option"},
     {"verbose", 'v', 0, 0, "Increase verbosity"},
-    {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your current location"},
+    {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your " \
+        "current location"},
     { 0 }
 };
 
@@ -72,12 +77,14 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             break;
         case 'b':
             if (!isdigit(*arg)) {
+                fprintf(stderr, "Incorrect brightness value\n");
                 argp_usage(state);
                 break;
             }
 
             b = atoi(arg);
             if ( !(b == 0 || b == 1 || b == 2) ) {
+                fprintf(stderr, "Incorrect brightness value\n");
                 argp_usage(state);
                 break;
             }
@@ -126,6 +133,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
                 // Use the default wallpapers path if none specified.
                 arguments->args[0] = default_wallpaper_dir;
             }
+            if (arguments->time && latitude == -1) {
+                 fprintf(stderr, "Your location must be set with --location " \
+                         "when using --time\n");
+                 argp_usage(state);
+            }
             break;
 
         default:
@@ -156,7 +168,6 @@ int main(int argc, char **argv) {
     arguments.time = 0;
     arguments.scan = 0;
     arguments.verbose = 0;
-    arguments.location = "51.48:0.0";
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
