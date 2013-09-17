@@ -63,13 +63,9 @@ char *annfile;
 /* Default wallpaper directory */
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 
-char current_wallpaper[PATH_MAX];
-char wallpaper_dir[PATH_MAX];
 char wallpaper_path[PATH_MAX];
-double latitude = -1, longitude = -1;
-double kurtosis_values[4];
 int verbose = 0, max_walls = 0;
-int c, rc, known_image;
+int rc, known_image;
 int wallpaper_list[LIST_MAX];
 
 
@@ -84,6 +80,7 @@ int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
 int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 int get_local_brightness(double lat, double lon);
 int get_brightness(struct fann *ann, double kurtosis, double lightness);
+int remove_wallpaper(sqlite3 *db, const char *path);
 
 
 /**
@@ -471,5 +468,32 @@ int get_local_brightness(double lat, double lon) {
     else {
         return -1;
     }
+}
+
+/**
+  Delete a wallpaper from disk and the nextwall database.
+
+  @param[in] db The database handler.
+  @param[in] path Absolute path of the wallpaper.
+  @return Returns 0 on successful completion, and -1 on error.
+ */
+int remove_wallpaper(sqlite3 *db, const char *path) {
+    char sql[PATH_MAX] = "\0";
+
+    snprintf(sql, sizeof sql, "DELETE FROM wallpapers WHERE path " \
+            "= '%s';", path);
+
+    rc = sqlite3_exec(db, sql, NULL, NULL, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
+        exit(1);
+    }
+
+    // Remove the wallpaper from disk
+    if (remove(path) == -1) {
+        return -1;
+    }
+
+    return 0;
 }
 

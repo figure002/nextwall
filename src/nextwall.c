@@ -29,6 +29,12 @@
 /* Function prototypes */
 static int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
 
+/* Copy of PATH */
+char wallpaper_dir[PATH_MAX];
+
+/* For storing the path of the current wallpaper */
+char current_wallpaper[PATH_MAX];
+
 /* Set up the arguments parser */
 const char *argp_program_version = PACKAGE_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
@@ -58,8 +64,9 @@ static struct argp_option options[] = {
 /* Used by main to communicate with parse_opt */
 struct arguments {
     char *args[1]; /* PATH argument */
-    int brightness, interactive, recursion, scan, time, verbose;
     char *location;
+    int brightness, interactive, recursion, scan, time, verbose;
+    double latitude, longitude;
 };
 
 /* Parse a single option */
@@ -104,12 +111,12 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             lat = strtok(tmp, ":");
             lon = strtok(NULL, ":");
 
-            rc = sscanf(lat, "%lf", &latitude); // parse string to double
+            rc = sscanf(lat, "%lf", &arguments->latitude);
             if (rc == 0) {
                 fprintf(stderr, "Incorrect value for latitude\n");
                 argp_usage(state);
             }
-            rc = sscanf(lon, "%lf", &longitude); // parse string to double
+            rc = sscanf(lon, "%lf", &arguments->longitude);
             if (rc == 0) {
                 fprintf(stderr, "Incorrect value for longitude\n");
                 argp_usage(state);
@@ -141,7 +148,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
                 // Use the default wallpapers path if none specified.
                 arguments->args[0] = default_wallpaper_dir;
             }
-            if (arguments->time && latitude == -1) {
+            if (arguments->time && arguments->latitude == -1) {
                  fprintf(stderr, "Your location must be set with --location " \
                          "when using --time\n");
                  argp_usage(state);
@@ -166,7 +173,6 @@ int main(int argc, char **argv) {
     GSettings *settings;
     char *annfiles[3];
     char tmp[PATH_MAX];
-    char command[20], last_command[20] = "n\n";
     char *line = NULL;
     size_t linelen = 0;
     ssize_t read;
@@ -177,6 +183,8 @@ int main(int argc, char **argv) {
     // Default argument values
     arguments.brightness = -1;
     arguments.interactive = 0;
+    arguments.latitude = -1;
+    arguments.longitude = -1;
     arguments.recursion = 0;
     arguments.scan = 0;
     arguments.time = 0;
@@ -190,7 +198,8 @@ int main(int argc, char **argv) {
     strncpy(wallpaper_dir, arguments.args[0], sizeof wallpaper_dir);
 
     if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        fprintf(stderr, "The wallpaper path %s doesn't exist.\n", wallpaper_dir);
+        fprintf(stderr, "The wallpaper path %s doesn't exist.\n",
+                wallpaper_dir);
         return 1;
     }
 
@@ -255,7 +264,8 @@ int main(int argc, char **argv) {
     // Open database connection.
     if ( rc != SQLITE_OK ) {
         if ( (rc = sqlite3_open(dbfile, &db)) != SQLITE_OK ) {
-            fprintf(stderr, "Error: Can't open database: %s\n", sqlite3_errmsg(db));
+            fprintf(stderr, "Error: Can't open database: %s\n",
+                    sqlite3_errmsg(db));
             return 1;
         }
     }
@@ -272,7 +282,8 @@ int main(int argc, char **argv) {
     // Get local brightness
     if (arguments.time) {
         if (arguments.brightness == -1)
-            local_brightness = get_local_brightness(latitude, longitude);
+            local_brightness = get_local_brightness(arguments.latitude,
+                    arguments.longitude);
         else
             local_brightness = arguments.brightness;
 
@@ -287,47 +298,59 @@ int main(int argc, char **argv) {
                 eprintf("Selecting wallpaper for day.\n");
                 break;
             default:
-                fprintf(stderr, "Error: Could not determine the local brightness value.\n");
+                fprintf(stderr, "Error: Could not determine the local " \
+                        "brightness value.\n");
                 goto Return;
         }
     }
 
     // Set wallpaper_path
     if ( (nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
-        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan option or remove the --time option.\n", wallpaper_dir);
+        fprintf(stderr, "No wallpapers found for directory %s. Try the " \
+                "--scan option or remove the --time option.\n", wallpaper_dir);
         goto Return;
     }
 
     if (arguments.interactive) {
-        fprintf(stderr, "Nextwall Copyright 2010-2013 Serrano Pereira\n" \
+        fprintf(stderr, "Nextwall %s\n" \
+                "Copyright (C) 2010-2013 Serrano Pereira\n" \
+                "License GPLv3+: GNU GPL version 3 or later " \
+                "<http://gnu.org/licenses/gpl.html>\n" \
                 "Type 'help' for more information.\n" \
-                "> ");
+                "nextwall> ", PACKAGE_VERSION);
         while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
-            if ( strcmp(line, "\n") == 0 )
-                strcpy(command, last_command);
-            else
-                strncpy(command, line, sizeof command);
-
-            if ( strcmp(command, "n\n") == 0 ) {
-                if ( set_wallpaper(settings, db, local_brightness) == -1)
+            if (strcmp(line, "d\n") == 0) {
+                get_background_uri(settings, current_wallpaper);
+                fprintf(stderr, "Permanently remove %s from disk? (y/N) ",
+                        current_wallpaper);
+                read = getline(&line, &linelen, stdin);
+                if ( read != -1 && strcmp(line, "y\n") == 0 && \
+                        remove_wallpaper(db, current_wallpaper) == 0) {
+                    fprintf(stderr, "Wallpaper removed\n");
+                    if ( set_wallpaper(settings, db, local_brightness) == -1)
+                        goto Return;
+                }
+            }
+            else if (strcmp(line, "\n") == 0 || strcmp(line, "n\n") == 0) {
+                if (set_wallpaper(settings, db, local_brightness) == -1)
                     goto Return;
             }
-            else if ( strcmp(command, "help\n") == 0 ) {
+            else if (strcmp(line, "help\n") == 0) {
                 fprintf(stderr,
-                        "Nextwall is now running in interactive mode. The " \
-                        "following commands are available:\n" \
-                        "'n'\tNext wallpaper\n" \
-                        "'q'\tExit nextwall\n" \
-                        "\n\nPressing Enter without command repeats the last command.");
+                    "Nextwall is now running in interactive mode. The " \
+                    "following commands are available:\n" \
+                    "'d'\tPermanently remove the current wallpaper from disk\n" \
+                    "'n'\tNext wallpaper (default)\n" \
+                    "'q'\tExit nextwall\n");
             }
-            else if ( strcmp(command, "q\n") == 0 )
+            else if (strcmp(line, "q\n") == 0) {
                 goto Return;
-            else
+            }
+            else {
                 fprintf(stderr, "Unknown command. Type 'help' to see the " \
                         "available commands.\n");
-
-            strncpy(last_command, command, sizeof last_command);
-            fprintf(stderr, "> ");
+            }
+            fprintf(stderr, "nextwall> ");
         }
     }
     else {
@@ -352,7 +375,8 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
     // Make sure we select a different wallpaper
     for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
         if (i == 5) {
-            fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.\n");
+            fprintf(stderr, "Not enough wallpapers found. Select a different " \
+                    "directory or use the --scan option.\n");
             return -1;
         }
         nextwall(db, wallpaper_dir, brightness);
