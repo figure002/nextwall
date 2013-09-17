@@ -27,7 +27,7 @@
 #include "nextwall.h"
 
 /* Function prototypes */
-int switch_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
+static int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
 
 /* Set up the arguments parser */
 const char *argp_program_version = PACKAGE_VERSION;
@@ -185,8 +185,8 @@ int main(int argc, char **argv) {
        be reflected in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    // Set the wallpaper path
-    wallpaper_dir = arguments.args[0];
+    // Set the wallpaper directory
+    strncpy(wallpaper_dir, arguments.args[0], sizeof wallpaper_dir);
 
     if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
         fprintf(stderr, "The wallpaper path %s doesn't exist.\n", wallpaper_dir);
@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
                 "> ");
         while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
             if ( strcmp(line, "n\n") == 0 ) {
-                if ( switch_wallpaper(settings, db, local_brightness) == -1)
+                if ( set_wallpaper(settings, db, local_brightness) == -1)
                     goto Return;
             }
             else if ( strcmp(line, "help\n") == 0 ) {
@@ -324,7 +324,7 @@ int main(int argc, char **argv) {
         }
     }
     else {
-        switch_wallpaper(settings, db, local_brightness);
+        set_wallpaper(settings, db, local_brightness);
     }
 
     goto Return;
@@ -336,7 +336,7 @@ Return:
     return 0;
 }
 
-int switch_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
+int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
     int i;
 
     // Get the path of the current wallpaper
@@ -357,3 +357,4 @@ int switch_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
 
     return 0;
 }
+

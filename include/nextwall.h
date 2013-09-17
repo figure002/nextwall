@@ -64,7 +64,7 @@ char *annfile;
 char default_wallpaper_dir[] = "/usr/share/backgrounds/";
 
 char current_wallpaper[PATH_MAX];
-char *wallpaper_dir;
+char wallpaper_dir[PATH_MAX];
 char wallpaper_path[PATH_MAX];
 double latitude = -1, longitude = -1;
 double kurtosis_values[4];
@@ -334,20 +334,14 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
           otherwise.
  */
 int nextwall(sqlite3 *db, const char *path, int brightness) {
-    char sql[BUFFER_SIZE] = "\0";
+    char sql[PATH_MAX] = "\0";
     int i;
     unsigned seed;
     ssize_t bytes;
 
-    if (brightness == 0)
+    if (brightness != -1)
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND brightness=0;", path);
-    else if (brightness == 1)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND brightness=1;", path);
-    else if (brightness == 2)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND brightness=2;", path);
+                "LIKE \"%s%%\" AND brightness=%d;", path, brightness);
     else
         snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
                 "LIKE \"%s%%\";", path);
