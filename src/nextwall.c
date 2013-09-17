@@ -290,7 +290,7 @@ int main(int argc, char **argv) {
 
     // Make sure we select a different wallpaper
     for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
-        if (i == 3) {
+        if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.\n");
             goto Return;
         }
