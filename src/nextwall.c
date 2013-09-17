@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
     GSettings *settings;
     char *annfiles[3];
     char tmp[PATH_MAX];
+    char command[20], last_command[20] = "n\n";
     char *line = NULL;
     size_t linelen = 0;
     ssize_t read;
@@ -302,24 +303,30 @@ int main(int argc, char **argv) {
                 "Type 'help' for more information.\n" \
                 "> ");
         while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
-            if ( strcmp(line, "n\n") == 0 ) {
+            if ( strcmp(line, "\n") == 0 )
+                strcpy(command, last_command);
+            else
+                strncpy(command, line, sizeof command);
+
+            if ( strcmp(command, "n\n") == 0 ) {
                 if ( set_wallpaper(settings, db, local_brightness) == -1)
                     goto Return;
             }
-            else if ( strcmp(line, "help\n") == 0 ) {
+            else if ( strcmp(command, "help\n") == 0 ) {
                 fprintf(stderr,
                         "Nextwall is now running in interactive mode. The " \
                         "following commands are available:\n" \
                         "'n'\tNext wallpaper\n" \
-                        "'q'\tExit nextwall\n");
+                        "'q'\tExit nextwall\n" \
+                        "\n\nPressing Enter without command repeats the last command.");
             }
-            else if ( strcmp(line, "q\n") == 0 ) {
+            else if ( strcmp(command, "q\n") == 0 )
                 goto Return;
-            }
             else
                 fprintf(stderr, "Unknown command. Type 'help' to see the " \
                         "available commands.\n");
 
+            strncpy(last_command, command, sizeof last_command);
             fprintf(stderr, "> ");
         }
     }
