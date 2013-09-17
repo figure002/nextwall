@@ -26,6 +26,9 @@
 #include "cfgpath.h"
 #include "nextwall.h"
 
+/* Function prototypes */
+int switch_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
+
 /* Set up the arguments parser */
 const char *argp_program_version = PACKAGE_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
@@ -38,23 +41,24 @@ static char args_doc[] = "PATH";
 
 /* The options we understand */
 static struct argp_option options[] = {
-    {"recursion", 'r', 0, 0, "Causes --scan to look in subdirectories"},
     {"brightness", 'b', "N", 0, "Select wallpapers for night (0), twilight " \
         "(1), or day (2)"},
-    {"time", 't', 0, 0, "Find wallpapers that fit the time of day. Must be " \
-        "used in combination with --location"},
-    {"scan", 's', 0, 0, "Scan for images files in PATH. Also see the " \
-        "--recursion option"},
-    {"verbose", 'v', 0, 0, "Increase verbosity"},
+    {"interactive", 'i', 0, 0, "Run in interactive mode"},
     {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your " \
         "current location"},
+    {"recursion", 'r', 0, 0, "Causes --scan to look in subdirectories"},
+    {"scan", 's', 0, 0, "Scan for images files in PATH. Also see the " \
+        "--recursion option"},
+    {"time", 't', 0, 0, "Find wallpapers that fit the time of day. Must be " \
+        "used in combination with --location"},
+    {"verbose", 'v', 0, 0, "Increase verbosity"},
     { 0 }
 };
 
 /* Used by main to communicate with parse_opt */
 struct arguments {
     char *args[1]; /* PATH argument */
-    int recursion, brightness, time, scan, verbose;
+    int brightness, interactive, recursion, scan, time, verbose;
     char *location;
 };
 
@@ -63,18 +67,13 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     /* Get the input argument from argp_parse, which we
        know is a pointer to our arguments structure. */
     struct arguments *arguments = state->input;
-    char tmp[50];
+
+    char tmp[80];
     char *lat, *lon;
     int rc, b;
 
     switch (key)
     {
-        case 'r':
-            arguments->recursion = 1;
-            break;
-        case 't':
-            arguments->time = 1;
-            break;
         case 'b':
             if (!isdigit(*arg)) {
                 fprintf(stderr, "Incorrect brightness value\n");
@@ -91,11 +90,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
             arguments->brightness = b;
             break;
-        case 's':
-            arguments->scan = 1;
-            break;
-        case 'v':
-            arguments->verbose = verbose = 1;
+        case 'i':
+            arguments->interactive = 1;
             break;
         case 'l':
             arguments->location = arg;
@@ -118,6 +114,18 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
                 fprintf(stderr, "Incorrect value for longitude\n");
                 argp_usage(state);
             }
+            break;
+        case 'r':
+            arguments->recursion = 1;
+            break;
+        case 's':
+            arguments->scan = 1;
+            break;
+        case 't':
+            arguments->time = 1;
+            break;
+        case 'v':
+            arguments->verbose = verbose = 1;
             break;
 
         case ARGP_KEY_ARG:
@@ -153,20 +161,24 @@ int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
     int rc = -1, local_brightness = -1, ann_found = 0;
-    int found, i, j, id;
+    int found, i;
     sqlite3 *db;
     GSettings *settings;
     char *annfiles[3];
     char tmp[PATH_MAX];
+    char *line = NULL;
+    size_t linelen = 0;
+    ssize_t read;
 
     // Create a new GSettings object
     settings = g_settings_new("org.gnome.desktop.background");
 
     // Default argument values
-    arguments.recursion = 0;
     arguments.brightness = -1;
-    arguments.time = 0;
+    arguments.interactive = 0;
+    arguments.recursion = 0;
     arguments.scan = 0;
+    arguments.time = 0;
     arguments.verbose = 0;
 
     /* Parse arguments; every option seen by parse_opt will
@@ -200,9 +212,9 @@ int main(int argc, char **argv) {
     annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
     annfiles[2] = "/usr/share/nextwall/nextwall.net";
 
-    for (j = 0; j < 3; j++) {
-        if (file_exists(annfiles[j])) {
-            annfile = annfiles[j];
+    for (i = 0; i < 3; i++) {
+        if (file_exists(annfiles[i])) {
+            annfile = annfiles[i];
             ann_found = 1;
             eprintf("Using ANN %s\n", annfile);
             break;
@@ -280,10 +292,52 @@ int main(int argc, char **argv) {
     }
 
     // Set wallpaper_path
-    if ( (id = nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
-        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan or --recursion option.\n", wallpaper_dir);
+    if ( (nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
+        fprintf(stderr, "No wallpapers found for directory %s. Try the --scan option or remove the --time option.\n", wallpaper_dir);
         goto Return;
     }
+
+    if (arguments.interactive) {
+        fprintf(stderr, "Nextwall Copyright 2010-2013 Serrano Pereira\n" \
+                "Type 'help' for more information.\n" \
+                "> ");
+        while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
+            if ( strcmp(line, "n\n") == 0 ) {
+                if ( switch_wallpaper(settings, db, local_brightness) == -1)
+                    goto Return;
+            }
+            else if ( strcmp(line, "help\n") == 0 ) {
+                fprintf(stderr,
+                        "Nextwall is now running in interactive mode. The " \
+                        "following commands are available:\n" \
+                        "'n'\tNext wallpaper\n" \
+                        "'q'\tExit nextwall\n");
+            }
+            else if ( strcmp(line, "q\n") == 0 ) {
+                goto Return;
+            }
+            else
+                fprintf(stderr, "Unknown command. Type 'help' to see the " \
+                        "available commands.\n");
+
+            fprintf(stderr, "> ");
+        }
+    }
+    else {
+        switch_wallpaper(settings, db, local_brightness);
+    }
+
+    goto Return;
+
+Return:
+    free(line);
+    g_object_unref(settings);
+    sqlite3_close(db);
+    return 0;
+}
+
+int switch_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
+    int i;
 
     // Get the path of the current wallpaper
     get_background_uri(settings, current_wallpaper);
@@ -292,20 +346,14 @@ int main(int argc, char **argv) {
     for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
         if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different directory or use the --scan option.\n");
-            goto Return;
+            return -1;
         }
-        id = nextwall(db, wallpaper_dir, local_brightness);
+        nextwall(db, wallpaper_dir, brightness);
     }
 
     // Set the new wallpaper
     eprintf("Setting wallpaper to %s\n", wallpaper_path);
     set_background_uri(settings, wallpaper_path);
 
-    goto Return;
-
-Return:
-    g_object_unref(settings);
-    sqlite3_close(db);
     return 0;
 }
-
