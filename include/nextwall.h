@@ -67,6 +67,7 @@ char wallpaper_path[PATH_MAX];
 int verbose = 0, max_walls = 0;
 int rc, known_image;
 int wallpaper_list[LIST_MAX];
+static int rand_seeded = 0;
 
 
 /* Function prototypes */
@@ -353,10 +354,13 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
         return -1;
 
     // Set the seed for the random number generator
-    bytes = read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
-    if (bytes == -1)
-        return -1;
-    srand(seed);
+    if (!rand_seeded) {
+        bytes = read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
+        if (bytes == -1)
+            return -1;
+        srand(seed);
+        rand_seeded = 1;
+    }
 
     // Get random index for wallpaper_list
     i = rand() % max_walls;
