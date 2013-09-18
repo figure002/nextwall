@@ -26,8 +26,13 @@
 #include "cfgpath.h"
 #include "nextwall.h"
 
+/* Default wallpaper directory */
+#define DEFAULT_WALLPAPER_DIR "/usr/share/backgrounds/"
+
+
 /* Function prototypes */
 static int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
+
 
 /* Copy of PATH */
 char wallpaper_dir[PATH_MAX];
@@ -137,7 +142,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_ARG:
             if (state->arg_num >= 1) {
-                 // Too many arguments.
+                 // Too many arguments
                  argp_usage(state);
             }
             arguments->args[state->arg_num] = arg;
@@ -145,8 +150,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
         case ARGP_KEY_END:
             if (state->arg_num == 0) {
-                // Use the default wallpapers path if none specified.
-                arguments->args[0] = default_wallpaper_dir;
+                // Use the default wallpaper directory if none specified
+                arguments->args[0] = DEFAULT_WALLPAPER_DIR;
             }
             if (arguments->time && arguments->latitude == -1) {
                  fprintf(stderr, "Your location must be set with --location " \

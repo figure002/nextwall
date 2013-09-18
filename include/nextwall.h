@@ -60,28 +60,26 @@ char dbfile[PATH_MAX];
 /* Path to ANN file */
 char *annfile;
 
-/* Default wallpaper directory */
-char default_wallpaper_dir[] = "/usr/share/backgrounds/";
-
 char wallpaper_path[PATH_MAX];
-int verbose = 0, max_walls = 0;
-int rc, known_image;
-int wallpaper_list[LIST_MAX];
+int verbose = 0;
+static int max_walls = 0;
+static int rc, known_image;
+static int wallpaper_list[LIST_MAX];
 static int rand_seeded = 0;
 
 
 /* Function prototypes */
 int make_db(sqlite3 *db);
 int scan_dir(sqlite3 *db, const char *base, int recursive);
-int is_known_image(sqlite3 *db, const char *path);
-int known_image_callback(void *notused, int argc, char **argv, char **colnames);
-int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 int nextwall(sqlite3 *db, const char *path, int brightness);
-int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
-int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 int get_local_brightness(double lat, double lon);
-int get_brightness(struct fann *ann, double kurtosis, double lightness);
 int remove_wallpaper(sqlite3 *db, const char *path);
+static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
+static int get_brightness(struct fann *ann, double kurtosis, double lightness);
+static int is_known_image(sqlite3 *db, const char *path);
+static int known_image_callback(void *notused, int argc, char **argv, char **colnames);
+static int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
+static int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
 
 
 /**
