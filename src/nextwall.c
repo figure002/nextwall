@@ -101,6 +101,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             }
 
             arguments->brightness = b;
+            arguments->time = 1;
             break;
         case 'i':
             arguments->interactive = 1;
@@ -153,7 +154,8 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
                 // Use the default wallpaper directory if none specified
                 arguments->args[0] = DEFAULT_WALLPAPER_DIR;
             }
-            if (arguments->time && arguments->latitude == -1) {
+            if (arguments->brightness == -1 && arguments->time && \
+                    arguments->latitude == -1) {
                  fprintf(stderr, "Your location must be set with --location " \
                          "when using --time\n");
                  argp_usage(state);
