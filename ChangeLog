@@ -1,3 +1,19 @@
+2013-09-26  Serrano Pereira  <serrano.pereira@gmail.com>
+
+	Added a man page.
+	* configure.ac: Updated.
+	* man/Makefile: New file.
+	* man/nextwall.1: New file.
+	* man/nextwall.h2m: New file.
+	* src/Makefile.am: Updated.
+	* src/nextwall.c: Updated.
+
+2013-09-17  Serrano Pereira  <serrano.pereira@gmail.com>
+
+	Implemented a basic interactive mode.
+	* include/nextwall.h: Updated.
+	* src/nextwall.c: Updated.
+
 2013-09-11  Serrano Pereira  <serrano.pereira@gmail.com>
 
 	Rewrite in C.
