@@ -4,6 +4,7 @@ AM_CFLAGS = -Wall -Werror -I$(top_srcdir)/include $(GIO_CFLAGS) $(IMAGEMAGICK_CF
 
 bin_PROGRAMS = nextwall
 EXTRA_DIST = $(top_srcdir)/include/*.h $(top_srcdir)/data/ann/nextwall.net
+man1_MANS = $(top_srcdir)/man/nextwall.1
 
 nextwall_SOURCES = nextwall.c
 nextwall_LDADD = -lm -lsqlite3 -lmagic -lfann $(GIO_LIBS) $(IMAGEMAGICK_LIBS)

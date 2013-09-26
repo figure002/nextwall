@@ -1,0 +1,22 @@
+[name]
+nextwall - A wallpaper rotator with some sense of time.
+[description]
+.B Nextwall
+is a small application that changes the background of the GNOME desktop to a
+random image. The fit time of day feature automatically sets backgrounds that
+fit the time of the day (dark backgrounds at night, bright backgrounds at day,
+intermediate at twilight). It uses an Artificial Neural Network to determine
+the brightness of a wallpaper.
+[authors]
+.B Nextwall
+was written by Serrano Pereira.
+[copyright]
+Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
+
+.B Nextwall
+is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+.B Nextwall
+is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
