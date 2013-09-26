@@ -7,6 +7,31 @@ random image. The fit time of day feature automatically sets backgrounds that
 fit the time of the day (dark backgrounds at night, bright backgrounds at day,
 intermediate at twilight). It uses an Artificial Neural Network to determine
 the brightness of a wallpaper.
+
+When running
+.B nextwall
+for the first time, you need to scan your wallpaper directory for wallpapers:
+
+	nextwall -sr /path/to/wallpapers/
+
+While it scans for wallpapers, it defines the brightness for each wallpaper.
+[examples]
+You can use
+.I watch
+to temporarily change the background at a set interval. For 60 seconds, run:
+
+	watch -n 60
+.B nextwall
+[\fIOPTION\fR...] \fIPATH\fR
+
+You can also use the
+.I cron
+deamon to schedule execution of nextwall. For once an hour, run `crontab -e' and add this line:
+
+	0 * * * * DISPLAY=:0.0
+.B nextwall
+[\fIOPTION\fR...] \fIPATH\fR
+
 [authors]
 .B Nextwall
 was written by Serrano Pereira.

@@ -45,7 +45,8 @@ const char *argp_program_version = PACKAGE_VERSION;
 const char *argp_program_bug_address = PACKAGE_BUGREPORT;
 
 /* Program documentation */
-static char doc[] = "nextwall -- a wallpaper rotator with some sense of time";
+//static char doc[] = "nextwall - A wallpaper rotator with some sense of time.";
+static char doc[] = "\nOptions:";
 
 /* A description of the arguments we accept */
 static char args_doc[] = "PATH";
