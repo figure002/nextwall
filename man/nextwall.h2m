@@ -12,7 +12,7 @@ When running
 .B nextwall
 for the first time, you need to scan your wallpaper directory for wallpapers:
 
-	nextwall -sr /path/to/wallpapers/
+	nextwall -sr \fIPATH\fR
 
 While it scans for wallpapers, it defines the brightness for each wallpaper.
 [examples]
@@ -36,6 +36,8 @@ deamon to schedule execution of nextwall. For once an hour, run `crontab -e' and
 .B Nextwall
 was written by Serrano Pereira.
 [copyright]
+Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
+
 Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
 
 .B Nextwall
