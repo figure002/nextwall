@@ -321,7 +321,6 @@ int main(int argc, char **argv) {
 
     if (arguments.interactive) {
         fprintf(stderr, "Nextwall %s\n" \
-                "Copyright (C) 2010-2013 Serrano Pereira\n" \
                 "License GPLv3+: GNU GPL version 3 or later " \
                 "<http://gnu.org/licenses/gpl.html>\n" \
                 "Type 'help' for more information.\n" \
@@ -343,12 +342,17 @@ int main(int argc, char **argv) {
                 if (set_wallpaper(settings, db, local_brightness) == -1)
                     goto Return;
             }
+            else if (strcmp(line, "o\n") == 0) {
+                get_background_uri(settings, current_wallpaper);
+                open_image(current_wallpaper);
+            }
             else if (strcmp(line, "help\n") == 0) {
                 fprintf(stderr,
                     "Nextwall is now running in interactive mode. The " \
                     "following commands are available:\n" \
                     "'d'\tPermanently remove the current wallpaper from disk\n" \
                     "'n'\tNext wallpaper (default)\n" \
+                    "'o'\tOpen the current wallpaper\n" \
                     "'q'\tExit nextwall\n");
             }
             else if (strcmp(line, "q\n") == 0) {

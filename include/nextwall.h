@@ -34,7 +34,7 @@
 #include "sunriset.h"
 #include "std.h"
 #include "image.h"
-#include "gsettings.h"
+#include "gnome.h"
 
 /* Default size for strings */
 #define BUFFER_SIZE 512

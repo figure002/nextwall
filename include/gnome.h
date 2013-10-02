@@ -24,6 +24,7 @@
 /* Function prototypes */
 void set_background_uri(GSettings *settings, const char *path);
 void get_background_uri(GSettings *settings, char *dest);
+int open_image(char *path);
 
 
 /**
@@ -56,5 +57,28 @@ void get_background_uri(GSettings *settings, char *dest) {
 
     uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
     strcpy(dest, uri+7);
+}
+
+/**
+  Launch the default application for an image path.
+
+  @param[in] path Path or uri for the image.
+  @return Returns TRUE on success, FALSE on error.
+ */
+int open_image(char *path) {
+    gboolean ret;
+    GError *error = NULL;
+    char uri[PATH_MAX];
+
+    if (!strstr(path, "file://"))
+        sprintf(uri, "file://%s", path);
+    else
+        strcpy(uri, path);
+
+    ret = g_app_info_launch_default_for_uri(uri, NULL, &error);
+    if (!ret)
+        g_message("%s", error->message);
+
+    return ret;
 }
 
