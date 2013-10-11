@@ -33,6 +33,7 @@ AC_CHECK_FUNCS([floor localtime_r mkdir realpath sqrt strstr])
 
 AC_CONFIG_FILES([Makefile
 				src/Makefile
-				data/Makefile])
+				data/Makefile
+				icons/Makefile])
 AC_OUTPUT
 
