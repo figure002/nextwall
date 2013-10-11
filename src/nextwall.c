@@ -350,7 +350,7 @@ int main(int argc, char **argv) {
                 fprintf(stderr,
                     "Nextwall is now running in interactive mode. The " \
                     "following commands are available:\n" \
-                    "'d'\tPermanently remove the current wallpaper from disk\n" \
+                    "'d'\tDelete the current wallpaper\n" \
                     "'n'\tNext wallpaper (default)\n" \
                     "'o'\tOpen the current wallpaper\n" \
                     "'q'\tExit nextwall\n");
