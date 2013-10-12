@@ -4,5 +4,5 @@ extensionname = nextwall
 uuid = $(extensionname)@serrano.byobu.info
 extensiondir = $(topextensiondir)/$(uuid)
 localextensiondir = $(HOME)/.local/share/gnome-shell/extensions/$(uuid)
-extensionurl = https://github.com/figure002/nextwall/gnome-shell-extensions
+extensionurl = https://github.com/figure002/nextwall/gnome-shell-extension
 
