@@ -32,8 +32,10 @@ AC_STRUCT_TIMEZONE
 AC_CHECK_FUNCS([floor localtime_r mkdir realpath sqrt strstr])
 
 AC_CONFIG_FILES([Makefile
-				src/Makefile
 				data/Makefile
-				icons/Makefile])
+				gnome-shell-extension/Makefile
+				icons/Makefile
+				src/Makefile
+				])
 AC_OUTPUT
 

@@ -1,0 +1,18 @@
+.current-wallpaper-databox {
+    padding: 5px 15px 0px 30px;
+}
+
+.current-wallpaper-thumbnail {
+    padding: 0;
+}
+
+.current-wallpaper-thumbnail-box {
+    padding-right: 20px;
+}
+
+.current-wallpaper-databox-captions {
+    text-align: right;
+    padding-right: 5px;
+    color: #999999;
+}
+
