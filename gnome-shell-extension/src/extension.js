@@ -3,7 +3,6 @@ const Main = imports.ui.main;
 const Lang = imports.lang;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
-const Tweener = imports.ui.tweener;
 
 let nextwallMenu;
 
@@ -32,7 +31,7 @@ WallpaperInfoBox.prototype = {
         this.refreshInfo();
     },
 
-	refreshInfo: function() {
+    refreshInfo: function() {
         //TODO
     },
 
@@ -44,7 +43,7 @@ WallpaperInfoBox.prototype = {
             style_class: 'current-wallpaper-thumbnail'
         });
 
-        // Add the current wallpaper thumb to a box.
+        // Add the current wallpaper thumb to the info box.
         let box = new St.BoxLayout({
             style_class: 'current-wallpaper-box'
         });
@@ -69,15 +68,12 @@ WallpaperInfoBox.prototype = {
         databox.add_actor(databox_captions);
         databox.add_actor(databox_values);
 
-        databox_captions.add_actor(new St.Label({text: _('Path:')}));
+        databox_captions.add_actor(new St.Label({text: 'Path:'}));
         databox_values.add_actor(this._currentWallpaperPath);
-        databox_captions.add_actor(new St.Label({text: _('Brightness:')}));
+        databox_captions.add_actor(new St.Label({text: 'Brightness:'}));
         databox_values.add_actor(this._currentWallpaperBrightness);
 
-        let xb = new St.BoxLayout();
-        xb.add_actor(databox);
-
-        box.add_actor(xb);
+        box.add_actor(databox);
    },
 };
 
