@@ -1,3 +1,19 @@
+2013-10-15  Serrano Pereira  <serrano.pereira@gmail.com>
+
+	Added a Gnome Shell extension.
+	* Makefile.am: Updated.
+	* configure.ac: Updated.
+	* README(.md): Updated.
+	* data/screenshot-extension.png: New file.
+	* gnome-shell-extension/Makefile.am: New file.
+	* gnome-shell-extension/include.mk: New file.
+	* gnome-shell-extension/src/convenience.js: New file.
+	* gnome-shell-extension/src/extension.js: New file.
+	* gnome-shell-extension/src/metadata.json: New file.
+	* gnome-shell-extension/src/org.gnome.shell.extensions.nextwall.gschema.xml: New file.
+	* gnome-shell-extension/src/prefs.js: New file.
+	* gnome-shell-extension/src/stylesheet.css: New file.
+
 2013-09-26  Serrano Pereira  <serrano.pereira@gmail.com>
 
 	Added a man page.
