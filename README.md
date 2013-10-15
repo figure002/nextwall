@@ -101,7 +101,9 @@ You can update the ANN by using an existing training data file as follows:
 
     ./train_ann -r
 
-This will create/update nextwall.net from an existing nextwall.dat file.
+This will create/update nextwall.net from an existing nextwall.dat file. This
+is useful if you want to create a new ANN with different parameters, without
+having to rebuild the training data.
 
 
 ## License
