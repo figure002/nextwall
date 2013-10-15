@@ -12,6 +12,12 @@ desktop to a random image. Nextwall has the following features:
   intermediate at twilight). It uses an Artificial Neural Network to determine
   the brightness of a wallpaper.
 
+- - -
+
+*Nextwall* also comes with a Gnome Shell extension.
+
+![Screenshot](https://raw.github.com/figure002/nextwall/master/data/screenshot-extension.png)
+
 
 ## Setup
 
