@@ -1,1 +1,15 @@
-{"shell-version": ["3.6.3.1"], "uuid": "nextwall@serrano.byobu.info", "name": "Nextwall", "description": "Rotate desktop background"}
+{
+  "description": "Gnome Shell extension for Nextwall - a wallpaper rotator for the Gnome desktop.",
+  "extension-id": "nextwall",
+  "name": "Nextwall",
+  "original-authors": [
+    "serrano.pereira@gmail.com"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.nextwall",
+  "shell-version": [
+    "3.6.3.1"
+  ],
+  "url": "https://github.com/figure002/nextwall/",
+  "uuid": "nextwall@serrano.byobu.info",
+  "version": "0.3.1"
+}

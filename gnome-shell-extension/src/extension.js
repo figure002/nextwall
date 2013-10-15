@@ -7,6 +7,11 @@ const PopupMenu = imports.ui.popupMenu;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
+const Util = imports.misc.util;
+
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
+const Convenience = Me.imports.convenience;
 
 let nextwallMenu;
 let panelIcon;
@@ -64,7 +69,6 @@ WallpaperInfoBox.prototype = {
         // Wallpaper labels
         this._currentWallpaperFolder = new St.Label({ text: '...' });
         this._currentWallpaperName = new St.Label({ text: '...' });
-        //this._currentWallpaperBrightness = new St.Label({ text: '...' });
 
         let databox = new St.BoxLayout({
             style_class: 'current-wallpaper-databox'
@@ -84,8 +88,6 @@ WallpaperInfoBox.prototype = {
         databox_values.add_actor(this._currentWallpaperFolder);
         databox_captions.add_actor(new St.Label({text: 'Name:'}));
         databox_values.add_actor(this._currentWallpaperName);
-        //databox_captions.add_actor(new St.Label({text: 'Brightness:'}));
-        //databox_values.add_actor(this._currentWallpaperBrightness);
 
         box.add_actor(databox);
 
@@ -102,9 +104,6 @@ WallpaperInfoBox.prototype = {
         // Update the labels
         this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
         this._currentWallpaperName.text = path.substring(path.lastIndexOf('/') + 1);
-
-        // Update panel icon
-        //panelIcon.set_gicon(wallpaperInfo.get_icon());
 
         // Change thumbnail
         this._thumbnailPath = this.getThumbnailPath(this.thumbnail_factory, path);
@@ -197,6 +196,8 @@ NextwallExtension.prototype = {
     _init: function() {
         PanelMenu.Button.prototype._init.call(this, 0.0);
 
+        this._settings = Convenience.getSettings();
+
         // Create a panel container.
         this.panelContainer = new St.BoxLayout();
         this.actor.add_actor(this.panelContainer);
@@ -244,7 +245,9 @@ NextwallExtension.prototype = {
         this.menu.addMenuItem(item);
 
         // Fit Time of Day
-        this.todSwitch = new PopupMenu.PopupSwitchMenuItem("Fit Time of Day", false);
+        this.todSwitch = new PopupMenu.PopupSwitchMenuItem("Fit Time of Day",
+            this._settings.get_boolean("fit-time"));
+        this.todSwitch.connect('activate', Lang.bind(this, this._onFitTimeChange));
         this.menu.addMenuItem(this.todSwitch);
 
         // Settings
@@ -253,8 +256,24 @@ NextwallExtension.prototype = {
         this.menu.addMenuItem(item);
     },
 
+    _onFitTimeChange: function(widget, data) {
+        this._settings.set_boolean("fit-time", widget.state);
+    },
+
     _onNextWallpaper: function() {
-        //TODO
+        let wallpaper_path = this._settings.get_string("wallpaper-path");
+        let current_location = this._settings.get_string("location");
+        let command = 'nextwall';
+        if (this.todSwitch.state) {
+            command += ' -tl ' + current_location;
+        }
+        let path = Gio.file_new_for_path(wallpaper_path);
+        let app = Gio.app_info_create_from_commandline(
+            command,
+            null,
+            Gio.AppInfoCreateFlags.NONE,
+            null);
+        app.launch([path], null, null);
     },
 
     /* Open wallpaper with default file handler */
@@ -285,8 +304,10 @@ NextwallExtension.prototype = {
         //TODO
     },
 
+    /* Open extension preferences */
     _onSettings: function() {
-        //TODO
+        Util.spawn(["gnome-shell-extension-prefs", "nextwall@serrano.byobu.info"]);
+        return 0;
     },
 
 }

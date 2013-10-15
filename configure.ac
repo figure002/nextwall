@@ -31,6 +31,9 @@ AC_STRUCT_TIMEZONE
 # Checks for library functions.
 AC_CHECK_FUNCS([floor localtime_r mkdir realpath sqrt strstr])
 
+# For use of GSettings schemas in Makefiles.
+GLIB_GSETTINGS
+
 AC_CONFIG_FILES([Makefile
 				data/Makefile
 				gnome-shell-extension/Makefile
