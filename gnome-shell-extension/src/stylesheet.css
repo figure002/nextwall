@@ -1,10 +1,14 @@
 .current-wallpaper-databox {
-    padding: 5px 15px 0px 30px;
+    padding: 5px 5px 0px 30px;
 }
 
 .thumbnail-bin {
     border: 2px solid rgba(255, 255, 255, 0.8);
     border-radius: 2px;
+}
+
+.thumbnail-bin:hover {
+    border: 2px solid #bbbbbb;
 }
 
 .current-wallpaper-thumbnail-box {
@@ -18,6 +22,6 @@
 }
 
 .current-wallpaper-databox-values {
-	max-width: 250px;
+    max-width: 300px;
 }
 

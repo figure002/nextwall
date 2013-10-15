@@ -64,10 +64,9 @@ const NextwallSettingsWidget = new GObject.Class({
         vbox = new Gtk.VBox({margin: 10});
         this.add(vbox);
         let sw = new Gtk.Switch();
-        sw.active = this._settings.get_boolean("symbolic-icons");;
+        sw.set_active(this._settings.get_boolean("symbolic-icons"));
         vbox.add(sw)
         sw.connect('notify::active', Lang.bind(this, this._onSymbolicIconsChange));
-        sw.set_active(this._settings.get_boolean("symbolic-icons"));
     },
 
     _onWallpaperPathChange: function(widget, data) {

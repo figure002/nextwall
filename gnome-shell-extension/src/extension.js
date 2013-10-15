@@ -19,15 +19,12 @@ let wallpaperFile;
 let wallpaperInfo;
 
 /* Box for displaying current wallpaper info */
-function WallpaperInfoBox() {
-    this._init.apply(this, arguments);
-}
-
-WallpaperInfoBox.prototype = {
-    __proto__: PopupMenu.PopupBaseMenuItem.prototype,
+const WallpaperInfoBox = new Lang.Class({
+    Name: 'WallpaperInfoBox',
+    Extends: PopupMenu.PopupBaseMenuItem,
 
     _init: function(itemParams) {
-        PopupMenu.PopupBaseMenuItem.prototype._init.call(this, {reactive: false});
+        this.parent({ reactive: false, can_focus: false });
 
         // Menu box for wallpaper info.
         let box = new St.BoxLayout({style_class: 'info-box'});
@@ -204,19 +201,17 @@ WallpaperInfoBox.prototype = {
         // Return the absolute path for the thumbnail.
         return factory.lookup(uri, mtime)
     },
-};
+});
 
 /* Panel button */
-function NextwallExtension() {
-    this._init();
-}
-
-NextwallExtension.prototype = {
-    __proto__: PanelMenu.Button.prototype,
+const NextwallMenuButton = new Lang.Class({
+    Name: 'NextwallMenuButton',
+    Extends: PanelMenu.Button,
 
     _init: function() {
-        PanelMenu.Button.prototype._init.call(this, 0.0);
+        this.parent(0.0);
 
+        // Get nextwall settings.
         this._settings = Convenience.getSettings();
 
         // Create a panel container.
@@ -224,7 +219,7 @@ NextwallExtension.prototype = {
         this.actor.add_actor(this.panelContainer);
 
         // Create the wallpaper info box.
-        let info = new WallpaperInfoBox();
+        let info = new WallpaperInfoBox({ reactive: true });
 
         // Add an icon to the panel container.
         panelIcon = new St.Icon({
@@ -333,14 +328,13 @@ NextwallExtension.prototype = {
         Util.spawn(["gnome-shell-extension-prefs", "nextwall@serrano.byobu.info"]);
         return 0;
     },
-
-}
+});
 
 function init() {
 }
 
 function enable() {
-    nextwallMenu = new NextwallExtension();
+    nextwallMenu = new NextwallMenuButton();
     Main.panel.addToStatusArea('nextwall', nextwallMenu, 0, 'right');
 }
 
