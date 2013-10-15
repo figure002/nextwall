@@ -229,6 +229,11 @@ NextwallExtension.prototype = {
         item.connect('activate', Lang.bind(this, this._onOpenWallpaper));
         this.menu.addMenuItem(item);
 
+        // Show in File Manager
+        item = new PopupMenu.PopupMenuItem("Show in File Manager");
+        item.connect('activate', Lang.bind(this, this._onShowInFileManager));
+        this.menu.addMenuItem(item);
+
         // Delete Wallpaper
         item = new PopupMenu.PopupMenuItem("Delete Wallpaper");
         item.connect('activate', Lang.bind(this, this._onDeleteWallpaper));
@@ -260,7 +265,16 @@ NextwallExtension.prototype = {
         }
     },
 
-    /* Send file to trashcan */
+    /* Show wallpaper in file manager */
+    _onShowInFileManager: function() {
+        if (wallpaperFile) {
+            let app = Gio.app_info_create_from_commandline('nautilus --no-desktop',
+                    null, Gio.AppInfoCreateFlags.NONE, null);
+            app.launch([wallpaperFile], null, null);
+        }
+    },
+
+   /* Send file to trashcan */
     _onDeleteWallpaper: function() {
         if (wallpaperFile) {
             wallpaperFile.trash(null, null);
