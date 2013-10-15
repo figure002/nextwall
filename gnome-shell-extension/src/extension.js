@@ -320,6 +320,7 @@ NextwallExtension.prototype = {
     _onDeleteWallpaper: function() {
         if (wallpaperFile) {
             wallpaperFile.trash(null, null);
+            this._onNextWallpaper();
         }
     },
 
