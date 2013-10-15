@@ -9,7 +9,7 @@ icons48appsdir = $(themedir)/48x48/apps
 icons48apps_DATA = 48x48/apps/nextwall.png
 
 icons16statusdir = $(themedir)/16x16/status
-icons16status_DATA = 16x16/status/nextwall.svg
+icons16status_DATA = 16x16/status/nextwall.svg 16x16/status/nextwall-symbolic.svg
 
 icons22statusdir = $(themedir)/22x22/status
 icons22status_DATA = 22x22/status/nextwall.svg

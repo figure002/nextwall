@@ -41,14 +41,15 @@ WallpaperInfoBox.prototype = {
         // Thumbnail factory
         this.thumbnail_factory = new GnomeDesktop.DesktopThumbnailFactory();
 
+        // Thumbnail container
         this._thumbnailBin = new St.Bin({
             style_class: 'thumbnail-bin'
         });
 
         // Default thumbnail
         this._default_thumb = new St.Icon({
-            icon_size: 128,
-            icon_name: 'nextwall',
+            icon_size: 64,
+            icon_name: 'image-missing',
         });
 
         // Build the UI.
@@ -94,6 +95,26 @@ WallpaperInfoBox.prototype = {
         this._currentWallpaperBin.set_child(box);
     },
 
+    icon_type: function() {
+        if (!this._settingsNextwall) {
+            this.loadSettings();
+        }
+
+        if (this._settingsNextwall.get_boolean("symbolic-icons"))
+            return "-symbolic";
+        else
+            return "";
+    },
+
+    loadSettings: function() {
+        let that = this;
+        this._settingsBackground = Convenience.getSettings("org.gnome.desktop.background");
+        this._settingsBackgroundC = this._settingsBackground.connect("changed", function() {that.refreshInfo();});
+
+        this._settingsNextwall = Convenience.getSettings("org.gnome.shell.extensions.nextwall");
+        this._settingsNextwallC = this._settingsNextwall.connect("changed", function() {that.onNextwallSettingsChanged();});
+    },
+
     refreshInfo: function() {
         let path = this._currentWallpaperPath;
 
@@ -115,8 +136,21 @@ WallpaperInfoBox.prototype = {
             this._thumbnailBin.set_child(thumbTexture);
         }
         else {
+            this._thumbnailBin.width = 64;
+            this._thumbnailBin.height = 64;
             this._thumbnailBin.set_child(this._default_thumb);
         }
+    },
+
+    onNextwallSettingsChanged: function() {
+        panelIcon.icon_name = 'nextwall' + this.icon_type();
+    },
+
+    get _currentWallpaperPath() {
+        if (!this._settingsBackground) {
+            this.loadSettings();
+        }
+        return this._settingsBackground.get_string("picture-uri").substring(7);
     },
 
     /* Return the thumbnail path for an image file.
@@ -132,12 +166,12 @@ WallpaperInfoBox.prototype = {
 
     @param GnomeDesktop.DesktopThumbnailFactory factory Instance of a GNOME
         thumbnail factory.
-    @param string path Absolute path of an image file.
+    @param string image_path Absolute path of an image file.
     @return Returns path to the thumbnail, null on error.
     */
-    getThumbnailPath: function(factory, path) {
+    getThumbnailPath: function(factory, image_path) {
         // Use Gio to determine the URI and mime type
-        let file = Gio.file_new_for_path(path);
+        let file = Gio.file_new_for_path(image_path);
         let uri = file.get_uri();
         let info = file.query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, null);
         let mtime = info.get_modification_time();
@@ -170,19 +204,6 @@ WallpaperInfoBox.prototype = {
         // Return the absolute path for the thumbnail.
         return factory.lookup(uri, mtime)
     },
-
-    loadSettingsInterface: function() {
-        let that = this;
-        this._settingsInterface = new Gio.Settings({ schema: "org.gnome.desktop.background" });
-        this._settingsInterfaceC = this._settingsInterface.connect("changed", function() {that.refreshInfo();});
-    },
-
-    get _currentWallpaperPath() {
-        if (!this._settingsInterface) {
-            this.loadSettingsInterface();
-        }
-        return this._settingsInterface.get_string("picture-uri").substring(7);
-    },
 };
 
 /* Panel button */
@@ -202,9 +223,12 @@ NextwallExtension.prototype = {
         this.panelContainer = new St.BoxLayout();
         this.actor.add_actor(this.panelContainer);
 
+        // Create the wallpaper info box.
+        let info = new WallpaperInfoBox();
+
         // Add an icon to the panel container.
         panelIcon = new St.Icon({
-            icon_name: 'nextwall',
+            icon_name: 'nextwall' + info.icon_type(),
             icon_size: 16,
             style_class: 'panel-icon'
         });
@@ -212,8 +236,7 @@ NextwallExtension.prototype = {
 
         // Set the menu itens:
 
-        // Create the wallpaper info box.
-        let info = new WallpaperInfoBox();
+        // Add the info box.
         this.menu.addMenuItem(info);
 
         // -----

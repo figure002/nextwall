@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
     <schema id="org.gnome.shell.extensions.nextwall" path="/org/gnome/shell/extensions/nextwall/">
-        <key name="fit-time" type="b">
-            <default>false</default>
-            <summary>Fit time of day</summary>
-            <description>When enabled, only wallpapers matching the current time of day are selected.</description>
+        <key name="symbolic-icons" type="b">
+            <default>true</default>
+            <summary>Enable symbolic icons.</summary>
         </key>
-        <key name="wallpaper-path" type="s">
+       <key name="wallpaper-path" type="s">
             <default>'/usr/share/backgrounds/'</default>
             <summary>Wallpapers folder.</summary>
         </key>
@@ -14,6 +13,11 @@
             <default>'51.92:4.48'</default>
             <summary>Your current location</summary>
             <description>Your current location in the format 'latitude:longitude'. This is required for the Fit Time of Day feature.</description>
+        </key>
+        <key name="fit-time" type="b">
+            <default>false</default>
+            <summary>Fit time of day</summary>
+            <description>When enabled, only wallpapers matching the current time of day are selected.</description>
         </key>
     </schema>
 </schemalist>

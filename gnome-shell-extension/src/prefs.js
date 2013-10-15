@@ -36,24 +36,6 @@ const NextwallSettingsWidget = new GObject.Class({
         vbox.add(file_chooser)
         file_chooser.connect('file-set', Lang.bind(this, this._onWallpaperPathChange));
 
-        // Fit time of day
-        /*
-        label = new Gtk.Label();
-        label.set_markup("<b>Fit Time of Day</b>")
-        label.set_alignment(0, 0.5)
-        this.add(label);
-
-        vbox = new Gtk.VBox({margin: 10});
-        this.add(vbox);
-        let sw = new Gtk.Switch();
-        sw.visible = 1;
-        sw.can_focus = 0;
-        sw.active = this._settings.get_boolean("fit-time");;
-        vbox.add(sw)
-        sw.connect('notify::active', Lang.bind(this, this._onFitTimeChange));
-        sw.set_active(this._settings.get_boolean("fit-time"));
-        */
-
         // Location
         label = new Gtk.Label();
         label.set_markup("<b>Your Current Location</b>")
@@ -72,18 +54,32 @@ const NextwallSettingsWidget = new GObject.Class({
                                    text: this._settings.get_string("location")})
         vbox.add(entry)
         entry.connect('changed', Lang.bind(this, this._onLocationChange));
+
+        // Symbolic icons
+        label = new Gtk.Label();
+        label.set_markup("<b>Symbolic Panel Icon</b>")
+        label.set_alignment(0, 0.5)
+        this.add(label);
+
+        vbox = new Gtk.VBox({margin: 10});
+        this.add(vbox);
+        let sw = new Gtk.Switch();
+        sw.active = this._settings.get_boolean("symbolic-icons");;
+        vbox.add(sw)
+        sw.connect('notify::active', Lang.bind(this, this._onSymbolicIconsChange));
+        sw.set_active(this._settings.get_boolean("symbolic-icons"));
     },
 
     _onWallpaperPathChange: function(widget, data) {
         this._settings.set_string("wallpaper-path", widget.get_current_folder());
     },
 
-    _onFitTimeChange: function(widget, data) {
-        this._settings.set_boolean("fit-time", widget.get_active());
-    },
-
     _onLocationChange: function(widget, data) {
         this._settings.set_string("location", widget.get_text());
+    },
+
+    _onSymbolicIconsChange: function(widget, data) {
+        this._settings.set_boolean("symbolic-icons", widget.get_active());
     },
 });
 
