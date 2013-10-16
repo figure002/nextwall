@@ -21,9 +21,6 @@ const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 const THUMBNAIL_ICON_SIZE = 64;
 
 let nextwallMenu;
-let panelIcon;
-let wallpaperFile;
-let wallpaperInfo;
 
 /* The thumbnail widget displays the thumbnail for an image */
 const ThumbnailWidget = new Lang.Class({
@@ -208,8 +205,8 @@ const WallpaperInfoBox = new Lang.Class({
         let path = this._currentWallpaperPath;
 
         // Set global vars
-        wallpaperFile = Gio.file_new_for_path(path);
-        wallpaperInfo = wallpaperFile.query_info('standard::content-type',
+        this.wallpaperFile = Gio.file_new_for_path(path);
+        this.wallpaperInfo = this.wallpaperFile.query_info('standard::content-type',
             Gio.FileQueryInfoFlags.NONE, null);
 
         // Update the labels
@@ -221,7 +218,7 @@ const WallpaperInfoBox = new Lang.Class({
     },
 
     onNextwallSettingsChanged: function() {
-        panelIcon.icon_name = 'nextwall' + this.icon_type;
+        nextwallMenu.panelIcon.icon_name = 'nextwall' + this.icon_type;
     },
 
     get icon_type() {
@@ -252,24 +249,28 @@ const NextwallMenuButton = new Lang.Class({
         this.actor.add_actor(this.panelContainer);
 
         // Add an icon to the panel container.
-        panelIcon = new St.Icon({
+        this.panelIcon = new St.Icon({
             icon_name: 'nextwall' + this.icon_type,
             icon_size: 16,
             style_class: 'panel-icon'
         });
-        this.panelContainer.add(panelIcon);
+        this.panelContainer.add(this.panelIcon);
 
-        // Set the menu items.
+        // Create a wallpaper info box.
+        this.infoBox = new WallpaperInfoBox();
+
+        // Open the wallpaper when the thumbnail is clicked.
+        this.infoBox.thumbnailBin.connect('clicked', Lang.bind(this,
+            this._onOpenWallpaper));
+
+        // Create the menu.
         this._createMenu();
     },
 
     _createMenu: function() {
         let item;
 
-        item = new WallpaperInfoBox();
-        item.thumbnailBin.connect('clicked', Lang.bind(this,
-            this._onOpenWallpaper));
-        this.menu.addMenuItem(item);
+        this.menu.addMenuItem(this.infoBox);
 
         item = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(item);
@@ -328,27 +329,27 @@ const NextwallMenuButton = new Lang.Class({
 
     /* Open wallpaper with default file handler */
     _onOpenWallpaper: function() {
-        if (wallpaperFile) {
+        if (this.infoBox.wallpaperFile) {
             this.menu.close(BoxPointer.PopupAnimation.FULL);
             Main.overview.hide();
-            let app = wallpaperFile.query_default_handler(null, null);
-            app.launch([wallpaperFile], null, null);
+            let app = this.infoBox.wallpaperFile.query_default_handler(null, null);
+            app.launch([this.infoBox.wallpaperFile], null, null);
         }
     },
 
     /* Show wallpaper in file manager */
     _onShowInFileManager: function() {
-        if (wallpaperFile) {
+        if (this.infoBox.wallpaperFile) {
             let app = Gio.app_info_create_from_commandline('nautilus --no-desktop',
                     null, Gio.AppInfoCreateFlags.NONE, null);
-            app.launch([wallpaperFile], null, null);
+            app.launch([this.infoBox.wallpaperFile], null, null);
         }
     },
 
    /* Send file to trashcan */
     _onDeleteWallpaper: function() {
-        if (wallpaperFile) {
-            wallpaperFile.trash(null, null);
+        if (this.infoBox.wallpaperFile) {
+            this.infoBox.wallpaperFile.trash(null, null);
             this._onNextWallpaper();
         }
     },
@@ -369,5 +370,7 @@ function enable() {
 }
 
 function disable() {
+    Main.panel.menuManager.removeMenu(nextwallMenu.menu);
     nextwallMenu.destroy();
+    nextwallMenu = null;
 }
