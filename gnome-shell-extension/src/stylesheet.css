@@ -1,9 +1,5 @@
-.current-wallpaper-databox {
-    padding: 5px 5px 0px 30px;
-}
-
 .thumbnail-bin {
-    border: 2px solid rgba(255, 255, 255, 0.8);
+    border: 2px solid #8b8b8b;
     border-radius: 2px;
 }
 
@@ -11,17 +7,17 @@
     border: 2px solid #bbbbbb;
 }
 
-.current-wallpaper-thumbnail-box {
-    padding-right: 20px;
+.current-wallpaper-captionbox {
+    padding: 0px 5px 0px 5px;
 }
 
-.current-wallpaper-databox-captions {
+.current-wallpaper-captionbox-captions {
     text-align: right;
     padding-right: 5px;
     color: #999999;
 }
 
-.current-wallpaper-databox-values {
+.current-wallpaper-captionbox-values {
     max-width: 300px;
 }
 

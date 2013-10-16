@@ -2,8 +2,10 @@ const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
 const Main = imports.ui.main;
 const Lang = imports.lang;
+const Pango = imports.gi.Pango;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
+const Params = imports.misc.params;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
@@ -13,158 +15,80 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const THUMBNAIL_ICON_SIZE = 64;
+
 let nextwallMenu;
 let panelIcon;
 let wallpaperFile;
 let wallpaperInfo;
 
-/* Box for displaying current wallpaper info */
-const WallpaperInfoBox = new Lang.Class({
-    Name: 'WallpaperInfoBox',
-    Extends: PopupMenu.PopupBaseMenuItem,
+/* The thumbnail widget displays the thumbnail for an image */
+const ThumbnailWidget = new Lang.Class({
+    Name: 'ThumbnailWidget',
 
-    _init: function(itemParams) {
-        this.parent({ reactive: false, can_focus: false });
+    _init: function(image_path, params) {
+        this._image_path = image_path;
+        params = Params.parse(params, { reactive: false,
+                                        iconSize: THUMBNAIL_ICON_SIZE,
+                                        styleClass: 'thumbnail-widget' });
+        this._iconSize = params.iconSize;
 
-        // Menu box for wallpaper info.
-        let box = new St.BoxLayout({style_class: 'info-box'});
-        box.set_vertical(true);
-        this.addActor(box);
+        this.actor = new St.Bin({ style_class: params.styleClass,
+                                  track_hover: params.reactive,
+                                  reactive: params.reactive });
 
-        // Add a bin for the current wallpaper info.
-        this._currentWallpaperBin = new St.Bin({ style_class: 'current-wallpaper-bin' });
-        box.add(this._currentWallpaperBin);
-
-        // Thumbnail factory
-        this.thumbnail_factory = new GnomeDesktop.DesktopThumbnailFactory();
-
-        // Thumbnail container
-        this._thumbnailBin = new St.Bin({
-            style_class: 'thumbnail-bin'
-        });
-
-        // Default thumbnail
-        this._default_thumb = new St.Icon({
-            icon_size: 64,
-            icon_name: 'image-missing',
-        });
-
-        // Build the UI.
-        this.buildUI();
-        this.refreshInfo();
+        this._thumbnail_factory = new GnomeDesktop.DesktopThumbnailFactory();
     },
 
-    buildUI: function() {
-        // Create a box for the wallpaper thumbnail + labels
-        let box = new St.BoxLayout({
-            vertical: false,
-            style_class: 'current-wallpaper-box'
-        });
-        let tbl = new St.BoxLayout({style_class: 'thumbnail-box'});
-        tbl.add_actor(this._thumbnailBin);
-        box.add_actor(tbl);
-
-        // Wallpaper labels
-        this._currentWallpaperFolder = new St.Label({ text: '...' });
-        this._currentWallpaperName = new St.Label({ text: '...' });
-
-        let databox = new St.BoxLayout({
-            style_class: 'current-wallpaper-databox'
-        });
-        let databox_captions = new St.BoxLayout({
-            vertical: true,
-            style_class: 'current-wallpaper-databox-captions'
-        });
-        let databox_values = new St.BoxLayout({
-            vertical: true,
-            style_class: 'current-wallpaper-databox-values'
-        });
-        databox.add_actor(databox_captions);
-        databox.add_actor(databox_values);
-
-        databox_captions.add_actor(new St.Label({text: 'Folder:'}));
-        databox_values.add_actor(this._currentWallpaperFolder);
-        databox_captions.add_actor(new St.Label({text: 'Name:'}));
-        databox_values.add_actor(this._currentWallpaperName);
-
-        box.add_actor(databox);
-
-        this._currentWallpaperBin.set_child(box);
+    setSensitive: function(sensitive) {
+        this.actor.can_focus = sensitive;
+        this.actor.reactive = sensitive;
     },
 
-    icon_type: function() {
-        if (!this._settingsNextwall) {
-            this.loadSettings();
-        }
+    update: function(image_path) {
+        let thumbnail_path;
 
-        if (this._settingsNextwall.get_boolean("symbolic-icons"))
-            return "-symbolic";
+        if (!GLib.file_test(image_path, GLib.FileTest.EXISTS))
+            image_path = null;
         else
-            return "";
-    },
+            thumbnail_path = this.getThumbnailPath(this._thumbnail_factory, image_path);
 
-    loadSettings: function() {
-        let that = this;
-        this._settingsBackground = Convenience.getSettings("org.gnome.desktop.background");
-        this._settingsBackgroundC = this._settingsBackground.connect("changed", function() {that.refreshInfo();});
-
-        this._settingsNextwall = Convenience.getSettings("org.gnome.shell.extensions.nextwall");
-        this._settingsNextwallC = this._settingsNextwall.connect("changed", function() {that.onNextwallSettingsChanged();});
-    },
-
-    refreshInfo: function() {
-        let path = this._currentWallpaperPath;
-
-        // Set global vars
-        wallpaperFile = Gio.file_new_for_path(path);
-        wallpaperInfo = wallpaperFile.query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, null);
-
-        // Update the labels
-        this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
-        this._currentWallpaperName.text = path.substring(path.lastIndexOf('/') + 1);
-
-        // Change thumbnail
-        this._thumbnailPath = this.getThumbnailPath(this.thumbnail_factory, path);
-        if (this._thumbnailPath && GLib.file_test(this._thumbnailPath, GLib.FileTest.EXISTS)) {
-            let thumbTexture = new Clutter.Texture({filter_quality: 2, filename: this._thumbnailPath});
-            let [thumbWidth, thumbHeight] = thumbTexture.get_base_size();
-            this._thumbnailBin.width = thumbWidth;
-            this._thumbnailBin.height = thumbHeight;
-            this._thumbnailBin.set_child(thumbTexture);
+        if (image_path && thumbnail_path) {
+            if (GLib.file_test(thumbnail_path, GLib.FileTest.EXISTS)) {
+                let thumbTexture = new Clutter.Texture({filter_quality: 2, filename: thumbnail_path});
+                let [thumbWidth, thumbHeight] = thumbTexture.get_base_size();
+                this.actor.width = thumbWidth;
+                this.actor.height = thumbHeight;
+                this.actor.set_child(thumbTexture);
+            }
         }
         else {
-            this._thumbnailBin.width = 64;
-            this._thumbnailBin.height = 64;
-            this._thumbnailBin.set_child(this._default_thumb);
+            this.actor.style = null;
+            this.actor.width = this._iconSize;
+            this.actor.height = this._iconSize;
+            this.actor.child = new St.Icon({
+                icon_name: 'image-missing',
+                icon_size: this._iconSize
+            });
         }
     },
 
-    onNextwallSettingsChanged: function() {
-        panelIcon.icon_name = 'nextwall' + this.icon_type();
-    },
+    /**
+       Return the thumbnail path for an image file.
 
-    get _currentWallpaperPath() {
-        if (!this._settingsBackground) {
-            this.loadSettings();
-        }
-        return this._settingsBackground.get_string("picture-uri").substring(7);
-    },
+       Creates a thumbnail if it doesn't exist already and return the
+       absolute path for the thumbnail. If a thumbnail can't be generated,
+       return null.
 
-    /* Return the thumbnail path for an image file.
+       This method is based on code shared by `James Henstridge
+       <http://askubuntu.com/users/12469/james-henstridge>` on
+       `AskUbuntu.com <http://askubuntu.com/a/201997/303>`, licensed under the
+       Creative Commons Attribution-ShareAlike 3.0 Unported license.
 
-    Creates a thumbnail if it doesn't exist already and return the
-    absolute path for the thumbnail. If a thumbnail can't be generated,
-    return null.
-
-    This method is based on code shared by `James Henstridge
-    <http://askubuntu.com/users/12469/james-henstridge>` on
-    `AskUbuntu.com <http://askubuntu.com/a/201997/303>`, licensed under the
-    Creative Commons Attribution-ShareAlike 3.0 Unported license.
-
-    @param GnomeDesktop.DesktopThumbnailFactory factory Instance of a GNOME
-        thumbnail factory.
-    @param string image_path Absolute path of an image file.
-    @return Returns path to the thumbnail, null on error.
+       @param GnomeDesktop.DesktopThumbnailFactory factory Instance of a GNOME
+            thumbnail factory.
+       @param string image_path Absolute path of an image file.
+       @return Returns path to the thumbnail, null on error.
     */
     getThumbnailPath: function(factory, image_path) {
         // Use Gio to determine the URI and mime type
@@ -203,6 +127,107 @@ const WallpaperInfoBox = new Lang.Class({
     },
 });
 
+/* Box for displaying current wallpaper info */
+const WallpaperInfoBox = new Lang.Class({
+    Name: 'WallpaperInfoBox',
+    Extends: PopupMenu.PopupBaseMenuItem,
+
+    _init: function(itemParams) {
+        this.parent({ reactive: false, can_focus: false });
+
+        // Thumbnail widget
+        this._thumbnail = new ThumbnailWidget(null, { reactive: true });
+        this.thumbnailBin = new St.Button({
+            child: this._thumbnail.actor,
+            style_class: 'thumbnail-bin'
+        });
+        this.addActor(this.thumbnailBin);
+
+        // Create wallpaper captions
+        this._currentWallpaperFolder = new St.Label({ text: '...' });
+
+        this._currentWallpaperName = new St.Label({ text: '...' });
+        this._currentWallpaperName.clutter_text.set_line_wrap(true);
+        this._currentWallpaperName.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
+
+        let captionbox = new St.BoxLayout({
+            style_class: 'current-wallpaper-captionbox'
+        });
+
+        let captions = new St.BoxLayout({
+            vertical: true,
+            style_class: 'current-wallpaper-captionbox-captions'
+        });
+        let values = new St.BoxLayout({
+            vertical: true,
+            style_class: 'current-wallpaper-captionbox-values'
+        });
+        captionbox.add_actor(captions);
+        captionbox.add_actor(values);
+
+        captions.add_actor(new St.Label({text: 'Folder:'}));
+        values.add_actor(this._currentWallpaperFolder);
+        captions.add_actor(new St.Label({text: 'Name:'}));
+        values.add_actor(this._currentWallpaperName);
+
+        this.addActor(captionbox);
+
+        //let box = new St.BoxLayout();
+        //box.add_actor(this.thumbnailBin);
+        //box.add_actor(captionbox);
+        //this.addActor(box, {expand: true, span: -1});
+
+        // Update the info.
+        this.update();
+    },
+
+    loadSettings: function() {
+        let that = this;
+        this._settingsBackground = Convenience.getSettings("org.gnome.desktop.background");
+        this._settingsBackgroundC = this._settingsBackground.connect("changed", function() {that.update();});
+
+        this._settingsNextwall = Convenience.getSettings("org.gnome.shell.extensions.nextwall");
+        this._settingsNextwallC = this._settingsNextwall.connect("changed", function() {that.onNextwallSettingsChanged();});
+    },
+
+    update: function() {
+        let path = this._currentWallpaperPath;
+
+        // Set global vars
+        wallpaperFile = Gio.file_new_for_path(path);
+        wallpaperInfo = wallpaperFile.query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, null);
+
+        // Update the labels
+        this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
+        this._currentWallpaperName.text = path.substring(path.lastIndexOf('/') + 1);
+
+        // Update thumbnail
+        this._thumbnail.update(path);
+    },
+
+    onNextwallSettingsChanged: function() {
+        panelIcon.icon_name = 'nextwall' + this.icon_type;
+    },
+
+    get icon_type() {
+        if (!this._settingsNextwall) {
+            this.loadSettings();
+        }
+
+        if (this._settingsNextwall.get_boolean("symbolic-icons"))
+            return "-symbolic";
+        else
+            return "";
+    },
+
+    get _currentWallpaperPath() {
+        if (!this._settingsBackground) {
+            this.loadSettings();
+        }
+        return this._settingsBackground.get_string("picture-uri").substring(7);
+    },
+});
+
 /* Panel button */
 const NextwallMenuButton = new Lang.Class({
     Name: 'NextwallMenuButton',
@@ -219,11 +244,12 @@ const NextwallMenuButton = new Lang.Class({
         this.actor.add_actor(this.panelContainer);
 
         // Create the wallpaper info box.
-        let info = new WallpaperInfoBox({ reactive: true });
+        let info = new WallpaperInfoBox();
+        info.thumbnailBin.connect('clicked', Lang.bind(this, this._onOpenWallpaper));
 
         // Add an icon to the panel container.
         panelIcon = new St.Icon({
-            icon_name: 'nextwall' + info.icon_type(),
+            icon_name: 'nextwall' + info.icon_type,
             icon_size: 16,
             style_class: 'panel-icon'
         });
@@ -244,9 +270,9 @@ const NextwallMenuButton = new Lang.Class({
         this.menu.addMenuItem(item);
 
         // Open Wallpaper
-        item = new PopupMenu.PopupMenuItem("Open Wallpaper");
-        item.connect('activate', Lang.bind(this, this._onOpenWallpaper));
-        this.menu.addMenuItem(item);
+        //item = new PopupMenu.PopupMenuItem("Open Wallpaper");
+        //item.connect('activate', Lang.bind(this, this._onOpenWallpaper));
+        //this.menu.addMenuItem(item);
 
         // Show in File Manager
         item = new PopupMenu.PopupMenuItem("Show in File Manager");
