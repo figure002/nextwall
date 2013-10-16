@@ -8,6 +8,7 @@ const PopupMenu = imports.ui.popupMenu;
 const Params = imports.misc.params;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const BoxPointer = imports.ui.boxpointer;
 const GnomeDesktop = imports.gi.GnomeDesktop;
 const Util = imports.misc.util;
 
@@ -323,6 +324,8 @@ const NextwallMenuButton = new Lang.Class({
     /* Open wallpaper with default file handler */
     _onOpenWallpaper: function() {
         if (wallpaperFile) {
+            this.menu.close(BoxPointer.PopupAnimation.FULL);
+            Main.overview.hide();
             let app = wallpaperFile.query_default_handler(null, null);
             app.launch([wallpaperFile], null, null);
         }
