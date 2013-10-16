@@ -141,7 +141,25 @@ const WallpaperInfoBox = new Lang.Class({
         // Load gsettings.
         this.loadSettings();
 
-        // Thumbnail widget
+        // Create the info box.
+        this.createBox();
+
+        // Update the info.
+        this.update();
+    },
+
+    loadSettings: function() {
+        this._settingsBackground = Convenience.getSettings(BACKGROUND_SCHEMA);
+        this._settingsBackground.connect('changed',
+            Lang.bind(this, this.update));
+
+        this._settingsNextwall = Convenience.getSettings(NEXTWALL_SCHEMA);
+        this._settingsNextwall.connect('changed',
+            Lang.bind(this, this.onNextwallSettingsChanged));
+    },
+
+    createBox: function() {
+        // Create thumbnail button
         this._thumbnail = new ThumbnailWidget(null, { reactive: true });
         this.thumbnailBin = new St.Button({
             child: this._thumbnail.actor,
@@ -178,25 +196,12 @@ const WallpaperInfoBox = new Lang.Class({
         this.addActor(this.thumbnailBin);
         this.addActor(captionbox);
 
-        // I don't know why this creates undesired space on the right side of
+        // This is better, but it creates undesired space on the right side of
         // the menu.
         //let box = new St.BoxLayout();
         //box.add_actor(this.thumbnailBin);
         //box.add_actor(captionbox);
         //this.addActor(box);
-
-        // Update the info.
-        this.update();
-    },
-
-    loadSettings: function() {
-        this._settingsBackground = Convenience.getSettings(BACKGROUND_SCHEMA);
-        this._settingsBackgroundC = this._settingsBackground.connect('changed',
-            Lang.bind(this, this.update));
-
-        this._settingsNextwall = Convenience.getSettings(NEXTWALL_SCHEMA);
-        this._settingsNextwallC = this._settingsNextwall.connect('changed',
-            Lang.bind(this, this.onNextwallSettingsChanged));
     },
 
     update: function() {
