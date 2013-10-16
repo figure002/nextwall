@@ -1,12 +1,13 @@
-const Gdk = imports.gi.Gdk;
 const Gio = imports.gi.Gio;
-const Gtk = imports.gi.Gtk;
 const GObject = imports.gi.GObject;
+const Gtk = imports.gi.Gtk;
 const Lang = imports.lang;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
+
+const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 
 const NextwallSettingsWidget = new GObject.Class({
     Name: 'Nextwall.Prefs.NextwallSettingsWidget',
@@ -17,7 +18,7 @@ const NextwallSettingsWidget = new GObject.Class({
         this.parent(params);
         this.margin = 10;
 
-        this._settings = Convenience.getSettings();
+        this._settings = Convenience.getSettings(NEXTWALL_SCHEMA);
 
         let vbox, label;
 
@@ -30,9 +31,9 @@ const NextwallSettingsWidget = new GObject.Class({
         vbox = new Gtk.VBox({margin: 10});
         this.add(vbox);
 
-        let file_chooser = new Gtk.FileChooserButton({title: 'Select Backgrounds Folder'});
+        let file_chooser = new Gtk.FileChooserButton({title: "Select Backgrounds Folder"});
         file_chooser.set_action(Gtk.FileChooserAction.SELECT_FOLDER);
-        file_chooser.set_current_folder(this._settings.get_string("wallpaper-path"));
+        file_chooser.set_current_folder(this._settings.get_string('wallpaper-path'));
         vbox.add(file_chooser)
         file_chooser.connect('file-set', Lang.bind(this, this._onWallpaperPathChange));
 
@@ -43,7 +44,7 @@ const NextwallSettingsWidget = new GObject.Class({
         this.add(label);
 
         label = new Gtk.Label();
-        label.set_markup("Enter location in the format 'latitude:longitude'. This is required for the Fit Time of Day feature.")
+        label.set_markup("Enter your current location in the format 'latitude:longitude'. This is required for the Fit Time of Day feature.")
         label.set_alignment(0, 0)
         this.add(label);
 
@@ -51,7 +52,7 @@ const NextwallSettingsWidget = new GObject.Class({
         this.add(vbox);
         let entry = new Gtk.Entry({margin_bottom: 10,
                                    margin_top: 5,
-                                   text: this._settings.get_string("location")})
+                                   text: this._settings.get_string('location')})
         vbox.add(entry)
         entry.connect('changed', Lang.bind(this, this._onLocationChange));
 
@@ -64,31 +65,29 @@ const NextwallSettingsWidget = new GObject.Class({
         vbox = new Gtk.VBox({margin: 10});
         this.add(vbox);
         let sw = new Gtk.Switch();
-        sw.set_active(this._settings.get_boolean("symbolic-icons"));
+        sw.set_active(this._settings.get_boolean('symbolic-icons'));
         vbox.add(sw)
         sw.connect('notify::active', Lang.bind(this, this._onSymbolicIconsChange));
     },
 
     _onWallpaperPathChange: function(widget, data) {
-        this._settings.set_string("wallpaper-path", widget.get_current_folder());
+        this._settings.set_string('wallpaper-path', widget.get_current_folder());
     },
 
     _onLocationChange: function(widget, data) {
-        this._settings.set_string("location", widget.get_text());
+        this._settings.set_string('location', widget.get_text());
     },
 
     _onSymbolicIconsChange: function(widget, data) {
-        this._settings.set_boolean("symbolic-icons", widget.get_active());
-    },
+        this._settings.set_boolean('symbolic-icons', widget.get_active());
+    }
 });
 
 function init() {
-
 }
 
 function buildPrefsWidget() {
     let widget = new NextwallSettingsWidget();
     widget.show_all();
-
     return widget;
 }

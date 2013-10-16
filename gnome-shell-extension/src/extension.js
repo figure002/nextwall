@@ -1,21 +1,23 @@
-const St = imports.gi.St;
 const Clutter = imports.gi.Clutter;
-const Main = imports.ui.main;
-const Lang = imports.lang;
-const Pango = imports.gi.Pango;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Params = imports.misc.params;
+const BoxPointer = imports.ui.boxpointer;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
-const BoxPointer = imports.ui.boxpointer;
 const GnomeDesktop = imports.gi.GnomeDesktop;
+const Lang = imports.lang;
+const Main = imports.ui.main;
+const PanelMenu = imports.ui.panelMenu;
+const Pango = imports.gi.Pango;
+const Params = imports.misc.params;
+const PopupMenu = imports.ui.popupMenu;
+const St = imports.gi.St;
 const Util = imports.misc.util;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
+const BACKGROUND_SCHEMA = 'org.gnome.desktop.background';
+const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 const THUMBNAIL_ICON_SIZE = 64;
 
 let nextwallMenu;
@@ -125,7 +127,7 @@ const ThumbnailWidget = new Lang.Class({
 
         // Return the absolute path for the thumbnail.
         return factory.lookup(uri, mtime)
-    },
+    }
 });
 
 /* Box for displaying current wallpaper info */
@@ -136,20 +138,21 @@ const WallpaperInfoBox = new Lang.Class({
     _init: function(itemParams) {
         this.parent({ reactive: false, can_focus: false });
 
+        // Load gsettings.
+        this.loadSettings();
+
         // Thumbnail widget
         this._thumbnail = new ThumbnailWidget(null, { reactive: true });
         this.thumbnailBin = new St.Button({
             child: this._thumbnail.actor,
             style_class: 'thumbnail-bin'
         });
-        this.addActor(this.thumbnailBin);
 
         // Create wallpaper captions
         this._currentWallpaperFolder = new St.Label({ text: '...' });
 
         this._currentWallpaperName = new St.Label({ text: '...' });
         this._currentWallpaperName.clutter_text.set_line_wrap(true);
-        this._currentWallpaperName.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
 
         let captionbox = new St.BoxLayout({
             style_class: 'current-wallpaper-captionbox'
@@ -171,24 +174,29 @@ const WallpaperInfoBox = new Lang.Class({
         captions.add_actor(new St.Label({text: 'Name:'}));
         values.add_actor(this._currentWallpaperName);
 
+        // Add the items.
+        this.addActor(this.thumbnailBin);
         this.addActor(captionbox);
 
+        // I don't know why this creates undesired space on the right side of
+        // the menu.
         //let box = new St.BoxLayout();
         //box.add_actor(this.thumbnailBin);
         //box.add_actor(captionbox);
-        //this.addActor(box, {expand: true, span: -1});
+        //this.addActor(box);
 
         // Update the info.
         this.update();
     },
 
     loadSettings: function() {
-        let that = this;
-        this._settingsBackground = Convenience.getSettings("org.gnome.desktop.background");
-        this._settingsBackgroundC = this._settingsBackground.connect("changed", function() {that.update();});
+        this._settingsBackground = Convenience.getSettings(BACKGROUND_SCHEMA);
+        this._settingsBackgroundC = this._settingsBackground.connect('changed',
+            Lang.bind(this, this.update));
 
-        this._settingsNextwall = Convenience.getSettings("org.gnome.shell.extensions.nextwall");
-        this._settingsNextwallC = this._settingsNextwall.connect("changed", function() {that.onNextwallSettingsChanged();});
+        this._settingsNextwall = Convenience.getSettings(NEXTWALL_SCHEMA);
+        this._settingsNextwallC = this._settingsNextwall.connect('changed',
+            Lang.bind(this, this.onNextwallSettingsChanged));
     },
 
     update: function() {
@@ -196,7 +204,8 @@ const WallpaperInfoBox = new Lang.Class({
 
         // Set global vars
         wallpaperFile = Gio.file_new_for_path(path);
-        wallpaperInfo = wallpaperFile.query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, null);
+        wallpaperInfo = wallpaperFile.query_info('standard::content-type',
+            Gio.FileQueryInfoFlags.NONE, null);
 
         // Update the labels
         this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
@@ -211,22 +220,15 @@ const WallpaperInfoBox = new Lang.Class({
     },
 
     get icon_type() {
-        if (!this._settingsNextwall) {
-            this.loadSettings();
-        }
-
-        if (this._settingsNextwall.get_boolean("symbolic-icons"))
-            return "-symbolic";
+        if (this._settingsNextwall.get_boolean('symbolic-icons'))
+            return '-symbolic';
         else
-            return "";
+            return '';
     },
 
     get _currentWallpaperPath() {
-        if (!this._settingsBackground) {
-            this.loadSettings();
-        }
-        return this._settingsBackground.get_string("picture-uri").substring(7);
-    },
+        return this._settingsBackground.get_string('picture-uri').substring(7);
+    }
 });
 
 /* Panel button */
@@ -238,78 +240,76 @@ const NextwallMenuButton = new Lang.Class({
         this.parent(0.0);
 
         // Get nextwall settings.
-        this._settings = Convenience.getSettings();
+        this._settings = Convenience.getSettings(NEXTWALL_SCHEMA);
 
         // Create a panel container.
         this.panelContainer = new St.BoxLayout();
         this.actor.add_actor(this.panelContainer);
 
-        // Create the wallpaper info box.
-        let info = new WallpaperInfoBox();
-        info.thumbnailBin.connect('clicked', Lang.bind(this, this._onOpenWallpaper));
-
         // Add an icon to the panel container.
         panelIcon = new St.Icon({
-            icon_name: 'nextwall' + info.icon_type,
+            icon_name: 'nextwall' + this.icon_type,
             icon_size: 16,
             style_class: 'panel-icon'
         });
         this.panelContainer.add(panelIcon);
 
-        // Set the menu itens:
+        // Set the menu items.
+        this._createMenu();
+    },
 
-        // Add the info box.
-        this.menu.addMenuItem(info);
+    _createMenu: function() {
+        let item;
 
-        // -----
-        let item = new PopupMenu.PopupSeparatorMenuItem();
+        item = new WallpaperInfoBox();
+        item.thumbnailBin.connect('clicked', Lang.bind(this,
+            this._onOpenWallpaper));
         this.menu.addMenuItem(item);
 
-        // Next Wallpaper
+        item = new PopupMenu.PopupSeparatorMenuItem();
+        this.menu.addMenuItem(item);
+
         item = new PopupMenu.PopupMenuItem("Next Wallpaper");
         item.connect('activate', Lang.bind(this, this._onNextWallpaper));
         this.menu.addMenuItem(item);
 
-        // Open Wallpaper
-        //item = new PopupMenu.PopupMenuItem("Open Wallpaper");
-        //item.connect('activate', Lang.bind(this, this._onOpenWallpaper));
-        //this.menu.addMenuItem(item);
-
-        // Show in File Manager
         item = new PopupMenu.PopupMenuItem("Show in File Manager");
         item.connect('activate', Lang.bind(this, this._onShowInFileManager));
         this.menu.addMenuItem(item);
 
-        // Delete Wallpaper
         item = new PopupMenu.PopupMenuItem("Delete Wallpaper");
         item.connect('activate', Lang.bind(this, this._onDeleteWallpaper));
         this.menu.addMenuItem(item);
 
-        // -----
-        let item = new PopupMenu.PopupSeparatorMenuItem();
+        item = new PopupMenu.PopupSeparatorMenuItem();
         this.menu.addMenuItem(item);
 
-        // Fit Time of Day
-        this.todSwitch = new PopupMenu.PopupSwitchMenuItem("Fit Time of Day",
-            this._settings.get_boolean("fit-time"));
-        this.todSwitch.connect('activate', Lang.bind(this, this._onFitTimeChange));
-        this.menu.addMenuItem(this.todSwitch);
+        item = new PopupMenu.PopupSwitchMenuItem("Fit Time of Day",
+            this._settings.get_boolean('fit-time'));
+        item.connect('activate', Lang.bind(this, this._onFitTimeChange));
+        this.menu.addMenuItem(item);
 
-        // Settings
         item = new PopupMenu.PopupMenuItem("Settings");
         item.connect('activate', Lang.bind(this, this._onSettings));
         this.menu.addMenuItem(item);
     },
 
+    get icon_type() {
+        if (this._settings.get_boolean('symbolic-icons'))
+            return '-symbolic';
+        else
+            return '';
+    },
+
     _onFitTimeChange: function(widget, data) {
-        this._settings.set_boolean("fit-time", widget.state);
+        this._settings.set_boolean('fit-time', widget.state);
     },
 
     _onNextWallpaper: function() {
-        let wallpaper_path = this._settings.get_string("wallpaper-path");
-        let current_location = this._settings.get_string("location");
+        let wallpaper_path = this._settings.get_string('wallpaper-path');
+        let current_location = this._settings.get_string('location');
         let command = 'nextwall';
-        if (this.todSwitch.state) {
+        if (this._settings.get_boolean('fit-time')) {
             command += ' -tl ' + current_location;
         }
         let path = Gio.file_new_for_path(wallpaper_path);
@@ -348,15 +348,11 @@ const NextwallMenuButton = new Lang.Class({
         }
     },
 
-    _onScanWallpapers: function() {
-        //TODO
-    },
-
     /* Open extension preferences */
     _onSettings: function() {
-        Util.spawn(["gnome-shell-extension-prefs", "nextwall@serrano.byobu.info"]);
+        Util.spawn(['gnome-shell-extension-prefs', 'nextwall@serrano.byobu.info']);
         return 0;
-    },
+    }
 });
 
 function init() {
