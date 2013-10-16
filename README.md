@@ -3,7 +3,7 @@
 This is the README file for nextwall - A wallpaper rotator for the GNOME
 desktop.
 
-*Nextwall* is a small application that changes the background of the GNOME
+Nextwall is a small application that changes the background of the GNOME
 desktop to a random image. Nextwall has the following features:
 
 * Operates as a command-line tool. Run `nextwall --help` for usage information.
@@ -14,7 +14,7 @@ desktop to a random image. Nextwall has the following features:
 
 - - -
 
-*Nextwall* also comes with a Gnome Shell extension.
+Nextwall also comes with a GNOME Shell extension.
 
 ![Screenshot](https://raw.github.com/figure002/nextwall/master/data/screenshot-extension.png)
 

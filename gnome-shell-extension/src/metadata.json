@@ -1,7 +1,7 @@
 {
-  "description": "Gnome Shell extension for Nextwall - a wallpaper rotator for the Gnome desktop.",
+  "description": "Integrate Nextwall with GNOME Shell.",
   "extension-id": "nextwall",
-  "name": "Nextwall",
+  "name": "Nextwall Indicator",
   "original-authors": [
     "serrano.pereira@gmail.com"
   ],
