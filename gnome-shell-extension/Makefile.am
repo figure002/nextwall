@@ -1,17 +1,6 @@
 include include.mk
 
-dist_extension_DATA = src/convenience.js src/extension.js src/stylesheet.css src/metadata.json src/prefs.js
-
-gschemas_in = src/$(gschemabase).$(extensionname).gschema.xml
-
-EXTRA_DIST = $(gschemas_in)
-CLEANFILES = $(gschemas_in:.xml=.valid)
-
-# gsettings_SCHEMAS is a list of all the schemas you want to install
-gsettings_SCHEMAS = $(gschemas_in)
-
-# include the appropriate makefile rules for schema handling
-@GSETTINGS_RULES@
+SUBDIRS = src
 
 zip-file: all
 	-rm -fR $(builddir)/_build

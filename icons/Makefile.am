@@ -10,7 +10,7 @@ nobase_icon_DATA = \
 	48x48/apps/nextwall.png \
 	scalable/apps/nextwall.svg
 
-EXTRA_DIST = $(nobase_icon_DATA)
+EXTRA_DIST = $(nobase_icon_DATA) $(top_srcdir)/icons/src/*
 
 # Post-install hooks for updating the GTK icon cache
 gtk_update_icon_cache = gtk-update-icon-cache -f -t $(datadir)/icons/hicolor/

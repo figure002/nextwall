@@ -37,6 +37,7 @@ GLIB_GSETTINGS
 AC_CONFIG_FILES([Makefile
 				data/Makefile
 				gnome-shell-extension/Makefile
+				gnome-shell-extension/src/Makefile
 				icons/Makefile
 				src/Makefile
 				])
