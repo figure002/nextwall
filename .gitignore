@@ -1,9 +1,14 @@
+Session.vim
 *~
 *.swp
 *.o
-Session.vim
+*.gschema.valid
+_build/
 nextwall
 train_ann
+zip-files/
+
+Makefile
 Makefile.in
 .deps/
 aclocal.m4
@@ -16,4 +21,3 @@ install-sh
 missing
 config.h
 stamp-h1
-
