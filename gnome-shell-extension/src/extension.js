@@ -1,5 +1,5 @@
-const Clutter = imports.gi.Clutter;
 const BoxPointer = imports.ui.boxpointer;
+const Clutter = imports.gi.Clutter;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
@@ -64,7 +64,7 @@ const DeleteWallpaperDialog = new Lang.Class({
 
         this.parent({ styleClass: 'delete-wallpaper-dialog' });
 
-        this.setButtons([{ label: _("Cancel"),
+        this.setButtons([{ label: "Cancel",
                            action: Lang.bind(this, this._onCancelButtonPressed),
                            key: Clutter.Escape,
                            default: true
