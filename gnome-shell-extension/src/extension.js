@@ -5,6 +5,7 @@ const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
 const Lang = imports.lang;
 const Main = imports.ui.main;
+const ModalDialog = imports.ui.modalDialog;
 const PanelMenu = imports.ui.panelMenu;
 const Pango = imports.gi.Pango;
 const Params = imports.misc.params;
@@ -21,6 +22,82 @@ const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 const THUMBNAIL_ICON_SIZE = 64;
 
 let nextwallMenu;
+
+/* Error dialog */
+const ErrorDialog = new Lang.Class({
+    Name: 'ErrorDialog',
+    Extends: ModalDialog.ModalDialog,
+
+    _init: function(message) {
+        this.parent({ styleClass: 'error-dialog' });
+
+        this.setButtons([{ label: "OK",
+                           action: Lang.bind(this, this._onOkButtonPressed),
+                           default: true
+                         }]);
+
+        let box = new St.BoxLayout();
+        this.contentLayout.add(box);
+
+        let icon = new St.Icon({
+            icon_name: 'dialog-error',
+            style_class: 'dialog-icon'
+        });
+        box.add(icon);
+
+        let label = new St.Label({ text: message });
+        box.add(label);
+    },
+
+    _onOkButtonPressed: function(button, event) {
+        this.close(global.get_current_time());
+    }
+});
+
+/* Delete wallpaper confirmation dialog */
+const DeleteWallpaperDialog = new Lang.Class({
+    Name: 'DeleteWallpaperDialog',
+    Extends: ModalDialog.ModalDialog,
+
+    _init: function(file) {
+        this._file = file;
+
+        this.parent({ styleClass: 'delete-wallpaper-dialog' });
+
+        this.setButtons([{ label: _("Cancel"),
+                           action: Lang.bind(this, this._onCancelButtonPressed),
+                           key: Clutter.Escape,
+                           default: true
+                         },
+                         { label: "Yes",
+                           action: Lang.bind(this, this._onYesButtonPressed)
+                         }]);
+
+        let box = new St.BoxLayout();
+        this.contentLayout.add(box);
+
+        let icon = new St.Icon({
+            icon_name: 'dialog-question',
+            style_class: 'dialog-icon'
+        });
+        box.add(icon);
+
+        let message = "Move wallpaper file '%s' to trash?".format(file.get_path());
+
+        let label = new St.Label({ text: message });
+        box.add(label);
+    },
+
+    _onCancelButtonPressed: function(button, event) {
+        this.close(global.get_current_time());
+    },
+
+    _onYesButtonPressed: function(button, event) {
+        this._file.trash(null, null);
+        this.close(global.get_current_time());
+        nextwallMenu.onNextWallpaper();
+    }
+});
 
 /* The thumbnail widget displays the thumbnail for an image */
 const ThumbnailWidget = new Lang.Class({
@@ -276,7 +353,7 @@ const NextwallMenuButton = new Lang.Class({
         this.menu.addMenuItem(item);
 
         item = new PopupMenu.PopupMenuItem("Next Wallpaper");
-        item.connect('activate', Lang.bind(this, this._onNextWallpaper));
+        item.connect('activate', Lang.bind(this, this.onNextWallpaper));
         this.menu.addMenuItem(item);
 
         item = new PopupMenu.PopupMenuItem("Show in File Manager");
@@ -311,7 +388,7 @@ const NextwallMenuButton = new Lang.Class({
         this._settings.set_boolean('fit-time', widget.state);
     },
 
-    _onNextWallpaper: function() {
+    onNextWallpaper: function() {
         let wallpaper_path = this._settings.get_string('wallpaper-path');
         let current_location = this._settings.get_string('location');
         let command = 'nextwall';
@@ -319,12 +396,19 @@ const NextwallMenuButton = new Lang.Class({
             command += ' -tl ' + current_location;
         }
         let path = Gio.file_new_for_path(wallpaper_path);
-        let app = Gio.app_info_create_from_commandline(
-            command,
-            null,
-            Gio.AppInfoCreateFlags.NONE,
-            null);
-        app.launch([path], null, null);
+
+        let app = Gio.app_info_create_from_commandline(command, null,
+            Gio.AppInfoCreateFlags.NONE, null);
+
+        try {
+            app.launch([path], null, null);
+        }
+        catch(err) {
+            log(err.message);
+            let message = "Failed to launch Nextwall. Please make sure that Nextwall is installed correctly.\n\nThe following error message was returned:\n%s".format(err.message);
+            let dialog = new ErrorDialog(message);
+            dialog.open(global.get_current_time());
+        }
     },
 
     /* Open wallpaper with default file handler */
@@ -333,7 +417,15 @@ const NextwallMenuButton = new Lang.Class({
             this.menu.close(BoxPointer.PopupAnimation.FULL);
             Main.overview.hide();
             let app = this.infoBox.wallpaperFile.query_default_handler(null, null);
-            app.launch([this.infoBox.wallpaperFile], null, null);
+
+            try {
+                app.launch([this.infoBox.wallpaperFile], null, null);
+            }
+            catch(err) {
+                log(err.message);
+                let dialog = new ErrorDialog(err.message);
+                dialog.open(global.get_current_time());
+            }
         }
     },
 
@@ -342,15 +434,23 @@ const NextwallMenuButton = new Lang.Class({
         if (this.infoBox.wallpaperFile) {
             let app = Gio.app_info_create_from_commandline('nautilus --no-desktop',
                     null, Gio.AppInfoCreateFlags.NONE, null);
-            app.launch([this.infoBox.wallpaperFile], null, null);
+
+            try {
+                app.launch([this.infoBox.wallpaperFile], null, null);
+            }
+            catch(err) {
+                log(err.message);
+                let dialog = new ErrorDialog(err.message);
+                dialog.open(global.get_current_time());
+            }
         }
     },
 
    /* Send file to trashcan */
     _onDeleteWallpaper: function() {
         if (this.infoBox.wallpaperFile) {
-            this.infoBox.wallpaperFile.trash(null, null);
-            this._onNextWallpaper();
+            let dialog = new DeleteWallpaperDialog(this.infoBox.wallpaperFile);
+            dialog.open(global.get_current_time());
         }
     },
 
