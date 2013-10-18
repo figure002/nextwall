@@ -20,6 +20,7 @@ const Convenience = Me.imports.convenience;
 const BACKGROUND_SCHEMA = 'org.gnome.desktop.background';
 const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 const THUMBNAIL_ICON_SIZE = 64;
+const DIALOG_ICON_SIZE = 32;
 
 let nextwallMenu;
 
@@ -29,7 +30,7 @@ const ErrorDialog = new Lang.Class({
     Extends: ModalDialog.ModalDialog,
 
     _init: function(message) {
-        this.parent({ styleClass: 'error-dialog' });
+        this.parent({ styleClass: 'message-dialog' });
 
         this.setButtons([{ label: "OK",
                            action: Lang.bind(this, this._onOkButtonPressed),
@@ -40,12 +41,16 @@ const ErrorDialog = new Lang.Class({
         this.contentLayout.add(box);
 
         let icon = new St.Icon({
-            icon_name: 'dialog-error',
+            icon_name: 'dialog-error-symbolic',
+            icon_size: DIALOG_ICON_SIZE,
             style_class: 'dialog-icon'
         });
         box.add(icon);
 
         let label = new St.Label({ text: message });
+        label.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
+        label.clutter_text.set_line_wrap(true);
+        label.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
         box.add(label);
     },
 
@@ -62,7 +67,7 @@ const DeleteWallpaperDialog = new Lang.Class({
     _init: function(file) {
         this._file = file;
 
-        this.parent({ styleClass: 'delete-wallpaper-dialog' });
+        this.parent({ styleClass: 'message-dialog' });
 
         this.setButtons([{ label: "Cancel",
                            action: Lang.bind(this, this._onCancelButtonPressed),
@@ -77,14 +82,18 @@ const DeleteWallpaperDialog = new Lang.Class({
         this.contentLayout.add(box);
 
         let icon = new St.Icon({
-            icon_name: 'dialog-question',
+            icon_name: 'dialog-question-symbolic',
+            icon_size: DIALOG_ICON_SIZE,
             style_class: 'dialog-icon'
         });
         box.add(icon);
 
-        let message = "Move wallpaper file '%s' to trash?".format(file.get_path());
+        let message = "Move the following wallpaper to trash?\n\n%s\n".format(file.get_path());
 
         let label = new St.Label({ text: message });
+        label.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
+        label.clutter_text.set_line_wrap(true);
+        label.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
         box.add(label);
     },
 
@@ -244,7 +253,9 @@ const WallpaperInfoBox = new Lang.Class({
         this._currentWallpaperFolder = new St.Label({ text: '...' });
 
         this._currentWallpaperName = new St.Label({ text: '...' });
+        this._currentWallpaperName.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
         this._currentWallpaperName.clutter_text.set_line_wrap(true);
+        this._currentWallpaperName.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
 
         let captionbox = new St.BoxLayout({
             style_class: 'current-wallpaper-captionbox'
