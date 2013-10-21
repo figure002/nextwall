@@ -224,24 +224,26 @@ int main(int argc, char **argv) {
     strcat(dbfile, "nextwall.db");
 
     // Set the ANN file path
-    strcpy(tmp, cfgpath);
-    strcat(tmp, "nextwall.net");
-    annfiles[0] = tmp;
-    annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
-    annfiles[2] = "/usr/share/nextwall/nextwall.net";
+    if (arguments.scan) {
+        strcpy(tmp, cfgpath);
+        strcat(tmp, "nextwall.net");
+        annfiles[0] = tmp;
+        annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
+        annfiles[2] = "/usr/share/nextwall/nextwall.net";
 
-    for (i = 0; i < 3; i++) {
-        if (file_exists(annfiles[i])) {
-            annfile = annfiles[i];
-            ann_found = 1;
-            eprintf("Using ANN %s\n", annfile);
-            break;
+        for (i = 0; i < 3; i++) {
+            if (file_exists(annfiles[i])) {
+                annfile = annfiles[i];
+                ann_found = 1;
+                eprintf("Using ANN %s\n", annfile);
+                break;
+            }
         }
-    }
 
-    if (!ann_found) {
-        fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
-        return 1;
+        if (!ann_found) {
+            fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
+            return 1;
+        }
     }
 
     // Create the data directory if it doesn't exist.
