@@ -40,7 +40,7 @@
 #define BUFFER_SIZE 512
 
 /* The maximum number of wallpapers in the wallpaper list */
-#define LIST_MAX 1000
+#define LIST_MAX 2000
 
 /* The nextwall database version */
 #define NEXTWALL_DB_VERSION 0.4
