@@ -380,17 +380,26 @@ Return:
 
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
     int i;
+    int exists;
 
     // Get the path of the current wallpaper
     get_background_uri(settings, current_wallpaper);
 
-    // Make sure we select a different wallpaper
-    for (i = 0; strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
+    // Make sure we select a different wallpaper and that the file exists.
+    for (i = 0; !(exists = g_file_test(wallpaper_path, G_FILE_TEST_IS_REGULAR)) ||
+            strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
         if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different " \
                     "directory or use the --scan option.\n");
             return -1;
         }
+
+        if (!exists) {
+            eprintf("Wallpaper '%s' no longer exists. Deleting.\n",
+                    wallpaper_path);
+            remove_wallpaper(db, wallpaper_path);
+        }
+
         nextwall(db, wallpaper_dir, brightness);
     }
 
