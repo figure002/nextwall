@@ -62,6 +62,7 @@ char *annfile;
 
 char wallpaper_path[PATH_MAX];
 int verbose = 0;
+int wallpaper_list_populated = 0;
 static int max_walls = 0;
 static int rc, known_image;
 static int wallpaper_list[LIST_MAX];
@@ -335,17 +336,20 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     unsigned seed;
     ssize_t bytes;
 
-    if (brightness != -1)
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\" AND brightness=%d;", path, brightness);
-    else
-        snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                "LIKE \"%s%%\";", path);
+    if (!wallpaper_list_populated) {
+        if (brightness != -1)
+            snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                    "LIKE \"%s%%\" AND brightness=%d;", path, brightness);
+        else
+            snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
+                    "LIKE \"%s%%\";", path);
 
-    rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
-        exit(1);
+        rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
+            exit(1);
+        }
+        wallpaper_list_populated = 1;
     }
 
     if (max_walls == 0)
