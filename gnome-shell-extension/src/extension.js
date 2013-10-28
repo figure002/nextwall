@@ -278,15 +278,15 @@ const WallpaperInfoBox = new Lang.Class({
         values.add_actor(this._currentWallpaperName);
 
         // Add the items.
-        this.addActor(this.thumbnailBin);
-        this.addActor(captionbox);
+        //this.addActor(this.thumbnailBin);
+        //this.addActor(captionbox);
 
         // This is better, but it creates undesired space on the right side of
         // the menu.
-        //let box = new St.BoxLayout();
-        //box.add_actor(this.thumbnailBin);
-        //box.add_actor(captionbox);
-        //this.addActor(box);
+        let box = new St.BoxLayout();
+        box.add(this.thumbnailBin);
+        box.add(captionbox);
+        this.addActor(box);
     },
 
     update: function() {
