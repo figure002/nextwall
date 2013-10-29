@@ -339,10 +339,12 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     if (!wallpaper_list_populated) {
         if (brightness != -1)
             snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                    "LIKE \"%s%%\" AND brightness=%d;", path, brightness);
+                "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
+                path, brightness, LIST_MAX);
         else
             snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
-                    "LIKE \"%s%%\";", path);
+                "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
+                path, LIST_MAX);
 
         rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
         if (rc != SQLITE_OK) {
