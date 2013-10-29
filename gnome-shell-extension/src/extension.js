@@ -443,8 +443,9 @@ const NextwallMenuButton = new Lang.Class({
     /* Show wallpaper in file manager */
     _onShowInFileManager: function() {
         if (this.infoBox.wallpaperFile) {
-            let app = Gio.app_info_create_from_commandline('nautilus --no-desktop',
-                    null, Gio.AppInfoCreateFlags.NONE, null);
+            // Get the default file manager
+            let dir = Gio.file_new_for_path('/');
+            let app = dir.query_default_handler(null, null);
 
             try {
                 app.launch([this.infoBox.wallpaperFile], null, null);
