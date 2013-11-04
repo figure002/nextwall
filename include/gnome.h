@@ -44,7 +44,7 @@ int set_background_uri(GSettings *settings, const char *path) {
 
     g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
     g_settings_sync(); // Make sure the changes are written to disk
-    if (g_settings_get_string(settings, "picture-uri") == pathc)
+    if ( strcmp(g_settings_get_string(settings, "picture-uri"), pathc) == 0 )
         return 0;
     else
         return -1;
