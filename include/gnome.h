@@ -22,7 +22,7 @@
 
 
 /* Function prototypes */
-void set_background_uri(GSettings *settings, const char *path);
+int set_background_uri(GSettings *settings, const char *path);
 void get_background_uri(GSettings *settings, char *dest);
 int open_image(char *path);
 
@@ -32,8 +32,9 @@ int open_image(char *path);
 
   @param[in] settings GSettings object with desktop background schema.
   @param[in] path The wallpaper path to set.
+  @return Returns 0 on success, -1 on failure.
  */
-void set_background_uri(GSettings *settings, const char *path) {
+int set_background_uri(GSettings *settings, const char *path) {
     char pathc[PATH_MAX];
 
     if (!strstr(path, "file://"))
@@ -43,7 +44,10 @@ void set_background_uri(GSettings *settings, const char *path) {
 
     g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
     g_settings_sync(); // Make sure the changes are written to disk
-    g_assert_cmpstr(g_settings_get_string(settings, "picture-uri"), ==, pathc);
+    if (g_settings_get_string(settings, "picture-uri") == pathc)
+        return 0;
+    else
+        return -1;
 }
 
 /**

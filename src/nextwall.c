@@ -407,7 +407,9 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
 
     // Set the new wallpaper
     eprintf("Setting wallpaper to %s\n", wallpaper_path);
-    set_background_uri(settings, wallpaper_path);
+    if (set_background_uri(settings, wallpaper_path) == -1) {
+        fprintf(stderr, "Error: failed to set the background.\n");
+    }
 
     return 0;
 }
