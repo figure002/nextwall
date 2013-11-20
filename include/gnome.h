@@ -25,6 +25,7 @@
 int set_background_uri(GSettings *settings, const char *path);
 void get_background_uri(GSettings *settings, char *dest);
 int open_image(char *path);
+int file_trash(char *path);
 
 
 /**
@@ -82,6 +83,23 @@ int open_image(char *path) {
     ret = g_app_info_launch_default_for_uri(uri, NULL, &error);
     if (!ret)
         g_message("%s", error->message);
+
+    return ret;
+}
+
+/**
+  Move a file to trash.
+
+  @param[in] path Path for the file.
+  @return Returns TRUE on success, FALSE on error.
+ */
+int file_trash(char *path) {
+    gboolean ret;
+    GFile *file;
+
+    file = g_file_new_for_path(path);
+    ret = g_file_trash(file, NULL, NULL);
+    g_object_unref(file);
 
     return ret;
 }

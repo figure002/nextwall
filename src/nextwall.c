@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
         while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
             if (strcmp(line, "d\n") == 0) {
                 get_background_uri(settings, current_wallpaper);
-                fprintf(stderr, "Permanently remove %s from disk? (y/N) ",
+                fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         current_wallpaper);
                 read = getline(&line, &linelen, stdin);
                 if ( read != -1 && strcmp(line, "y\n") == 0 && \

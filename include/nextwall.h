@@ -74,7 +74,7 @@ int make_db(sqlite3 *db);
 int scan_dir(sqlite3 *db, const char *base, int recursive);
 int nextwall(sqlite3 *db, const char *path, int brightness);
 int get_local_brightness(double lat, double lon);
-int remove_wallpaper(sqlite3 *db, const char *path);
+int remove_wallpaper(sqlite3 *db, char *path);
 static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 static int get_brightness(struct fann *ann, double kurtosis, double lightness);
 static int is_known_image(sqlite3 *db, const char *path);
@@ -479,14 +479,15 @@ int get_local_brightness(double lat, double lon) {
 }
 
 /**
-  Delete a wallpaper from disk and the nextwall database.
+  Move wallpaper to trash and remove it from the nextwall database.
 
   @param[in] db The database handler.
   @param[in] path Absolute path of the wallpaper.
   @return Returns 0 on successful completion, and -1 on error.
  */
-int remove_wallpaper(sqlite3 *db, const char *path) {
+int remove_wallpaper(sqlite3 *db, char *path) {
     char sql[PATH_MAX] = "\0";
+    int rc = 0;
 
     snprintf(sql, sizeof sql, "DELETE FROM wallpapers WHERE path " \
             "= '%s';", path);
@@ -497,11 +498,10 @@ int remove_wallpaper(sqlite3 *db, const char *path) {
         exit(1);
     }
 
-    // Remove the wallpaper from disk
-    if (remove(path) == -1) {
-        return -1;
-    }
+    // Move wallpaper to trash.
+    if ( file_trash(path) == 0 )
+        rc = -1;
 
-    return 0;
+    return rc;
 }
 
