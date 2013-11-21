@@ -291,11 +291,7 @@ const WallpaperInfoBox = new Lang.Class({
 
     update: function() {
         let path = this._currentWallpaperPath;
-
-        // Set global vars
         this.wallpaperFile = Gio.file_new_for_path(path);
-        this.wallpaperInfo = this.wallpaperFile.query_info('standard::content-type',
-            Gio.FileQueryInfoFlags.NONE, null);
 
         // Update the labels
         this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
