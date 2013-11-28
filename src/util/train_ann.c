@@ -38,7 +38,7 @@
 #include "config.h"
 #include "std.h"
 #include "image.h"
-#include "gsettings.h"
+#include "gnome.h"
 
 /* Number of input values for the ANN */
 #define NUM_INPUT 2
