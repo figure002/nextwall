@@ -9,6 +9,6 @@ EXTRA_DIST = $(top_srcdir)/include/*.h $(top_srcdir)/data/ann/nextwall.net \
 man1_MANS = $(top_srcdir)/man/nextwall.1
 EXTRA_DIST += $(top_srcdir)/man/*
 
-nextwall_SOURCES = nextwall.c
+nextwall_SOURCES = nextwall.c functions.c std.c gnome.c image.c
 nextwall_LDADD = -lm -lsqlite3 -lmagic -lfann $(GIO_LIBS) $(IMAGEMAGICK_LIBS)
 

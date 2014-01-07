@@ -26,19 +26,21 @@
    ANN (*.net).
  */
 
+#include <argp.h>
+#include <dirent.h>
+#include <fann.h>
+#include <gio/gio.h>
+#include <limits.h>
+#include <magic.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <limits.h>
-#include <argp.h>
-#include <fann.h>
+#include <string.h>
 #include <sys/types.h>
-#include <dirent.h>
-#include <magic.h>
 
 #include "config.h"
-#include "std.h"
-#include "image.h"
 #include "gnome.h"
+#include "image.h"
+#include "std.h"
 
 /* Number of input values for the ANN */
 #define NUM_INPUT 2

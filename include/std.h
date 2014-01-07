@@ -18,64 +18,13 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-
+#ifndef NEXTWALL_STD_H
+#define NEXTWALL_STD_H
 
 /* Function prototypes */
 int file_exists(const char *filename);
 char *hours_to_hm(double hours, char *s);
 int numcmp(const void *a, const void *b);
 
-
-/**
-  Check if a file exists and is readable.
-
-  @param[in] filename The path to the file.
-  @return Returns 1 if the file exists, 0 otherwise.
- */
-int file_exists(const char *filename) {
-    FILE *f;
-    if ( (f = fopen(filename, "r")) != NULL ) {
-        fclose(f);
-        return 1;
-    }
-    return 0;
-}
-
-/**
-  Converts hours to the format hh:mm.
-
-  @param[in] hours Hours as a floating point number.
-  @param[out] dest Time in the format hh:mm.
-  @return Pointer to the time in format hh:mm.
- */
-char *hours_to_hm(double hours, char *dest) {
-    char hm[6];
-    double h = floor(hours);
-    double m = (hours - h) * 60.0;
-    snprintf(hm, sizeof hm, "%02.0f:%02.0f", h, m);
-    strcpy(dest, hm);
-    return dest;
-}
-
-/**
-  Compare two floats `pa` and `pb`.
-
-  @param[in] pa First float value.
-  @param[in] pa Second float value.
-  @return Returns -1, 0, or 1 if `pa` is less, equal, or greater than pb
-          respectively.
- */
-int numcmp(const void *pa, const void *pb) {
-    float a = *(const float*)pa;
-    float b = *(const float*)pb;
-    if (a < b)
-        return -1;
-    else if (a > b)
-        return 1;
-    else
-        return 0;
-}
+#endif
 

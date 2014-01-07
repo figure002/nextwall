@@ -25,152 +25,23 @@
 
 #include "cfgpath.h"
 #include "nextwall.h"
-
-/* Default wallpaper directory */
-#define DEFAULT_WALLPAPER_DIR "/usr/share/backgrounds/"
+#include "config.h"
+#include "options.h"
+#include "gnome.h"
+#include "std.h"
 
 
 /* Function prototypes */
-static int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
+int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
 
+/* Path to user configurations directory */
+char cfgpath[PATH_MAX];
 
 /* Copy of PATH */
 char wallpaper_dir[PATH_MAX];
 
 /* For storing the path of the current wallpaper */
 char current_wallpaper[PATH_MAX];
-
-/* Set up the arguments parser */
-const char *argp_program_version = PACKAGE_VERSION;
-const char *argp_program_bug_address = PACKAGE_BUGREPORT;
-
-/* Program documentation */
-//static char doc[] = "nextwall - A wallpaper rotator with some sense of time.";
-static char doc[] = "\nOptions:";
-
-/* A description of the arguments we accept */
-static char args_doc[] = "PATH";
-
-/* The options we understand */
-static struct argp_option options[] = {
-    {"brightness", 'b', "N", 0, "Select wallpapers for night (0), twilight " \
-        "(1), or day (2)"},
-    {"interactive", 'i', 0, 0, "Run in interactive mode"},
-    {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your " \
-        "current location"},
-    {"recursion", 'r', 0, 0, "Causes --scan to look in subdirectories"},
-    {"scan", 's', 0, 0, "Scan for images files in PATH. Also see the " \
-        "--recursion option"},
-    {"time", 't', 0, 0, "Find wallpapers that fit the time of day. Must be " \
-        "used in combination with --location"},
-    {"verbose", 'v', 0, 0, "Increase verbosity"},
-    { 0 }
-};
-
-/* Used by main to communicate with parse_opt */
-struct arguments {
-    char *args[1]; /* PATH argument */
-    char *location;
-    int brightness, interactive, recursion, scan, time, verbose;
-    double latitude, longitude;
-};
-
-/* Parse a single option */
-static error_t parse_opt(int key, char *arg, struct argp_state *state) {
-    /* Get the input argument from argp_parse, which we
-       know is a pointer to our arguments structure. */
-    struct arguments *arguments = state->input;
-
-    char tmp[80];
-    char *lat, *lon;
-    int rc, b;
-
-    switch (key)
-    {
-        case 'b':
-            if (!isdigit(*arg)) {
-                fprintf(stderr, "Incorrect brightness value\n");
-                argp_usage(state);
-                break;
-            }
-
-            b = atoi(arg);
-            if ( !(b == 0 || b == 1 || b == 2) ) {
-                fprintf(stderr, "Incorrect brightness value\n");
-                argp_usage(state);
-                break;
-            }
-
-            arguments->brightness = b;
-            arguments->time = 1;
-            break;
-        case 'i':
-            arguments->interactive = 1;
-            break;
-        case 'l':
-            arguments->location = arg;
-
-            strcpy(tmp, arg);
-            if (strstr(tmp, ":") == NULL) {
-                fprintf(stderr, "Incorrect value for location\n");
-                argp_usage(state);
-            }
-            lat = strtok(tmp, ":");
-            lon = strtok(NULL, ":");
-
-            rc = sscanf(lat, "%lf", &arguments->latitude);
-            if (rc == 0) {
-                fprintf(stderr, "Incorrect value for latitude\n");
-                argp_usage(state);
-            }
-            rc = sscanf(lon, "%lf", &arguments->longitude);
-            if (rc == 0) {
-                fprintf(stderr, "Incorrect value for longitude\n");
-                argp_usage(state);
-            }
-            break;
-        case 'r':
-            arguments->recursion = 1;
-            break;
-        case 's':
-            arguments->scan = 1;
-            break;
-        case 't':
-            arguments->time = 1;
-            break;
-        case 'v':
-            arguments->verbose = verbose = 1;
-            break;
-
-        case ARGP_KEY_ARG:
-            if (state->arg_num >= 1) {
-                 // Too many arguments
-                 argp_usage(state);
-            }
-            arguments->args[state->arg_num] = arg;
-            break;
-
-        case ARGP_KEY_END:
-            if (state->arg_num == 0) {
-                // Use the default wallpaper directory if none specified
-                arguments->args[0] = DEFAULT_WALLPAPER_DIR;
-            }
-            if (arguments->brightness == -1 && arguments->time && \
-                    arguments->latitude == -1) {
-                 fprintf(stderr, "Your location must be set with --location " \
-                         "when using --time\n");
-                 argp_usage(state);
-            }
-            break;
-
-        default:
-            return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
-/* Our argp parser */
-static struct argp argp = { options, parse_opt, args_doc, doc };
 
 int main(int argc, char **argv) {
     struct arguments arguments;
@@ -196,7 +67,7 @@ int main(int argc, char **argv) {
     arguments.recursion = 0;
     arguments.scan = 0;
     arguments.time = 0;
-    arguments.verbose = 0;
+    arguments.verbose = verbose = 0;
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
