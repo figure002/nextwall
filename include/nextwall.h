@@ -51,11 +51,10 @@ int nextwall(sqlite3 *db, const char *path, int brightness);
 int get_local_brightness(double lat, double lon);
 int remove_wallpaper(sqlite3 *db, char *path);
 
-/* Variables */
-int verbose;
-char wallpaper_path[PATH_MAX];
-char dbfile[PATH_MAX];
-char *annfile;
+/* Declare global variables */
+extern int verbose;
+extern char wallpaper_path[PATH_MAX];
+extern char *annfile;
 
 #endif
 

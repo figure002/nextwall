@@ -18,12 +18,12 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NEXTWALL_TRAINER_OPTIONS_H
-#define NEXTWALL_TRAINER_OPTIONS_H
-
 #include <argp.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "config.h"
+#include "trainer-options.h"
 
 /* Set up the arguments parser */
 const char *argp_program_version = PACKAGE_VERSION;
@@ -45,14 +45,6 @@ static struct argp_option options[] = {
     {"error", 'e', "N", 0, "Desired error (default: 0.001)"},
     {"output", 'o', "NAME", 0, "Base name of output files (default: nextwall)"},
     { 0 }
-};
-
-/* Used by main to communicate with parse_opt */
-struct arguments {
-    char *args[1]; /* PATH argument */
-    char *output;
-    int layers, neurons, epochs, pairs, reuse;
-    float error;
 };
 
 /* Parse a single option */
@@ -107,7 +99,5 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 }
 
 /* Our argp parser */
-static struct argp argp = { options, parse_opt, args_doc, doc };
-
-#endif
+struct argp argp = { options, parse_opt, args_doc, doc };
 

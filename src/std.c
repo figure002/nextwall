@@ -22,6 +22,7 @@
 #include <string.h>
 #include <math.h>
 
+#include "std.h"
 
 /**
   Check if a file exists and is readable.

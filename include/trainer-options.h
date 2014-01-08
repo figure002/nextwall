@@ -18,15 +18,15 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NEXTWALL_OPTIONS_H
-#define NEXTWALL_OPTIONS_H
+#ifndef NEXTWALL_TRAINER_OPTIONS_H
+#define NEXTWALL_TRAINER_OPTIONS_H
 
 /* Used by main to communicate with parse_opt */
 struct arguments {
     char *args[1]; /* PATH argument */
-    char *location;
-    int brightness, interactive, recursion, scan, time, verbose;
-    double latitude, longitude;
+    char *output;
+    int layers, neurons, epochs, pairs, reuse;
+    float error;
 };
 
 /* Declare the argument parser */

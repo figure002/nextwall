@@ -18,6 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <argp.h>
 #include <gio/gio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -29,7 +30,6 @@
 #include "options.h"
 #include "gnome.h"
 #include "std.h"
-
 
 /* Function prototypes */
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
@@ -43,6 +43,16 @@ char wallpaper_dir[PATH_MAX];
 /* For storing the path of the current wallpaper */
 char current_wallpaper[PATH_MAX];
 
+/* Define the global verbose variable */
+int verbose = 0;
+
+/* Define the variable for the wallpaper path */
+char wallpaper_path[PATH_MAX];
+
+/* Define the variable for the location of the ANN file */
+char *annfile;
+
+/* Main function */
 int main(int argc, char **argv) {
     struct arguments arguments;
     struct stat sts;
@@ -51,8 +61,9 @@ int main(int argc, char **argv) {
     sqlite3 *db;
     GSettings *settings;
     char *annfiles[3];
+    char dbfile[PATH_MAX];
     char tmp[PATH_MAX];
-    char *line = NULL;
+    char *line;
     size_t linelen = 0;
     ssize_t read;
 
@@ -67,7 +78,7 @@ int main(int argc, char **argv) {
     arguments.recursion = 0;
     arguments.scan = 0;
     arguments.time = 0;
-    arguments.verbose = verbose = 0;
+    arguments.verbose = 0;
 
     /* Parse arguments; every option seen by parse_opt will
        be reflected in arguments. */
@@ -251,6 +262,7 @@ Return:
     return 0;
 }
 
+/* Wrapper functions for setting the wallpaper */
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
     int i;
     int exists;

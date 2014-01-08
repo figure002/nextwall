@@ -20,6 +20,8 @@
 
 #include <wand/MagickWand.h>
 
+#include "image.h"
+
 /**
   Returns the kurtosis and lightness value for an image file.
 

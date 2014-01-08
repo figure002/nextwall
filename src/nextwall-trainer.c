@@ -26,6 +26,7 @@
    ANN (*.net).
  */
 
+#include <argp.h>
 #include <dirent.h>
 #include <fann.h>
 #include <gio/gio.h>
@@ -40,7 +41,7 @@
 #include "gnome.h"
 #include "image.h"
 #include "std.h"
-#include "trainer_options.h"
+#include "trainer-options.h"
 
 /* Number of input values for the ANN */
 #define NUM_INPUT 2

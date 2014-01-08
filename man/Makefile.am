@@ -1,7 +1,7 @@
 ## Makefile.am -- Process this file with automake to produce Makefile.in
 
 man_MANS = nextwall.1
-EXTRA_DIST = $(man_MANS)
+EXTRA_DIST = $(man_MANS) nextwall.h2m
 MAINTAINERCLEANFILES = $(man_MANS)
 
 # The man pages depend on the --help strings and the version number.
