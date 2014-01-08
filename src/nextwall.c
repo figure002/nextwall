@@ -19,6 +19,7 @@
  */
 
 #include <argp.h>
+#include <floatfann.h>
 #include <gio/gio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -49,9 +50,6 @@ int verbose = 0;
 /* Define the variable for the wallpaper path */
 char wallpaper_path[PATH_MAX];
 
-/* Define the variable for the location of the ANN file */
-char *annfile;
-
 /* Main function */
 int main(int argc, char **argv) {
     struct arguments arguments;
@@ -60,6 +58,7 @@ int main(int argc, char **argv) {
     int found, i;
     sqlite3 *db;
     GSettings *settings;
+    struct fann *ann = NULL;
     char *annfiles[3];
     char dbfile[PATH_MAX];
     char tmp[PATH_MAX];
@@ -88,8 +87,7 @@ int main(int argc, char **argv) {
     strncpy(wallpaper_dir, arguments.args[0], sizeof wallpaper_dir);
 
     if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
-        fprintf(stderr, "The wallpaper path %s doesn't exist.\n",
-                wallpaper_dir);
+        fprintf(stderr, "Cannot access directory %s\n", wallpaper_dir);
         return 1;
     }
 
@@ -115,9 +113,12 @@ int main(int argc, char **argv) {
 
         for (i = 0; i < 3; i++) {
             if (file_exists(annfiles[i])) {
-                annfile = annfiles[i];
                 ann_found = 1;
-                eprintf("Using ANN %s\n", annfile);
+                eprintf("Using ANN %s\n", annfiles[i]);
+
+                // Initialize the ANN
+                ann = fann_create_from_file(annfiles[i]);
+
                 break;
             }
         }
@@ -126,6 +127,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
             return 1;
         }
+
     }
 
     // Create the data directory if it doesn't exist.
@@ -165,7 +167,8 @@ int main(int argc, char **argv) {
     // Search directory for wallpapers
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...");
-        found = scan_dir(db, wallpaper_dir, arguments.recursion);
+        found = scan_dir(db, wallpaper_dir, ann, arguments.recursion);
+        fann_destroy(ann);
         fprintf(stderr, " Done\n");
         fprintf(stderr, "Found %d new wallpapers\n", found);
         goto Return;

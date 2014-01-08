@@ -21,6 +21,7 @@
 #ifndef NEXTWALL_H
 #define NEXTWALL_H
 
+#include <floatfann.h>
 #include <sqlite3.h>
 
 /* For tm_gmtoff and tm_zone */
@@ -46,7 +47,7 @@
 
 /* Function prototypes */
 int make_db(sqlite3 *db);
-int scan_dir(sqlite3 *db, const char *base, int recursive);
+int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive);
 int nextwall(sqlite3 *db, const char *path, int brightness);
 int get_local_brightness(double lat, double lon);
 int remove_wallpaper(sqlite3 *db, char *path);
@@ -54,7 +55,6 @@ int remove_wallpaper(sqlite3 *db, char *path);
 /* Declare global variables */
 extern int verbose;
 extern char wallpaper_path[PATH_MAX];
-extern char *annfile;
 
 #endif
 

@@ -107,7 +107,7 @@ int make_db(sqlite3 *db) {
   @param[in] recursive If set to 1, the base directory is scanned recursively.
   @return The number of new wallpapers that were found.
  */
-int scan_dir(sqlite3 *db, const char *base, int recursive) {
+int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
     DIR *dir;
     struct dirent *entry;
     int found = 0;
@@ -121,9 +121,6 @@ int scan_dir(sqlite3 *db, const char *base, int recursive) {
     // Initialize Magic Number Recognition Library
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     magic_load(magic, NULL);
-
-    // Initialize ANN
-    struct fann *ann = fann_create_from_file(annfile);
 
     if (recursive < 2)
         sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
@@ -148,7 +145,7 @@ int scan_dir(sqlite3 *db, const char *base, int recursive) {
             if (strcmp(entry->d_name, ".") == 0  || strcmp(entry->d_name, "..") == 0 || \
                 strcmp(entry->d_name, ".thumbs") == 0)
                 continue;
-            found += scan_dir(db, path, recursive+1);
+            found += scan_dir(db, path, ann, recursive+1);
         }
         else if (strstr(magic_file(magic, path), "image")) {
             if (is_known_image(db, path))
@@ -174,7 +171,6 @@ Return:
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
         sqlite3_finalize(stmt);
     }
-    fann_destroy(ann);
     magic_close(magic);
     closedir(dir);
     return found;
