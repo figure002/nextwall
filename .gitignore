@@ -5,7 +5,7 @@ Session.vim
 *.gschema.valid
 _build/
 nextwall
-train_ann
+nextwall-trainer
 zip-files/
 
 Makefile

@@ -26,7 +26,6 @@
    ANN (*.net).
  */
 
-#include <argp.h>
 #include <dirent.h>
 #include <fann.h>
 #include <gio/gio.h>
@@ -41,6 +40,7 @@
 #include "gnome.h"
 #include "image.h"
 #include "std.h"
+#include "trainer_options.h"
 
 /* Number of input values for the ANN */
 #define NUM_INPUT 2
@@ -48,93 +48,8 @@
 /* Number of output values for the ANN */
 #define NUM_OUTPUT 3
 
-
 /* Function prototypes */
 int set_training_pairs(FILE *fp, const char *base, int max_pairs);
-
-/* Set up the arguments parser */
-const char *argp_program_version = PACKAGE_VERSION;
-const char *argp_program_bug_address = PACKAGE_BUGREPORT;
-
-/* Program documentation */
-static char doc[] = "train_ann -- ANN trainer for nextwall";
-
-/* A description of the arguments we accept */
-static char args_doc[] = "PATH";
-
-/* The options we understand */
-static struct argp_option options[] = {
-    {"reuse", 'r', 0, 0, "Use existing training data file to create the ANN"},
-    {"pairs", 'p', "N", 0, "Number of training pairs to generate"},
-    {"layers", 'l', "N", 0, "Number of neuron layers (default: 3)"},
-    {"neurons", 'n', "N", 0, "Number of hidden neurons (default: 8)"},
-    {"epochs", 't', "N", 0, "Maximum number of epochs (default: 500000)"},
-    {"error", 'e', "N", 0, "Desired error (default: 0.001)"},
-    {"output", 'o', "NAME", 0, "Base name of output files (default: nextwall)"},
-    { 0 }
-};
-
-/* Used by main to communicate with parse_opt */
-struct arguments {
-    char *args[1]; /* PATH argument */
-    char *output;
-    int layers, neurons, epochs, pairs, reuse;
-    float error;
-};
-
-/* Parse a single option */
-static error_t parse_opt(int key, char *arg, struct argp_state *state) {
-    /* Get the input argument from argp_parse, which we
-       know is a pointer to our arguments structure. */
-    struct arguments *arguments = state->input;
-
-    switch (key)
-    {
-        case 'l':
-            arguments->layers = atoi(arg);
-            break;
-        case 'n':
-            arguments->neurons = atoi(arg);
-            break;
-        case 'p':
-            arguments->pairs = atoi(arg);
-            break;
-        case 't':
-            arguments->epochs = atoi(arg);
-            break;
-        case 'e':
-            arguments->error = atof(arg);
-            break;
-        case 'o':
-            arguments->output = arg;
-            break;
-        case 'r':
-            arguments->reuse = 1;
-            break;
-
-        case ARGP_KEY_ARG:
-            if (state->arg_num >= 1) {
-                 // Too many arguments
-                 argp_usage(state);
-            }
-            arguments->args[state->arg_num] = arg;
-            break;
-
-        case ARGP_KEY_END:
-            if (state->arg_num < 1 && arguments->reuse == 0) {
-                // Too few arguments
-                argp_usage(state);
-            }
-            break;
-
-        default:
-            return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
-/* Our argp parser */
-static struct argp argp = { options, parse_opt, args_doc, doc };
 
 
 int main(int argc, char **argv) {
