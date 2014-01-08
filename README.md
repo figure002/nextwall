@@ -34,19 +34,14 @@ On Debian (based) systems, run this command to install the dependencies:
     sudo apt-get install libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
 
 You can then build and install `nextwall`. See the INSTALL file for building
-and installation instructions. Generally it boils down to:
-
-    ./configure
-    make
-    make install
+and installation instructions. Briefly, the shell commands
+`./configure; make; make install` should configure, build, and install this
+package.
 
 If you're building `nextwall` from the Git repository, you need to use GNU
 Autotools to bring the package to autoconfiscated state before the above
-commands can be excuted:
-
-	aclocal
-	autoconf
-	automake -a
+commands can be excuted. This can be done with the shell commands
+`aclocal; autoconf; automake -a`.
 
 
 ## Usage
@@ -74,17 +69,12 @@ Then `nextwall` can be used as follows:
 
 ## ANN trainer
 
-Nextwall comes with a trainer for the Artificial Neural Network (ANN). You can
-build this trainer by running `make` in the directory `src/util/`:
-
-    cd src/util/
-	make
-
-Then run `./train_ann --help` to see usage information for the trainer. To use
+Nextwall comes with a trainer for the Artificial Neural Network (ANN).
+Run `nextwall-trainer --help` to see usage information for the trainer. To use
 this trainer, first create a directory with image files that you want to train
 the ANN on. Then you can run the trainer as follows:
 
-    ./train_ann -p30 ~/Pictures/train/
+    nextwall-trainer -p30 ~/Pictures/train/
 
 This will train the ANN on 30 image files from the directory
 `~/Pictures/train/`. Then follow the instructions on the screen to start
@@ -99,7 +89,7 @@ it is executed with the `--scan` option.
 
 You can update the ANN by using an existing training data file as follows:
 
-    ./train_ann -r
+    nextwall-trainer -r
 
 This will create/update nextwall.net from an existing nextwall.dat file. This
 is useful if you want to create a new ANN with different parameters, without
