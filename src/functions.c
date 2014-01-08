@@ -18,23 +18,23 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <dirent.h>
+#include <fcntl.h>
+#include <floatfann.h>
+#include <limits.h>
+#include <magic.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sqlite3.h>
-#include <dirent.h>
-#include <limits.h>
-#include <magic.h>
-#include <fcntl.h>
-#include <floatfann.h>
+#include <unistd.h>
 
-#include "nextwall.h"
 #include "config.h"
-#include "sunriset.h"
-#include "std.h"
-#include "image.h"
 #include "gnome.h"
-
+#include "image.h"
+#include "nextwall.h"
+#include "std.h"
+#include "sunriset.h"
 
 static int wallpaper_list_populated = 0;
 static int max_walls = 0;

@@ -22,8 +22,6 @@
 #define NEXTWALL_H
 
 #include <sqlite3.h>
-#include <gio/gio.h>
-
 
 /* For tm_gmtoff and tm_zone */
 #define _GNU_SOURCE

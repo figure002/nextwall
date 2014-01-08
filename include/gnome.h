@@ -21,6 +21,7 @@
 #ifndef NEXTWALL_GNOME_H
 #define NEXTWALL_GNOME_H
 
+#include <gio/gio.h>
 
 /* Function prototypes */
 int set_background_uri(GSettings *settings, const char *path);
