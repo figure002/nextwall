@@ -34,10 +34,15 @@ AC_CHECK_FUNCS([floor localtime_r mkdir realpath sqrt strstr])
 # For use of GSettings schemas in Makefiles.
 GLIB_GSETTINGS
 
+# GNU help2man creates man pages from --help output; in many cases, this
+# is sufficient, and obviates the need to maintain man pages separately.
+AM_MISSING_PROG(HELP2MAN, help2man)
+
 AC_CONFIG_FILES([Makefile
 				data/Makefile
 				gnome-shell-extension/Makefile
 				gnome-shell-extension/src/Makefile
+				man/Makefile
 				src/Makefile
 				])
 AC_OUTPUT
