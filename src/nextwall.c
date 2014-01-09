@@ -88,11 +88,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Set data directory
+    /* Set the user specific data storage folder. The folder is
+       automatically created if it doesn't already exist. */
     get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
     if (cfgpath[0] == 0) {
-        fprintf(stderr, "Error: Unable to find home directory.\n");
+        fprintf(stderr, "Error: Unable to set the data storage folder.\n");
         return 1;
     }
 
@@ -126,20 +127,7 @@ int main(int argc, char **argv) {
 
     }
 
-    // Create the data directory if it doesn't exist.
-    if ( !g_file_test(cfgpath, G_FILE_TEST_IS_DIR) ) {
-        eprintf("Creating directory %s\n", cfgpath);
-
-        if ( mkdir(cfgpath, 0755) == 0 ) {
-            eprintf("Directory created.\n");
-        }
-        else {
-            fprintf(stderr, "Error: Failed to create directory %s\n", cfgpath);
-            return 1;
-        }
-    }
-
-    // Create the database file if it doesn't exist.
+    // Create the database if it doesn't exist.
     if ( !g_file_test(dbfile, G_FILE_TEST_IS_REGULAR) ) {
         eprintf("Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 && make_db(db) == 0 ) {
