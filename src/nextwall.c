@@ -21,16 +21,14 @@
 #include <argp.h>
 #include <floatfann.h>
 #include <gio/gio.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <glib.h>
+#include <glib/gstdio.h>
 
 #include "cfgpath.h"
 #include "nextwall.h"
 #include "config.h"
 #include "options.h"
 #include "gnome.h"
-#include "std.h"
 
 /* Function prototypes */
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
@@ -53,9 +51,8 @@ char wallpaper_path[PATH_MAX];
 /* Main function */
 int main(int argc, char **argv) {
     struct arguments arguments;
-    struct stat sts;
-    int rc = -1, local_brightness = -1, ann_found = 0;
-    int found, i;
+    int rc = -1, local_brightness = -1;
+    int ann_found, found, i;
     sqlite3 *db;
     GSettings *settings;
     struct fann *ann = NULL;
@@ -86,7 +83,7 @@ int main(int argc, char **argv) {
     // Set the wallpaper directory
     strncpy(wallpaper_dir, arguments.args[0], sizeof wallpaper_dir);
 
-    if ( stat(wallpaper_dir, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
+    if ( !g_file_test(wallpaper_dir, G_FILE_TEST_IS_DIR) ) {
         fprintf(stderr, "Cannot access directory %s\n", wallpaper_dir);
         return 1;
     }
@@ -112,8 +109,7 @@ int main(int argc, char **argv) {
         annfiles[2] = "/usr/share/nextwall/nextwall.net";
 
         for (i = 0; i < 3; i++) {
-            if (file_exists(annfiles[i])) {
-                ann_found = 1;
+            if ( (ann_found = g_file_test(annfiles[i], G_FILE_TEST_IS_REGULAR)) ) {
                 eprintf("Using ANN %s\n", annfiles[i]);
 
                 // Initialize the ANN
@@ -131,8 +127,9 @@ int main(int argc, char **argv) {
     }
 
     // Create the data directory if it doesn't exist.
-    if ( stat(cfgpath, &sts) != 0 || !S_ISDIR(sts.st_mode) ) {
+    if ( !g_file_test(cfgpath, G_FILE_TEST_IS_DIR) ) {
         eprintf("Creating directory %s\n", cfgpath);
+
         if ( mkdir(cfgpath, 0755) == 0 ) {
             eprintf("Directory created.\n");
         }
@@ -143,7 +140,7 @@ int main(int argc, char **argv) {
     }
 
     // Create the database file if it doesn't exist.
-    if ( stat(dbfile, &sts) != 0 ) {
+    if ( !g_file_test(dbfile, G_FILE_TEST_IS_REGULAR) ) {
         eprintf("Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == 0 && make_db(db) == 0 ) {
             eprintf("Done\n");
@@ -265,10 +262,9 @@ Return:
     return 0;
 }
 
-/* Wrapper functions for setting the wallpaper */
+/* Wrapper function for setting the wallpaper */
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
-    int i;
-    int exists;
+    int i, exists;
 
     // Get the path of the current wallpaper
     get_background_uri(settings, current_wallpaper);

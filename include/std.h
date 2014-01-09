@@ -22,9 +22,8 @@
 #define NEXTWALL_STD_H
 
 /* Function prototypes */
-int file_exists(const char *filename);
 char *hours_to_hm(double hours, char *s);
-int numcmp(const void *a, const void *b);
+int floatcmp(const void *a, const void *b);
 
 #endif
 

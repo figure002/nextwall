@@ -270,7 +270,7 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
     diff[1] = 1.0 - out[1];
     diff[2] = 1.0 - out[2];
 
-    qsort(diff, 3, sizeof (float), numcmp);
+    qsort(diff, 3, sizeof (float), floatcmp);
 
     for (i = 0; i < 3; i++) {
         if ((1.0 - out[i]) == diff[0]) {
@@ -468,5 +468,4 @@ int remove_wallpaper(sqlite3 *db, char *path) {
 
     return rc;
 }
-
 

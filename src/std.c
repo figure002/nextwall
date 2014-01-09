@@ -25,21 +25,6 @@
 #include "std.h"
 
 /**
-  Check if a file exists and is readable.
-
-  @param[in] filename The path to the file.
-  @return Returns 1 if the file exists, 0 otherwise.
- */
-int file_exists(const char *filename) {
-    FILE *f;
-    if ( (f = fopen(filename, "r")) != NULL ) {
-        fclose(f);
-        return 1;
-    }
-    return 0;
-}
-
-/**
   Converts hours to the format hh:mm.
 
   @param[in] hours Hours as a floating point number.
@@ -63,7 +48,7 @@ char *hours_to_hm(double hours, char *dest) {
   @return Returns -1, 0, or 1 if `pa` is less, equal, or greater than pb
           respectively.
  */
-int numcmp(const void *pa, const void *pb) {
+int floatcmp(const void *pa, const void *pb) {
     float a = *(const float*)pa;
     float b = *(const float*)pb;
     if (a < b)
