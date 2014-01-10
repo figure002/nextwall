@@ -42,9 +42,10 @@ char wallpaper_path[PATH_MAX] = "\0";
 /* Main function */
 int main(int argc, char **argv) {
     int rc = -1, local_brightness = -1;
+    int exit_status = EXIT_SUCCESS;
     int ann_found, found, i;
     char *annfiles[3];
-    char *line;
+    char *line = NULL;
     char cfgpath[PATH_MAX];
     char current_wallpaper[PATH_MAX] = "\0";
     char dbfile[PATH_MAX];
@@ -53,11 +54,8 @@ int main(int argc, char **argv) {
     ssize_t read;
     struct arguments arguments;
     struct fann *ann = NULL;
-    GSettings *settings;
-    sqlite3 *db;
-
-    // Create a GSettings object for the desktop background
-    settings = g_settings_new("org.gnome.desktop.background");
+    GSettings *settings = NULL;
+    sqlite3 *db = NULL;
 
     // Default argument values
     arguments.brightness = -1;
@@ -69,8 +67,8 @@ int main(int argc, char **argv) {
     arguments.time = 0;
     arguments.verbose = 0;
 
-    /* Parse arguments; every option seen by parse_opt will
-       be reflected in arguments. */
+    /* Parse arguments; every option seen by parse_opt will be reflected
+       in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
     // Define the wallpaper state
@@ -81,16 +79,20 @@ int main(int argc, char **argv) {
 
     if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
         fprintf(stderr, "Cannot access directory %s\n", wallpaper.dir);
-        return 1;
+
+        exit_status = EXIT_FAILURE;
+        goto Return;
     }
 
-    /* Set the user specific data storage folder. The folder is
-       automatically created if it doesn't already exist. */
+    /* Set the user specific data storage folder. The folder is automatically
+       created if it doesn't already exist. */
     get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
 
     if (cfgpath[0] == 0) {
         fprintf(stderr, "Error: Unable to set the data storage folder.\n");
-        return 1;
+
+        exit_status = EXIT_FAILURE;
+        goto Return;
     }
 
     // Set the database file path
@@ -118,7 +120,9 @@ int main(int argc, char **argv) {
 
         if (!ann_found) {
             fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
-            return 1;
+
+            exit_status = EXIT_FAILURE;
+            goto Return;
         }
 
     }
@@ -132,7 +136,9 @@ int main(int argc, char **argv) {
         else {
             eprintf("Failed\n");
             fprintf(stderr, "Error: Creating database failed.\n");
-            return 1;
+
+            exit_status = EXIT_FAILURE;
+            goto Return;
         }
     }
 
@@ -141,16 +147,18 @@ int main(int argc, char **argv) {
         if ( (rc = sqlite3_open(dbfile, &db)) != SQLITE_OK ) {
             fprintf(stderr, "Error: Can't open database: %s\n",
                     sqlite3_errmsg(db));
-            return 1;
+
+            exit_status = EXIT_FAILURE;
+            goto Return;
         }
     }
 
     // Search directory for wallpapers
     if (arguments.scan) {
-        fprintf(stderr, "Scanning for new wallpapers...");
+        fprintf(stderr, "Scanning for new wallpapers... ");
         found = scan_dir(db, wallpaper.dir, ann, arguments.recursion);
         fann_destroy(ann);
-        fprintf(stderr, " Done\n");
+        fprintf(stderr, "Done\n");
         fprintf(stderr, "Found %d new wallpapers\n", found);
         goto Return;
     }
@@ -187,9 +195,12 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
+    // Create a GSettings object for the desktop background
+    settings = g_settings_new("org.gnome.desktop.background");
+
     if (arguments.interactive) {
         fprintf(stderr, "Nextwall %s\n" \
-                "License GPLv3+: GNU GPL version 3 or later " \
+                "License: GNU GPL version 3 or later " \
                 "<http://gnu.org/licenses/gpl.html>\n" \
                 "Type 'help' for more information.\n" \
                 "nextwall> ", PACKAGE_VERSION);
@@ -240,10 +251,13 @@ int main(int argc, char **argv) {
     goto Return;
 
 Return:
-    free(line);
-    g_object_unref(settings);
-    sqlite3_close(db);
-    return 0;
+    if (line != NULL)
+        free(line);
+    if (settings != NULL)
+        g_object_unref(settings);
+    if (db != NULL)
+        sqlite3_close(db);
+    return exit_status;
 }
 
 /* Wrapper function for setting the wallpaper */
