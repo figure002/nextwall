@@ -61,7 +61,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
 
     char tmp[80];
     char *lat, *lon;
-    int rc, b;
+    int b;
 
     switch (key)
     {
@@ -96,13 +96,11 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             lat = strtok(tmp, ":");
             lon = strtok(NULL, ":");
 
-            rc = sscanf(lat, "%lf", &arguments->latitude);
-            if (rc == 0) {
+            if ((arguments->latitude = strtod(lat, NULL)) == 0) {
                 fprintf(stderr, "Incorrect value for latitude\n");
                 argp_usage(state);
             }
-            rc = sscanf(lon, "%lf", &arguments->longitude);
-            if (rc == 0) {
+            if ((arguments->longitude = strtod(lon, NULL)) == 0) {
                 fprintf(stderr, "Incorrect value for longitude\n");
                 argp_usage(state);
             }

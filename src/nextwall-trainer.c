@@ -54,11 +54,9 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs);
 
 
 int main(int argc, char **argv) {
-    FILE *fp;
     struct arguments arguments;
     char datafile[PATH_MAX], netfile[PATH_MAX];
     const unsigned int epochs_between_reports = 1000;
-    int n_pairs;
 
     // Default argument values
     arguments.error = 0.001;
@@ -78,13 +76,16 @@ int main(int argc, char **argv) {
     sprintf(netfile, "%s.net", arguments.output);
 
     if (!arguments.reuse) {
+        FILE *fp;
+        int n_pairs;
+
         if (arguments.pairs == -1) {
             fprintf(stderr, "Error: Number of training pairs is not set, " \
                     "use --pairs\n");
             return -1;
         }
 
-       // Open data file
+        // Open data file
         if ( (fp = fopen(datafile, "w")) == NULL ) {
             fprintf(stderr, "Failed to open %s for writing\n", datafile);
             exit(0);
@@ -141,12 +142,10 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
     struct dirent *entry;
     char tmp[PATH_MAX];
     char path[PATH_MAX];
-    char *pathp;
     double kurtosis, lightness;
     int n_pairs = 0;
     char *line = NULL;
     size_t len = 0;
-    ssize_t read;
     GSettings *settings;
 
     // Create a new GSettings object
@@ -168,7 +167,7 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
 
     do {
         snprintf(tmp, sizeof tmp, "%s/%s", base, entry->d_name);
-        if ( (pathp = realpath(tmp, path)) == NULL )
+        if ( realpath(tmp, path) == NULL )
             goto Return;
 
         if (entry->d_type == DT_DIR) {
@@ -185,7 +184,7 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
                     "light (2)? ");
 
             // Get image brightness value from user input.
-            while ( (read = getline(&line, &len, stdin)) != -1 && \
+            while ( getline(&line, &len, stdin) != -1 && \
                     n_pairs < max_pairs ) {
                 if ( strcmp(line, "0\n") == 0 ) {
                     fprintf(fp, "%f %f\n", kurtosis, lightness);

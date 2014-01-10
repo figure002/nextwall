@@ -40,8 +40,6 @@ int verbose = 0;
 int main(int argc, char **argv) {
     int rc = -1, local_brightness = -1;
     int exit_status = EXIT_SUCCESS;
-    int ann_found, found, i;
-    char *annfiles[3];
     char *line = NULL;
     char cfgpath[PATH_MAX];
     char current_wallpaper[PATH_MAX] = "\0";
@@ -49,7 +47,6 @@ int main(int argc, char **argv) {
     char tmp[PATH_MAX];
     char wallpaper_path[PATH_MAX] = "\0";
     size_t linelen = 0;
-    ssize_t read;
     struct arguments arguments;
     struct fann *ann = NULL;
     GSettings *settings = NULL;
@@ -100,6 +97,9 @@ int main(int argc, char **argv) {
 
     // Set the ANN file path
     if (arguments.scan) {
+        int i, ann_found;
+        char *annfiles[3];
+
         strcpy(tmp, cfgpath);
         strcat(tmp, "nextwall.net");
         annfiles[0] = tmp;
@@ -123,13 +123,13 @@ int main(int argc, char **argv) {
             exit_status = EXIT_FAILURE;
             goto Return;
         }
-
     }
 
     // Create the database if it doesn't exist.
     if ( !g_file_test(dbfile, G_FILE_TEST_IS_REGULAR) ) {
         eprintf("Creating database... ");
-        if ( (rc = sqlite3_open(dbfile, &db)) == 0 && make_db(db) == 0 ) {
+        if ( (rc = sqlite3_open(dbfile, &db)) == SQLITE_OK && \
+                make_db(db) == 0 ) {
             eprintf("Done\n");
         }
         else {
@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
 
     // Open database connection.
     if ( rc != SQLITE_OK ) {
-        if ( (rc = sqlite3_open(dbfile, &db)) != SQLITE_OK ) {
+        if ( sqlite3_open(dbfile, &db) != SQLITE_OK ) {
             fprintf(stderr, "Error: Can't open database: %s\n",
                     sqlite3_errmsg(db));
 
@@ -154,6 +154,8 @@ int main(int argc, char **argv) {
 
     // Search directory for wallpapers
     if (arguments.scan) {
+        int found;
+
         fprintf(stderr, "Scanning for new wallpapers... ");
         found = scan_dir(db, wallpaper.dir, ann, arguments.recursion);
         fann_destroy(ann);
@@ -203,13 +205,13 @@ int main(int argc, char **argv) {
                 "<http://gnu.org/licenses/gpl.html>\n" \
                 "Type 'help' for more information.\n" \
                 "nextwall> ", PACKAGE_VERSION);
-        while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
+        while ( getline(&line, &linelen, stdin) != -1 ) {
             if (strcmp(line, "d\n") == 0) {
                 get_background_uri(settings, wallpaper.current);
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         wallpaper.current);
-                read = getline(&line, &linelen, stdin);
-                if ( read != -1 && strcmp(line, "y\n") == 0 && \
+                if ( getline(&line, &linelen, stdin) != -1 && \
+                        strcmp(line, "y\n") == 0 && \
                         remove_wallpaper(db, wallpaper.current) == 0) {
                     fprintf(stderr, "Wallpaper removed\n");
                     if ( set_wallpaper(settings, db, local_brightness, wallpaper) == -1)

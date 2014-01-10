@@ -116,7 +116,6 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
     const char *tail = 0;
     char tmp[PATH_MAX];
     char path[PATH_MAX];
-    char *pathp;
 
     // Initialize Magic Number Recognition Library
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
@@ -136,7 +135,7 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
 
     do {
         snprintf(tmp, sizeof tmp, "%s/%s", base, entry->d_name);
-        if ( (pathp = realpath(tmp, path)) == NULL )
+        if ( realpath(tmp, path) == NULL )
             goto Return;
 
         if (entry->d_type == DT_DIR) {
@@ -305,7 +304,6 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
     char sql[PATH_MAX] = "\0";
     int i;
     unsigned seed;
-    ssize_t bytes;
 
     if (!wallpaper_list_populated) {
         if (brightness != -1)
@@ -330,8 +328,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
 
     // Set the seed for the random number generator
     if (!rand_seeded) {
-        bytes = read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed);
-        if (bytes == -1)
+        if (read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed) == -1)
             return -1;
         srand(seed);
         rand_seeded = 1;
