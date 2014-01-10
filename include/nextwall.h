@@ -56,5 +56,11 @@ int remove_wallpaper(sqlite3 *db, char *path);
 extern int verbose;
 extern char wallpaper_path[PATH_MAX];
 
+/* Declare structs */
+struct wallpaper_state {
+    char *dir; // Wallpaper directory
+    char *current; // Current wallpaper
+};
+
 #endif
 

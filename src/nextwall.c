@@ -31,39 +31,32 @@
 #include "gnome.h"
 
 /* Function prototypes */
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness);
+int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state state);
 
-/* Path to user configurations directory */
-char cfgpath[PATH_MAX];
-
-/* Copy of PATH */
-char wallpaper_dir[PATH_MAX];
-
-/* For storing the path of the current wallpaper */
-char current_wallpaper[PATH_MAX];
-
-/* Define the global verbose variable */
+/* Define the global variable for verbosity */
 int verbose = 0;
 
-/* Define the variable for the wallpaper path */
-char wallpaper_path[PATH_MAX];
+/* Define the global variable for the wallpaper path */
+char wallpaper_path[PATH_MAX] = "\0";
 
 /* Main function */
 int main(int argc, char **argv) {
-    struct arguments arguments;
     int rc = -1, local_brightness = -1;
     int ann_found, found, i;
-    sqlite3 *db;
-    GSettings *settings;
-    struct fann *ann = NULL;
     char *annfiles[3];
+    char *line;
+    char cfgpath[PATH_MAX];
+    char current_wallpaper[PATH_MAX] = "\0";
     char dbfile[PATH_MAX];
     char tmp[PATH_MAX];
-    char *line;
     size_t linelen = 0;
     ssize_t read;
+    struct arguments arguments;
+    struct fann *ann = NULL;
+    GSettings *settings;
+    sqlite3 *db;
 
-    // Create a new GSettings object
+    // Create a GSettings object for the desktop background
     settings = g_settings_new("org.gnome.desktop.background");
 
     // Default argument values
@@ -80,11 +73,14 @@ int main(int argc, char **argv) {
        be reflected in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    // Set the wallpaper directory
-    strncpy(wallpaper_dir, arguments.args[0], sizeof wallpaper_dir);
+    // Define the wallpaper state
+    struct wallpaper_state wallpaper = {
+        arguments.args[0], // Wallpaper directory
+        current_wallpaper // Current wallpaper
+    };
 
-    if ( !g_file_test(wallpaper_dir, G_FILE_TEST_IS_DIR) ) {
-        fprintf(stderr, "Cannot access directory %s\n", wallpaper_dir);
+    if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
+        fprintf(stderr, "Cannot access directory %s\n", wallpaper.dir);
         return 1;
     }
 
@@ -152,7 +148,7 @@ int main(int argc, char **argv) {
     // Search directory for wallpapers
     if (arguments.scan) {
         fprintf(stderr, "Scanning for new wallpapers...");
-        found = scan_dir(db, wallpaper_dir, ann, arguments.recursion);
+        found = scan_dir(db, wallpaper.dir, ann, arguments.recursion);
         fann_destroy(ann);
         fprintf(stderr, " Done\n");
         fprintf(stderr, "Found %d new wallpapers\n", found);
@@ -185,9 +181,9 @@ int main(int argc, char **argv) {
     }
 
     // Set wallpaper_path
-    if ( (nextwall(db, wallpaper_dir, local_brightness)) == -1 ) {
+    if ( (nextwall(db, wallpaper.dir, local_brightness)) == -1 ) {
         fprintf(stderr, "No wallpapers found for directory %s. Try the " \
-                "--scan option or remove the --time option.\n", wallpaper_dir);
+                "--scan option or remove the --time option.\n", wallpaper.dir);
         goto Return;
     }
 
@@ -199,24 +195,24 @@ int main(int argc, char **argv) {
                 "nextwall> ", PACKAGE_VERSION);
         while ( (read = getline(&line, &linelen, stdin)) != -1 ) {
             if (strcmp(line, "d\n") == 0) {
-                get_background_uri(settings, current_wallpaper);
+                get_background_uri(settings, wallpaper.current);
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
-                        current_wallpaper);
+                        wallpaper.current);
                 read = getline(&line, &linelen, stdin);
                 if ( read != -1 && strcmp(line, "y\n") == 0 && \
-                        remove_wallpaper(db, current_wallpaper) == 0) {
+                        remove_wallpaper(db, wallpaper.current) == 0) {
                     fprintf(stderr, "Wallpaper removed\n");
-                    if ( set_wallpaper(settings, db, local_brightness) == -1)
+                    if ( set_wallpaper(settings, db, local_brightness, wallpaper) == -1)
                         goto Return;
                 }
             }
             else if (strcmp(line, "\n") == 0 || strcmp(line, "n\n") == 0) {
-                if (set_wallpaper(settings, db, local_brightness) == -1)
+                if (set_wallpaper(settings, db, local_brightness, wallpaper) == -1)
                     goto Return;
             }
             else if (strcmp(line, "o\n") == 0) {
-                get_background_uri(settings, current_wallpaper);
-                open_image(current_wallpaper);
+                get_background_uri(settings, wallpaper.current);
+                open_image(wallpaper.current);
             }
             else if (strcmp(line, "help\n") == 0) {
                 fprintf(stderr,
@@ -238,7 +234,7 @@ int main(int argc, char **argv) {
         }
     }
     else {
-        set_wallpaper(settings, db, local_brightness);
+        set_wallpaper(settings, db, local_brightness, wallpaper);
     }
 
     goto Return;
@@ -251,15 +247,15 @@ Return:
 }
 
 /* Wrapper function for setting the wallpaper */
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
+int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state wallpaper) {
     int i, exists;
 
     // Get the path of the current wallpaper
-    get_background_uri(settings, current_wallpaper);
+    get_background_uri(settings, wallpaper.current);
 
     // Make sure we select a different wallpaper and that the file exists.
     for (i = 0; !(exists = g_file_test(wallpaper_path, G_FILE_TEST_IS_REGULAR)) ||
-            strcmp(wallpaper_path, current_wallpaper) == 0; i++) {
+            strcmp(wallpaper_path, wallpaper.current) == 0; i++) {
         if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different " \
                     "directory or use the --scan option.\n");
@@ -272,7 +268,7 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness) {
             remove_wallpaper(db, wallpaper_path);
         }
 
-        nextwall(db, wallpaper_dir, brightness);
+        nextwall(db, wallpaper.dir, brightness);
     }
 
     // Set the new wallpaper
