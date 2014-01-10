@@ -24,9 +24,6 @@
 #include <floatfann.h>
 #include <sqlite3.h>
 
-/* For tm_gmtoff and tm_zone */
-#define _GNU_SOURCE
-
 /* Default size for strings */
 #define BUFFER_SIZE 512
 
