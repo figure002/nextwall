@@ -48,18 +48,18 @@
 /* Function prototypes */
 int make_db(sqlite3 *db);
 int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive);
-int nextwall(sqlite3 *db, const char *path, int brightness);
+int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper);
 int get_local_brightness(double lat, double lon);
 int remove_wallpaper(sqlite3 *db, char *path);
 
 /* Declare global variables */
 extern int verbose;
-extern char wallpaper_path[PATH_MAX];
 
 /* Declare structs */
 struct wallpaper_state {
     char *dir; // Wallpaper directory
     char *current; // Current wallpaper
+    char *path; // Wallpaper path
 };
 
 #endif

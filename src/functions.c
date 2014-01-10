@@ -291,10 +291,11 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
   @param[in] path The base directory from which to select wallpapers.
   @param[in] brightness If set to 0, 1, or 2, wallpapers matching this
              brightness value are returned.
+  @param[out] wallpaper Will be set to the path of the next wallpaper.
   @return Returns the ID of a randomly selected wallpaper on success, -1
           otherwise.
  */
-int nextwall(sqlite3 *db, const char *path, int brightness) {
+int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
     char sql[PATH_MAX] = "\0";
     int i;
     unsigned seed;
@@ -304,11 +305,11 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
         if (brightness != -1)
             snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
                 "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
-                path, brightness, LIST_MAX);
+                base, brightness, LIST_MAX);
         else
             snprintf(sql, sizeof sql, "SELECT id FROM wallpapers WHERE path " \
                 "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
-                path, LIST_MAX);
+                base, LIST_MAX);
 
         rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
         if (rc != SQLITE_OK) {
@@ -336,7 +337,7 @@ int nextwall(sqlite3 *db, const char *path, int brightness) {
     // Set the wallpaper path
     snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;",
             wallpaper_list[i]);
-    rc = sqlite3_exec(db, sql, nextwall_callback2, NULL, NULL);
+    rc = sqlite3_exec(db, sql, nextwall_callback2, wallpaper, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
@@ -361,8 +362,11 @@ int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
   Callback for nextwall() which sets `wallpaper_path` to the path of the
   randomly selected wallpaper.
  */
-int nextwall_callback2(void *notused, int argc, char **argv, char **colnames) {
-    strncpy(wallpaper_path, argv[0], sizeof wallpaper_path);
+int nextwall_callback2(void *param, int argc, char **argv, char **colnames) {
+    char **path = (char **)param;
+    //*path = (char *) realloc(*path, sizeof(argv[0]));
+    strcpy(*path, argv[0]);
+    //strncpy(*path, argv[0], sizeof(*path));
     return 0;
 }
 
