@@ -38,7 +38,7 @@
 
 static int wallpaper_list_populated = 0;
 static int max_walls = 0;
-static int rc, known_image;
+static int rc;
 static int wallpaper_list[LIST_MAX];
 static int rand_seeded = 0;
 
@@ -46,9 +46,9 @@ static int rand_seeded = 0;
 static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 static int get_brightness(struct fann *ann, double kurtosis, double lightness);
 static int is_known_image(sqlite3 *db, const char *path);
-static int known_image_callback(void *notused, int argc, char **argv, char **colnames);
-static int nextwall_callback1(void *notused, int argc, char **argv, char **colnames);
-static int nextwall_callback2(void *notused, int argc, char **argv, char **colnames);
+static int callback_known_image(void *param, int argc, char **argv, char **colnames);
+static int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames);
+static int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames);
 
 
 /**
@@ -186,25 +186,31 @@ Return:
 int is_known_image(sqlite3 *db, const char *path) {
     char query[] = "SELECT id FROM wallpapers WHERE path='%s';";
     char sql[strlen(query)+strlen(path)];
-    known_image = 0;
+    int known = 0;
 
     snprintf(sql, sizeof sql, query, path);
-    rc = sqlite3_exec(db, sql, known_image_callback, NULL, NULL);
+    rc = sqlite3_exec(db, sql, callback_known_image, &known, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
     }
-    return known_image;
+    return known;
 }
 
 /**
   Callback function for is_known_image().
 
-  It sets the boolean `known_image` to 1 if the wallpaper is already present
-  in the database.
+  Sets the first argument to the callback to 1.
+
+  @param[out] param Pointer to an integer that will be set to 1.
+  @param[in] argc The number of columns in the result.
+  @param[in] argv An array of pointers to strings obtained for each column.
+  @param[in] colnames An array of pointers to strings where each entry
+             represents the name of corresponding result column.
  */
-int known_image_callback(void *notused, int argc, char **argv, char **colnames) {
-    known_image = 1;
+int callback_known_image(void *param, int argc, char **argv, char **colnames) {
+    int *known = (int *)param;
+    *known = 1;
     return 0;
 }
 
@@ -311,7 +317,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
                 "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
                 base, LIST_MAX);
 
-        rc = sqlite3_exec(db, sql, nextwall_callback1, NULL, NULL);
+        rc = sqlite3_exec(db, sql, callback_wallpaper_list, &wallpaper_list, NULL);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
             exit(1);
@@ -337,7 +343,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
     // Set the wallpaper path
     snprintf(sql, sizeof sql, "SELECT path FROM wallpapers WHERE id=%d;",
             wallpaper_list[i]);
-    rc = sqlite3_exec(db, sql, nextwall_callback2, wallpaper, NULL);
+    rc = sqlite3_exec(db, sql, callback_wallpaper_path, wallpaper, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", sql);
         exit(1);
@@ -347,22 +353,35 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
 }
 
 /**
-  Callback for nextwall() which populates `wallpaper_list`.
+  Callback for nextwall() which populates an array with wallpaper IDs.
 
-  This functions populates `wallpaper_list` with a list of candidate wallpaper
-  IDs.
+  Populates the first argumenent to the callback.
+
+  @param[out] param The wallpaper list array.
+  @param[in] argc The number of columns in the result.
+  @param[in] argv An array of pointers to strings obtained for each column.
+  @param[in] colnames An array of pointers to strings where each entry
+             represents the name of corresponding result column.
  */
-int nextwall_callback1(void *notused, int argc, char **argv, char **colnames) {
+int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames) {
+    int *wallpaper_list = (int *)param;
     wallpaper_list[max_walls] = atoi(argv[0]);
     ++max_walls;
     return 0;
 }
 
 /**
-  Callback for nextwall() which sets `wallpaper_path` to the path of the
-  randomly selected wallpaper.
+  Callback for nextwall() which returns the path of the selected wallpaper.
+
+  Sets the first argument to the callback.
+
+  @param[out] param The path of the selected wallpaper.
+  @param[in] argc The number of columns in the result.
+  @param[in] argv An array of pointers to strings obtained for each column.
+  @param[in] colnames An array of pointers to strings where each entry
+             represents the name of corresponding result column.
  */
-int nextwall_callback2(void *param, int argc, char **argv, char **colnames) {
+int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames) {
     char **path = (char **)param;
     //*path = (char *) realloc(*path, sizeof(argv[0]));
     strcpy(*path, argv[0]);
