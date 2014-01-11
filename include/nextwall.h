@@ -24,23 +24,20 @@
 #include <floatfann.h>
 #include <sqlite3.h>
 
-/* Default size for strings */
-#define BUFFER_SIZE 512
-
 /* The maximum number of wallpapers in the wallpaper list */
 #define LIST_MAX 2000
 
 /* The nextwall database version */
 #define NEXTWALL_DB_VERSION 0.4
 
+/* Default wallpaper directory */
+#define DEFAULT_WALLPAPER_DIR "/usr/share/backgrounds/"
+
 /* Wrapper for fprintf() for verbose messages */
 #define eprintf(format, ...) do { \
     if (verbose) \
         fprintf(stderr, format, ##__VA_ARGS__); \
 } while(0)
-
-/* Default wallpaper directory */
-#define DEFAULT_WALLPAPER_DIR "/usr/share/backgrounds/"
 
 /* Function prototypes */
 int make_db(sqlite3 *db);
