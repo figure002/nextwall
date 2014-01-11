@@ -252,11 +252,11 @@ int main(int argc, char **argv) {
     goto Return;
 
 Return:
-    if (line != NULL)
+    if (line)
         free(line);
-    if (settings != NULL)
+    if (settings)
         g_object_unref(settings);
-    if (db != NULL)
+    if (db)
         sqlite3_close(db);
     return exit_status;
 }

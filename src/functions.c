@@ -85,7 +85,7 @@ int make_db(sqlite3 *db) {
 
     if ((rc2 = asprintf(&aquery, "INSERT INTO info VALUES (null, 'version', %f);",
                 NEXTWALL_DB_VERSION)) == -1) {
-        fprintf(stderr, "Error: Failed to concatenate string\n");
+        fprintf(stderr, "Error: asprintf() failed\n");
         goto Return;
     }
 
@@ -209,7 +209,7 @@ int is_known_image(sqlite3 *db, const char *path) {
     char *query = NULL;
 
     if (asprintf(&query, "SELECT id FROM wallpapers WHERE path='%s';", path) == -1) {
-        fprintf(stderr, "Error: Failed to concatenate string\n");
+        fprintf(stderr, "Error: asprintf() failed\n");
         goto Error;
     }
 
@@ -439,9 +439,9 @@ int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames)
  */
 int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames) {
     char **path = (char **)param;
-    //*path = (char *) realloc(*path, sizeof(argv[0]));
-    strcpy(*path, argv[0]);
-    //strncpy(*path, argv[0], sizeof(*path));
+    //*path = (char *) realloc(*path, strlen(argv[0])+1);
+    if (strlen(argv[0]) < PATH_MAX)
+        strcpy(*path, argv[0]);
     return 0;
 }
 
