@@ -18,6 +18,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _GNU_SOURCE   /* for asprintf() */
+
 #include <argp.h>
 #include <floatfann.h>
 #include <gio/gio.h>
@@ -40,11 +42,11 @@ int verbose = 0;
 int main(int argc, char **argv) {
     int rc = -1, local_brightness = -1;
     int exit_status = EXIT_SUCCESS;
+    char *annfile = NULL;
     char *line = NULL;
     char cfgpath[PATH_MAX];
     char current_wallpaper[PATH_MAX] = "\0";
     char dbfile[PATH_MAX];
-    char tmp[PATH_MAX];
     char wallpaper_path[PATH_MAX] = "\0";
     size_t linelen = 0;
     struct arguments arguments;
@@ -100,9 +102,14 @@ int main(int argc, char **argv) {
         int i, ann_found;
         char *annfiles[3];
 
-        strcpy(tmp, cfgpath);
-        strcat(tmp, "nextwall.net");
-        annfiles[0] = tmp;
+        if (asprintf(&annfile, "%snextwall.net", cfgpath) == -1) {
+            fprintf(stderr, "Error: asprintf() failed\n");
+
+            exit_status = EXIT_FAILURE;
+            goto Return;
+        }
+
+        annfiles[0] = annfile;
         annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
         annfiles[2] = "/usr/share/nextwall/nextwall.net";
 
@@ -252,6 +259,8 @@ int main(int argc, char **argv) {
     goto Return;
 
 Return:
+    if (annfile)
+        free(annfile);
     if (line)
         free(line);
     if (settings)
