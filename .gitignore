@@ -4,15 +4,20 @@ Session.vim
 *.o
 *.gschema.valid
 _build/
+includes.txt
+lib/libnextwall.a
 nextwall
 nextwall-trainer
+tests/check-nextwall
 zip-files/
 
 Makefile
 Makefile.in
 .deps/
 aclocal.m4
+ar-lib
 autom4te.cache/
+compile
 configure
 config.log
 config.status

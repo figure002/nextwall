@@ -1,3 +1,29 @@
+2014-01-13  Serrano Pereira  <serrano.pereira@gmail.com>
+
+	Added basic unit testing and rearranged the directory structure.
+	* .gitignore: Updated.
+	* ChangeLog: Updated.
+	* configure.ac: Updated for unit testing with Check and for building a
+	static library.
+	* Makefile.am: Likewise.
+	* config.h.in: Moved from include/
+	* lib/Makefile.am: New file. Build a static library.
+	* lib/gnome.c: Moved from src/
+	* lib/image.c: Moved from src/
+	* lib/std.c: Moved from src/
+	* lib/gnome.h: Moved from include/
+	* lib/cfgpath.h: Moved from include/
+	* lib/image.h: Moved from include/
+	* lib/sunriset.h: Moved from include/
+	* lib/std.h: Moved from include/
+	* src/Makefile.am: Updated.
+	* src/nextwall.c: Updated.
+	* src/nextwall.h: Moved from include/
+	* src/options.h: Moved from include/
+	* src/trainer-options.h: Moved from include/
+	* tests/Makefile.am: New file. Build unit tests.
+	* tests/check-nextwall.c: New file. Unit testing tool.
+
 2013-10-15  Serrano Pereira  <serrano.pereira@gmail.com>
 
 	Added a Gnome Shell extension.

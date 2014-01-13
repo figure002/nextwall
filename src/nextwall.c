@@ -20,15 +20,16 @@
 
 #define _GNU_SOURCE   /* for asprintf() */
 
+#include <config.h>
 #include <argp.h>
 #include <floatfann.h>
 #include <gio/gio.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <stdlib.h>
 
 #include "cfgpath.h"
 #include "nextwall.h"
-#include "config.h"
 #include "options.h"
 #include "gnome.h"
 
@@ -192,6 +193,8 @@ int main(int argc, char **argv) {
             default:
                 fprintf(stderr, "Error: Could not determine the local " \
                         "brightness value.\n");
+
+                exit_status = EXIT_FAILURE;
                 goto Return;
         }
     }

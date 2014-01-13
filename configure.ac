@@ -5,15 +5,19 @@ AC_PREREQ([2.69])
 AC_INIT([nextwall], [0.3.0], [https://github.com/figure002/nextwall/issues])
 AM_INIT_AUTOMAKE([-Wall -Werror])
 AC_CONFIG_SRCDIR([src/nextwall.c])
-AC_CONFIG_HEADERS([include/config.h])
+AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
+AC_PROG_RANLIB
+AM_PROG_AR
 
 # Check modules.
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 PKG_CHECK_MODULES([GIO], [gio-2.0])
 PKG_CHECK_MODULES([IMAGEMAGICK], [MagickWand])
+PKG_CHECK_MODULES([CHECK], [check])
 
 # Checks for libraries.
 AC_CHECK_LIB([fann], [fann_create_from_file])
@@ -49,8 +53,10 @@ AC_CONFIG_FILES([Makefile
 				data/Makefile
 				gnome-shell-extension/Makefile
 				gnome-shell-extension/src/Makefile
+				lib/Makefile
 				man/Makefile
 				src/Makefile
+				tests/Makefile
 				])
 AC_OUTPUT
 
