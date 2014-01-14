@@ -39,10 +39,9 @@ and installation instructions. Briefly, the shell commands
 `./configure; make; make install` should configure, build, and install this
 package.
 
-If you're building `nextwall` from the Git repository, you need to use GNU
-Autotools to bring the package to autoconfiscated state before the above
-commands can be excuted. This can be done with the shell commands
-`aclocal; autoconf; automake -a`.
+If you're building `nextwall` from the Git repository, you first need to use
+GNU Autotools to make the GNU Build System files before the above commands work.
+This can be done with the shell command `autoreconf --install`.
 
 
 ## Usage
