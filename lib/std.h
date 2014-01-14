@@ -21,9 +21,12 @@
 #ifndef NEXTWALL_STD_H
 #define NEXTWALL_STD_H
 
+#include <floatfann.h>
+
 /* Function prototypes */
 char *hours_to_hm(double hours, char *s);
 int floatcmp(const void *a, const void *b);
+int get_brightness(struct fann *ann, double kurtosis, double lightness);
 
 #endif
 

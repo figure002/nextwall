@@ -14,15 +14,21 @@
 
 #include <stdlib.h>
 #include <check.h>
+#include <floatfann.h>
 
 #include "std.h"
 
+/* Location of the ANN file */
+#define ANN_FILE "../data/ann/nextwall.net"
+
+struct fann *ann = NULL;
+
 void setup(void) {
-    ;
+    ann = fann_create_from_file(ANN_FILE);
 }
 
 void teardown(void) {
-    ;
+    fann_destroy(ann);
 }
 
 START_TEST(test_floatcmp)
@@ -42,6 +48,17 @@ START_TEST(test_floatcmp)
 }
 END_TEST
 
+START_TEST(test_ann)
+{
+    ck_assert( get_brightness(ann, 17.933842, 0.117967) == 0 );
+    ck_assert( get_brightness(ann, 0.408988, 0.241489) == 1 );
+    ck_assert( get_brightness(ann, 8.668308, 0.742252) == 2 );
+    ck_assert( get_brightness(ann, 166.338012, 0.016205) == 0 );
+    ck_assert( get_brightness(ann, 0.135857, 0.245151) == 1 );
+    ck_assert( get_brightness(ann, -0.159653, 0.557191) == 2 );
+}
+END_TEST
+
 Suite *nextwall_suite(void)
 {
     Suite *s = suite_create("Nextwall");
@@ -50,6 +67,7 @@ Suite *nextwall_suite(void)
     TCase *tc_core = tcase_create("Core");
     tcase_add_checked_fixture(tc_core, setup, teardown);
     tcase_add_test(tc_core, test_floatcmp);
+    tcase_add_test(tc_core, test_ann);
     suite_add_tcase(s, tc_core);
 
     return s;

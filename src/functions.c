@@ -46,7 +46,6 @@ static int rand_seeded = 0;
 
 /* Function prototypes */
 static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
-static int get_brightness(struct fann *ann, double kurtosis, double lightness);
 static int is_known_image(sqlite3 *db, const char *path);
 static int callback_known_image(void *param, int argc, char **argv, char **colnames);
 static int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames);
@@ -278,43 +277,6 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
     sqlite3_clear_bindings(stmt);
     sqlite3_reset(stmt);
     return 0;
-}
-
-/**
-  Calculate the brightness value.
-
-  Uses the Artificial Neural Network to define the brightness value
-  for a given kurtosis and lightness.
-
-  @param[in] The Artificial Neural Network.
-  @param[in] The kurtosis value of the wallpaper.
-  @param[in] The lightness value of the wallpaper.
-  @return Returns the brightness value (0 for dark, 1 for intermediate, 2 for
-          light). Returns -1 on failure.
- */
-int get_brightness(struct fann *ann, double kurtosis, double lightness) {
-    fann_type *out;
-    fann_type input[2];
-    float diff[3];
-    int i;
-
-    input[0] = kurtosis;
-    input[1] = lightness;
-    out = fann_run(ann, input);
-
-    diff[0] = 1.0 - out[0];
-    diff[1] = 1.0 - out[1];
-    diff[2] = 1.0 - out[2];
-
-    qsort(diff, 3, sizeof (float), floatcmp);
-
-    for (i = 0; i < 3; i++) {
-        if ((1.0 - out[i]) == diff[0]) {
-            return i;
-        }
-    }
-
-    return -1;
 }
 
 /**
