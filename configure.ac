@@ -17,10 +17,7 @@ AM_PROG_AR
 PKG_CHECK_MODULES([GLIB], [glib-2.0])
 PKG_CHECK_MODULES([GIO], [gio-2.0])
 PKG_CHECK_MODULES([IMAGEMAGICK], [MagickWand])
-
-# Only the developer needs to have Check installed (for unit testing), so
-# this dependency is disabled.
-#PKG_CHECK_MODULES([CHECK], [check])
+PKG_CHECK_MODULES([CHECK], [check])
 
 # Checks for libraries.
 AC_CHECK_LIB([fann], [fann_create_from_file])

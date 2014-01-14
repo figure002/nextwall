@@ -23,6 +23,7 @@ Nextwall also comes with a GNOME Shell extension.
 
 To compile `nextwall` you need to have the following packages installed:
 
+* check
 * libglib2.0-dev
 * libmagickwand-dev
 * libmagic-dev
@@ -31,7 +32,7 @@ To compile `nextwall` you need to have the following packages installed:
 
 On Debian (based) systems, run this command to install the dependencies:
 
-    sudo apt-get install libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
+    sudo apt-get install check libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
 
 You can then build and install `nextwall`. See the INSTALL file for building
 and installation instructions. Briefly, the shell commands
