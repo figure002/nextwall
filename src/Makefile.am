@@ -2,7 +2,7 @@
 
 bin_PROGRAMS = nextwall nextwall-trainer
 
-nextwall_SOURCES = nextwall.c functions.c nextwall.h options.c options.h
+nextwall_SOURCES = nextwall.c nextwall.h options.c options.h
 
 nextwall_LDADD = $(top_builddir)/lib/lib$(PACKAGE).a
 nextwall_LDADD += -lm -lsqlite3 -lmagic -lfann $(GIO_LIBS) $(IMAGEMAGICK_LIBS)

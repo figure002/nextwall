@@ -18,31 +18,25 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE   /* for tm_gmtoff, tm_zone, and asprintf() */
+#define _GNU_SOURCE     /* for asprintf() */
 
-#include <dirent.h>
-#include <fcntl.h>
 #include <floatfann.h>
-#include <limits.h>
 #include <magic.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <sqlite3.h>
-#include <unistd.h>
+#include <sys/types.h>  /* for open() and opendir() */
+#include <sys/stat.h>   /* for open() and opendir() */
+#include <dirent.h>     /* for open() and opendir() */
+#include <fcntl.h>      /* for open() and opendir() */
 
-#include "config.h"
-#include "gnome.h"
-#include "image.h"
-#include "nextwall.h"
-#include "std.h"
-#include "sunriset.h"
+#include "database.h"
+#include "gnome.h"      /* for file_trash() */
+#include "image.h"      /* for get_image_info() */
+#include "std.h"        /* for get_brightness() */
 
 static int wallpaper_list_populated = 0;
 static int max_walls = 0;
-static int rc;
 static int wallpaper_list[LIST_MAX];
-static int rand_seeded = 0;
 
 /* Function prototypes */
 static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
@@ -51,14 +45,13 @@ static int callback_known_image(void *param, int argc, char **argv, char **colna
 static int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames);
 static int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames);
 
-
 /**
   Create a new nextwall database.
 
   @param[in] db The database handler.
   @return Returns 0 on success, -1 on failure.
  */
-int make_db(sqlite3 *db) {
+int create_database(sqlite3 *db) {
     int rc = 0, rc2 = 0;
     char *query;
     char *aquery = NULL;
@@ -205,23 +198,24 @@ Return:
  */
 int is_known_image(sqlite3 *db, const char *path) {
     int known = 0;
+	int rc = 0;
     char *query = NULL;
 
     if (asprintf(&query, "SELECT id FROM wallpapers WHERE path='%s';", path) == -1) {
         fprintf(stderr, "Error: asprintf() failed\n");
-        goto Error;
+        goto on_error;
     }
 
     rc = sqlite3_exec(db, query, callback_known_image, &known, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", query);
-        goto Error;
+        goto on_error;
     }
 
     free(query);
     return known;
 
-Error:
+on_error:
     free(query);
     exit(1);
 }
@@ -257,6 +251,7 @@ int callback_known_image(void *param, int argc, char **argv, char **colnames) {
 int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
     double kurtosis, lightness;
     int brightness;
+	int rc = 0;
 
     // Get the lightness for this image
     if (get_image_info(path, &kurtosis, &lightness) == -1)
@@ -295,8 +290,8 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
  */
 int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
     int i;
-    unsigned seed;
-    char *query = NULL;
+	int rc = 0;
+	char *query = NULL;
     char *query2 = NULL;
 
     if (!wallpaper_list_populated) {
@@ -305,7 +300,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
                     "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
                     base, brightness, LIST_MAX) == -1) {
                 fprintf(stderr, "Error: asprintf() failed\n");
-                goto Error;
+                goto on_error;
             }
         }
         else {
@@ -313,30 +308,21 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
                     "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
                     base, LIST_MAX) == -1) {
                 fprintf(stderr, "Error: asprintf() failed\n");
-                goto Error;
+                goto on_error;
             }
         }
 
         rc = sqlite3_exec(db, query, callback_wallpaper_list, &wallpaper_list, NULL);
         if (rc != SQLITE_OK) {
             fprintf(stderr, "Error: Failed to execute query: %s\n", query);
-            goto Error;
+            goto on_error;
         }
 
         wallpaper_list_populated = 1;
     }
 
     if (max_walls == 0)
-        goto Error;
-
-    // Set the seed for the random number generator
-    if (!rand_seeded) {
-        if (read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed) == -1)
-            goto Error;
-
-        srand(seed);
-        rand_seeded = 1;
-    }
+        goto on_error;
 
     // Get random index for wallpaper_list
     i = rand() % max_walls;
@@ -345,13 +331,13 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
     if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;",
             wallpaper_list[i]) == -1) {
         fprintf(stderr, "Error: asprintf() failed\n");
-        goto Error;
+        goto on_error;
     }
 
     rc = sqlite3_exec(db, query2, callback_wallpaper_path, wallpaper, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", query2);
-        goto Error;
+        goto on_error;
     }
 
     // Deallocate
@@ -362,7 +348,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
 
     return wallpaper_list[i];
 
-Error:
+on_error:
     if (query)
         free(query);
     if (query2)
@@ -408,82 +394,6 @@ int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames)
 }
 
 /**
-  Return the local brightness value.
-
-  This function uses sunriset.h to calculate sunrise, sunset, and civil
-  twilight times.
-
-  @param[in] lat The latitude of the current location.
-  @param[in] lon The longitude of the current location.
-  @return Returns 0 for night, 1 for twilight, or 2 for day, depending on
-          local time. Returns -1 if brightness could not be defined.
- */
-int get_local_brightness(double lat, double lon) {
-    struct tm ltime;
-    time_t now;
-    double htime, sunrise, sunset, civ_start, civ_end;
-    int year, month, day, gmt_offset_h, rs, civ;
-    char sr_s[6], ss_s[6], civ_start_s[6], civ_end_s[6];
-
-    time(&now);
-    localtime_r(&now, &ltime);
-    year = ltime.tm_year + 1900;
-    month = ltime.tm_mon + 1;
-    day = ltime.tm_mday;
-    gmt_offset_h = ltime.tm_gmtoff / 3600; // GMT offset with local time zone
-    htime = (double)ltime.tm_hour + (double)ltime.tm_min / 60.0; // Current time in hours
-
-    /* Set local sunrise, sunset, and civil twilight times */
-    rs = sun_rise_set(year, month, day, lon, lat, &sunrise, &sunset);
-    civ  = civil_twilight(year, month, day, lon, lat, &civ_start, &civ_end);
-
-    switch (rs) {
-        case 0:
-            sunrise += gmt_offset_h;
-            sunset += gmt_offset_h;
-            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s),
-                    hours_to_hm(sunset, ss_s), ltime.tm_zone);
-            break;
-        case +1:
-            eprintf("Sun above horizon\n");
-            return 2; // Day
-            break;
-        case -1:
-            eprintf("Sun below horizon\n");
-            return 0; // Night
-            break;
-    }
-
-    switch (civ) {
-        case 0:
-            civ_start += gmt_offset_h;
-            civ_end += gmt_offset_h;
-            eprintf("Civil twilight starts %s, ends %s %s\n",
-                    hours_to_hm(civ_start, civ_start_s),
-                    hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
-            break;
-        case +1:
-            eprintf("Never darker than civil twilight\n");
-            break;
-        case -1:
-            eprintf("Never as bright as civil twilight\n");
-            break;
-    }
-
-    if (rs == 0 && civ == 0) {
-        if (sunrise < htime && htime < sunset)
-            return 2; // Day
-        else if (htime < civ_start || htime > civ_end)
-            return 0; // Night
-        else
-            return 1; // Twilight
-    }
-    else {
-        return -1;
-    }
-}
-
-/**
   Move wallpaper to trash and remove it from the nextwall database.
 
   @param[in] db The database handler.
@@ -514,4 +424,3 @@ int remove_wallpaper(sqlite3 *db, char *path) {
 
     return rc;
 }
-

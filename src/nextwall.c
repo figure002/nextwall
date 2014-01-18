@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE   /* for asprintf() */
+#define _GNU_SOURCE     /* for asprintf(), tm_gmtoff and tm_zone */
 
 #include <config.h>
 #include <argp.h>
@@ -27,14 +27,18 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/types.h>  /* for open() */
+#include <sys/stat.h>   /* for open() */
+#include <fcntl.h>      /* for open() */
 
 #include "cfgpath.h"
 #include "nextwall.h"
+#include "database.h"
 #include "options.h"
 #include "gnome.h"
-
-/* Function prototypes */
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state state);
+#include "sunriset.h"
+#include "std.h"
 
 /* Define the global variable for verbosity */
 int verbose = 0;
@@ -43,6 +47,7 @@ int verbose = 0;
 int main(int argc, char **argv) {
     int rc = -1, local_brightness = -1;
     int exit_status = EXIT_SUCCESS;
+    unsigned seed;
     char *annfile = NULL;
     char *line = NULL;
     char cfgpath[PATH_MAX];
@@ -55,7 +60,7 @@ int main(int argc, char **argv) {
     GSettings *settings = NULL;
     sqlite3 *db = NULL;
 
-    // Default argument values
+    /* Default argument values */
     arguments.brightness = -1;
     arguments.interactive = 0;
     arguments.latitude = -1;
@@ -69,11 +74,11 @@ int main(int argc, char **argv) {
        in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    // Define the wallpaper state
+    /* Define the wallpaper state */
     struct wallpaper_state wallpaper = {
-        arguments.args[0], // Wallpaper directory
-        current_wallpaper, // Current wallpaper
-        wallpaper_path // Wallpaper path
+        arguments.args[0],
+        current_wallpaper,
+        wallpaper_path
     };
 
     if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
@@ -94,11 +99,11 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    // Set the database file path
+    /* Set the database file path */
     strcpy(dbfile, cfgpath);
     strcat(dbfile, "nextwall.db");
 
-    // Set the ANN file path
+    /* Find the location of the ANN file */
     if (arguments.scan) {
         int i, ann_found;
         char *annfiles[3];
@@ -118,7 +123,7 @@ int main(int argc, char **argv) {
             if ( (ann_found = g_file_test(annfiles[i], G_FILE_TEST_IS_REGULAR)) ) {
                 eprintf("Using ANN %s\n", annfiles[i]);
 
-                // Initialize the ANN
+                /* Initialize the ANN */
                 ann = fann_create_from_file(annfiles[i]);
 
                 break;
@@ -133,11 +138,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Create the database if it doesn't exist.
+    /* Create the database if it doesn't exist */
     if ( !g_file_test(dbfile, G_FILE_TEST_IS_REGULAR) ) {
         eprintf("Creating database... ");
         if ( (rc = sqlite3_open(dbfile, &db)) == SQLITE_OK && \
-                make_db(db) == 0 ) {
+                create_database(db) == 0 ) {
             eprintf("Done\n");
         }
         else {
@@ -149,7 +154,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Open database connection.
+    /* Open database connection */
     if ( rc != SQLITE_OK ) {
         if ( sqlite3_open(dbfile, &db) != SQLITE_OK ) {
             fprintf(stderr, "Error: Can't open database: %s\n",
@@ -160,7 +165,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Search directory for wallpapers
+    /* Search directory for wallpapers */
     if (arguments.scan) {
         int found;
 
@@ -172,7 +177,7 @@ int main(int argc, char **argv) {
         goto Return;
     }
 
-    // Get local brightness
+    /* Get local brightness */
     if (arguments.time) {
         if (arguments.brightness == -1)
             local_brightness = get_local_brightness(arguments.latitude,
@@ -199,14 +204,21 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Set wallpaper path
+    /* Set the seed for the random number generator */
+    if ( read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed) == -1 ) {
+        exit_status = EXIT_FAILURE;
+        goto Return;
+    }
+    srand(seed);
+
+    /* Set the wallpaper path */
     if ( (nextwall(db, wallpaper.dir, local_brightness, &wallpaper.path)) == -1 ) {
         fprintf(stderr, "No wallpapers found for directory %s. Try the " \
                 "--scan option or remove the --time option.\n", wallpaper.dir);
         goto Return;
     }
 
-    // Create a GSettings object for the desktop background
+    /* Create a GSettings object for the desktop background */
     settings = g_settings_new("org.gnome.desktop.background");
 
     if (arguments.interactive) {
@@ -277,10 +289,10 @@ Return:
 int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state wallpaper) {
     int i, exists;
 
-    // Get the path of the current wallpaper
+    /* Get the path of the current wallpaper */
     get_background_uri(settings, wallpaper.current);
 
-    // Make sure we select a different wallpaper and that the file exists.
+    /* Make sure we select a different wallpaper and that the file exists */
     for (i = 0; !(exists = g_file_test(wallpaper.path, G_FILE_TEST_IS_REGULAR)) ||
             strcmp(wallpaper.path, wallpaper.current) == 0; i++) {
         if (i == 5) {
@@ -298,7 +310,7 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallp
         nextwall(db, wallpaper.dir, brightness, &wallpaper.path);
     }
 
-    // Set the new wallpaper
+    /* Set the new wallpaper */
     eprintf("Setting wallpaper to %s\n", wallpaper.path);
     if (set_background_uri(settings, wallpaper.path) == -1) {
         fprintf(stderr, "Error: failed to set the background.\n");
@@ -307,3 +319,82 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallp
     return 0;
 }
 
+/**
+  Return the local brightness value.
+
+  This function uses sunriset.h to calculate sunrise, sunset, and civil
+  twilight times.
+
+  @param[in] lat The latitude of the current location.
+  @param[in] lon The longitude of the current location.
+  @return Returns 0 for night, 1 for twilight, or 2 for day, depending on
+          local time. Returns -1 if brightness could not be determined.
+ */
+int get_local_brightness(double lat, double lon) {
+    struct tm ltime;
+    time_t now;
+    double htime, sunrise, sunset, civ_start, civ_end;
+    int year, month, day, gmt_offset_h, rs, civ;
+    char sr_s[6], ss_s[6], civ_start_s[6], civ_end_s[6];
+
+    time(&now);
+    localtime_r(&now, &ltime);
+    year = ltime.tm_year + 1900;
+    month = ltime.tm_mon + 1;
+    day = ltime.tm_mday;
+
+    /* GMT offset in hours with local time zone */
+    gmt_offset_h = ltime.tm_gmtoff / 3600;
+
+    /* Current time in hours */
+    htime = (double)ltime.tm_hour + (double)ltime.tm_min / 60.0;
+
+    /* Set local sunrise, sunset, and civil twilight times */
+    rs = sun_rise_set(year, month, day, lon, lat, &sunrise, &sunset);
+    civ  = civil_twilight(year, month, day, lon, lat, &civ_start, &civ_end);
+
+    switch (rs) {
+        case 0:
+            sunrise += gmt_offset_h;
+            sunset += gmt_offset_h;
+            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s),
+                    hours_to_hm(sunset, ss_s), ltime.tm_zone);
+            break;
+        case +1:
+            eprintf("Sun above horizon\n");
+            return 2;
+            break;
+        case -1:
+            eprintf("Sun below horizon\n");
+            return 0;
+            break;
+    }
+
+    switch (civ) {
+        case 0:
+            civ_start += gmt_offset_h;
+            civ_end += gmt_offset_h;
+            eprintf("Civil twilight starts %s, ends %s %s\n",
+                    hours_to_hm(civ_start, civ_start_s),
+                    hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
+            break;
+        case +1:
+            eprintf("Never darker than civil twilight\n");
+            break;
+        case -1:
+            eprintf("Never as bright as civil twilight\n");
+            break;
+    }
+
+    if (rs == 0 && civ == 0) {
+        if (sunrise < htime && htime < sunset)
+            return 2;
+        else if (htime < civ_start || htime > civ_end)
+            return 0;
+        else
+            return 1;
+    }
+    else {
+        return -1;
+    }
+}

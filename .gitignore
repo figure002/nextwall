@@ -1,5 +1,6 @@
 Session.vim
 *~
+*.anjuta*
 *.swp
 *.o
 *.gschema.valid

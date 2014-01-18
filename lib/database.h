@@ -18,31 +18,21 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NEXTWALL_H
-#define NEXTWALL_H
+#ifndef DATABASE_H
+#define DATABASE_H
 
-#include <gio/gio.h>
+#include <floatfann.h>
 #include <sqlite3.h>
 
-/* Default wallpaper directory */
-#define DEFAULT_WALLPAPER_DIR "/usr/share/backgrounds/"
+/* The nextwall database version */
+#define NEXTWALL_DB_VERSION 0.4
 
-/* Wrapper for fprintf() for verbose messages */
-#define eprintf(format, ...) do { \
-    if (verbose) \
-        fprintf(stderr, format, ##__VA_ARGS__); \
-} while(0)
+/* The maximum number of wallpapers in the wallpaper list */
+#define LIST_MAX 2000
 
-struct wallpaper_state {
-    char *dir;      /* Wallpaper base directory */
-    char *current;  /* Current wallpaper */
-    char *path;     /* Path for next wallpaper */
-};
-
-int get_local_brightness(double lat, double lon);
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state state);
-
-/* Set to 1 to display verbose messages */
-extern int verbose;
+int create_database(sqlite3 *db);
+int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive);
+int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper);
+int remove_wallpaper(sqlite3 *db, char *path);
 
 #endif
