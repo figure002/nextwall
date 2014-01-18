@@ -7,7 +7,7 @@ check_nextwall_SOURCES = check-nextwall.c
 
 check_nextwall_CFLAGS = @CHECK_CFLAGS@
 
-check_nextwall_CPPFLAGS = -I$(top_srcdir)/lib
+check_nextwall_CPPFLAGS = -I$(top_srcdir)/lib $(GLIB_CFLAGS)
 
-check_nextwall_LDADD = $(top_builddir)/lib/lib$(PACKAGE).a @CHECK_LIBS@
+check_nextwall_LDADD = @CHECK_LIBS@ $(top_builddir)/lib/lib$(PACKAGE).a $(GLIB_LIBS)
 

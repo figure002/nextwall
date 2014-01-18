@@ -15,16 +15,29 @@
 #include <stdlib.h>
 #include <check.h>
 #include <floatfann.h>
+#include <glib.h>
+#include <glib/gstdio.h>
 
 #include "std.h"
-
-/* Location of the ANN file */
-#define ANN_FILE "../data/ann/nextwall.net"
 
 struct fann *ann = NULL;
 
 void setup(void) {
-    ann = fann_create_from_file(ANN_FILE);
+    int i, r;
+    char *ann_paths[2];
+
+    ann_paths[0] = "../data/ann/nextwall.net";
+    ann_paths[1] = "../../data/ann/nextwall.net"; /* for `make distcheck` */
+
+    for (i = 0; i < 2; i++) {
+        if ( (r = g_file_test(ann_paths[i], G_FILE_TEST_IS_REGULAR)) ) {
+            ann = fann_create_from_file(ann_paths[i]);
+            break;
+        }
+    }
+
+    if (!r)
+        exit(EXIT_FAILURE);
 }
 
 void teardown(void) {
