@@ -288,10 +288,10 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
   @return Returns the ID of a randomly selected wallpaper on success, -1
           otherwise.
  */
-int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
+int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
     int i;
-	int rc = 0;
-	char *query = NULL;
+    int rc = 0;
+    char *query = NULL;
     char *query2 = NULL;
 
     if (!wallpaper_list_populated) {
@@ -334,7 +334,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char **wallpaper) {
         goto on_error;
     }
 
-    rc = sqlite3_exec(db, query2, callback_wallpaper_path, wallpaper, NULL);
+    rc = sqlite3_exec(db, query2, callback_wallpaper_path, &path, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Error: Failed to execute query: %s\n", query2);
         goto on_error;

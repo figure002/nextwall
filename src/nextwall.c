@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
     srand(seed);
 
     /* Set the wallpaper path */
-    if ( (nextwall(db, wallpaper.dir, local_brightness, &wallpaper.path)) == -1 ) {
+    if ( (nextwall(db, wallpaper.dir, local_brightness, wallpaper.path)) == -1 ) {
         fprintf(stderr, "No wallpapers found for directory %s. Try the " \
                 "--scan option or remove the --time option.\n", wallpaper.dir);
         goto Return;
@@ -236,12 +236,12 @@ int main(int argc, char **argv) {
                         strcmp(line, "y\n") == 0 && \
                         remove_wallpaper(db, wallpaper.current) == 0) {
                     fprintf(stderr, "Wallpaper removed\n");
-                    if ( set_wallpaper(settings, db, local_brightness, wallpaper) == -1)
+                    if ( set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
                         goto Return;
                 }
             }
             else if (strcmp(line, "\n") == 0 || strcmp(line, "n\n") == 0) {
-                if (set_wallpaper(settings, db, local_brightness, wallpaper) == -1)
+                if (set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
                     goto Return;
             }
             else if (strcmp(line, "o\n") == 0) {
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
         }
     }
     else {
-        set_wallpaper(settings, db, local_brightness, wallpaper);
+        set_wallpaper(settings, db, local_brightness, &wallpaper);
     }
 
     goto Return;
@@ -286,15 +286,16 @@ Return:
 }
 
 /* Wrapper function for setting the wallpaper */
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallpaper_state wallpaper) {
+int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness,
+                  struct wallpaper_state *wallpaper) {
     int i, exists;
 
     /* Get the path of the current wallpaper */
-    get_background_uri(settings, wallpaper.current);
+    get_background_uri(settings, wallpaper->current);
 
     /* Make sure we select a different wallpaper and that the file exists */
-    for (i = 0; !(exists = g_file_test(wallpaper.path, G_FILE_TEST_IS_REGULAR)) ||
-            strcmp(wallpaper.path, wallpaper.current) == 0; i++) {
+    for (i = 0; !(exists = g_file_test(wallpaper->path, G_FILE_TEST_IS_REGULAR)) ||
+            strcmp(wallpaper->path, wallpaper->current) == 0; i++) {
         if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different " \
                     "directory or use the --scan option.\n");
@@ -303,16 +304,16 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness, struct wallp
 
         if (!exists) {
             eprintf("Wallpaper '%s' no longer exists. Deleting.\n",
-                    wallpaper.path);
-            remove_wallpaper(db, wallpaper.path);
+                    wallpaper->path);
+            remove_wallpaper(db, wallpaper->path);
         }
 
-        nextwall(db, wallpaper.dir, brightness, &wallpaper.path);
+        nextwall(db, wallpaper->dir, brightness, wallpaper->path);
     }
 
     /* Set the new wallpaper */
-    eprintf("Setting wallpaper to %s\n", wallpaper.path);
-    if (set_background_uri(settings, wallpaper.path) == -1) {
+    eprintf("Setting wallpaper to %s\n", wallpaper->path);
+    if (set_background_uri(settings, wallpaper->path) == -1) {
         fprintf(stderr, "Error: failed to set the background.\n");
     }
 
