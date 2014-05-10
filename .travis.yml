@@ -1,0 +1,14 @@
+language: c
+
+compiler:
+  - gcc
+
+install:
+  - sudo apt-get install check libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
+
+before_script:
+  - autoreconf --install
+  - ./configure
+  - make
+
+script: make check
