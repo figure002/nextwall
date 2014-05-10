@@ -273,8 +273,8 @@ const WallpaperInfoBox = new Lang.Class({
         captionbox.add_actor(captions);
         captionbox.add_actor(values);
 
-        captions.add_actor(new St.Label({text: 'Folder:'}));
-        values.add_actor(this._currentWallpaperFolder);
+        //captions.add_actor(new St.Label({text: 'Folder:'}));
+        //values.add_actor(this._currentWallpaperFolder);
         captions.add_actor(new St.Label({text: 'Name:'}));
         values.add_actor(this._currentWallpaperName);
 
@@ -295,7 +295,7 @@ const WallpaperInfoBox = new Lang.Class({
         this.wallpaperFile = Gio.file_new_for_path(path);
 
         // Update the labels
-        this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
+        //this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
         this._currentWallpaperName.text = path.substring(path.lastIndexOf('/') + 1);
 
         // Update thumbnail
