@@ -277,14 +277,11 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
 /**
   Select a random wallpaper from the nextwall database.
 
-  It sets the value of `wallpaper_path` to the absolute path of the randomly
-  selected wallpaper.
-
   @param[in] db The database handler.
-  @param[in] path The base directory from which to select wallpapers.
+  @param[in] base The base directory from which to select wallpapers.
   @param[in] brightness If set to 0, 1, or 2, wallpapers matching this
              brightness value are returned.
-  @param[out] wallpaper Will be set to the path of the next wallpaper.
+  @param[out] path Will be set to the path of the randomly selected wallpaper.
   @return Returns the ID of a randomly selected wallpaper on success, -1
           otherwise.
  */
