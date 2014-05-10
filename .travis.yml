@@ -8,7 +8,5 @@ install:
 
 before_script:
   - autoreconf --install
-  - ./configure
-  - make
 
-script: make check
+script: ./configure && make && make check
