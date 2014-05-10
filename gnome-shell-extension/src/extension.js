@@ -180,8 +180,9 @@ const ThumbnailWidget = new Lang.Class({
         // Use Gio to determine the URI and mime type
         let file = Gio.file_new_for_path(image_path);
         let uri = file.get_uri();
-        let info = file.query_info('standard::content-type', Gio.FileQueryInfoFlags.NONE, null);
-        let mtime = info.get_modification_time();
+        let info = file.query_info('standard::content-type,time::modified', Gio.FileQueryInfoFlags.NONE, null);
+        let mtimeval = info.get_modification_time();
+        let mtime = mtimeval.tv_sec;
         let mime_type = info.get_content_type();
 
         // Try to locate an existing thumbnail for the file specified. Returns
@@ -206,10 +207,10 @@ const ThumbnailWidget = new Lang.Class({
 
         // Save thumbnail at the right place. If the save fails a failed
         // thumbnail is written.
-        factory.save_thumbnail(thumbnail, uri, mtime)
+        factory.save_thumbnail(thumbnail, uri, mtime);
 
         // Return the absolute path for the thumbnail.
-        return factory.lookup(uri, mtime)
+        return factory.lookup(uri, mtime);
     }
 });
 
@@ -286,7 +287,7 @@ const WallpaperInfoBox = new Lang.Class({
         let box = new St.BoxLayout();
         box.add(this.thumbnailBin);
         box.add(captionbox);
-        this.addActor(box);
+        this.actor.add(box);
     },
 
     update: function() {
