@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
     const unsigned int epochs_between_reports = 1000;
 
     // Default argument values
-    arguments.error = 0.001;
-    arguments.epochs = 500000;
+    arguments.error = 0.00001;
+    arguments.epochs = 10000;
     arguments.pairs = -1;
     arguments.layers = 3;
     arguments.neurons = 8;
@@ -184,8 +184,7 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
                     "light (2)? ");
 
             // Get image brightness value from user input.
-            while ( getline(&line, &len, stdin) != -1 && \
-                    n_pairs < max_pairs ) {
+            while ( getline(&line, &len, stdin) != -1 ) {
                 if ( strcmp(line, "0\n") == 0 ) {
                     fprintf(fp, "%f %f\n", kurtosis, lightness);
                     fprintf(fp, "1 0 0\n");
@@ -220,7 +219,7 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
                     fprintf(stderr, "Incorrect input. Try again: ");
             }
         }
-    } while ( (entry = readdir(dir)) );
+    } while ( (entry = readdir(dir)) && n_pairs < max_pairs );
 
     goto Return;
 
