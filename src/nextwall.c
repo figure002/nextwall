@@ -28,6 +28,10 @@
 #include <glib/gstdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <sys/types.h>  /* for open() */
 #include <sys/stat.h>   /* for open() */
 #include <fcntl.h>      /* for open() */
@@ -49,12 +53,10 @@ int main(int argc, char **argv) {
     int exit_status = EXIT_SUCCESS;
     unsigned seed;
     char *annfile = NULL;
-    char *line = NULL;
     char cfgpath[PATH_MAX];
     char current_wallpaper[PATH_MAX] = "\0";
     char dbfile[PATH_MAX];
     char wallpaper_path[PATH_MAX] = "\0";
-    size_t linelen = 0;
     struct arguments arguments;
     struct fann *ann = NULL;
     GSettings *settings = NULL;
@@ -222,33 +224,51 @@ int main(int argc, char **argv) {
     settings = g_settings_new("org.gnome.desktop.background");
 
     if (arguments.interactive) {
+        char* input, shell_prompt[100];
+
         fprintf(stderr, "Nextwall %s\n" \
                 "License: GNU GPL version 3 or later " \
                 "<http://gnu.org/licenses/gpl.html>\n" \
-                "Type 'help' for more information.\n" \
-                "nextwall> ", PACKAGE_VERSION);
-        while ( getline(&line, &linelen, stdin) != -1 ) {
-            if (strcmp(line, "d\n") == 0) {
+                "Type 'help' for more information.\n", PACKAGE_VERSION);
+
+        // Configure readline to auto-complete paths when the tab key is hit.
+        rl_bind_key('\t', rl_complete);
+
+        // Set the prompt text.
+        snprintf(shell_prompt, sizeof(shell_prompt), "nextwall> ");
+
+        for(;;) {
+            // Display prompt and read input.
+            input = readline(shell_prompt);
+
+            // Check for EOF.
+            if (!input)
+                break;
+
+            // If the line has any text in it, save it on the history.
+            if (input && *input)
+                add_history(input);
+
+            if (strcmp(input, "d") == 0) {
                 get_background_uri(settings, wallpaper.current);
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         wallpaper.current);
-                if ( getline(&line, &linelen, stdin) != -1 && \
-                        strcmp(line, "y\n") == 0 && \
-                        remove_wallpaper(db, wallpaper.current) == 0) {
+                if ( (input = readline("")) && strcmp(input, "y") == 0 && \
+                        remove_wallpaper(db, wallpaper.current) == 0 ) {
                     fprintf(stderr, "Wallpaper removed\n");
                     if ( set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
                         goto Return;
                 }
             }
-            else if (strcmp(line, "\n") == 0 || strcmp(line, "n\n") == 0) {
+            else if (strcmp(input, "") == 0 || strcmp(input, "n") == 0) {
                 if (set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
                     goto Return;
             }
-            else if (strcmp(line, "o\n") == 0) {
+            else if (strcmp(input, "o") == 0) {
                 get_background_uri(settings, wallpaper.current);
                 open_image(wallpaper.current);
             }
-            else if (strcmp(line, "help\n") == 0) {
+            else if (strcmp(input, "help") == 0) {
                 fprintf(stderr,
                     "Nextwall is now running in interactive mode. The " \
                     "following commands are available:\n" \
@@ -257,14 +277,16 @@ int main(int argc, char **argv) {
                     "'o'\tOpen the current wallpaper\n" \
                     "'q'\tExit nextwall\n");
             }
-            else if (strcmp(line, "q\n") == 0) {
+            else if (strcmp(input, "q") == 0) {
                 goto Return;
             }
             else {
                 fprintf(stderr, "Unknown command. Type 'help' to see the " \
                         "available commands.\n");
             }
-            fprintf(stderr, "nextwall> ");
+
+            // Free input.
+            free(input);
         }
     }
     else {
@@ -276,8 +298,6 @@ int main(int argc, char **argv) {
 Return:
     if (annfile)
         free(annfile);
-    if (line)
-        free(line);
     if (settings)
         g_object_unref(settings);
     if (db)

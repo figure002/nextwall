@@ -24,6 +24,7 @@ AC_CHECK_LIB([fann], [fann_create_from_file])
 AC_CHECK_LIB([m], [floor])
 AC_CHECK_LIB([magic], [magic_open])
 AC_CHECK_LIB([sqlite3], [sqlite3_exec])
+AC_CHECK_LIB([readline], [readline])
 
 # Checks for header files.
 AC_CHECK_HEADERS([fcntl.h limits.h stdlib.h string.h unistd.h])
