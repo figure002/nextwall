@@ -41,6 +41,7 @@ extern int errno;
 
 static int wallpaper_list_populated = 0;
 static int wallpaper_count = 0;
+static int wallpaper_current = 0;
 static int wallpaper_list[LIST_MAX];
 
 /* Function prototypes */
@@ -290,7 +291,7 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
           otherwise.
  */
 int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
-    int i;
+    int id;
     int rc = 0;
     char *query = NULL;
     char *query2 = NULL;
@@ -339,11 +340,12 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
         goto on_error;
 
     // Get random index for wallpaper_list
-    i = rand() % wallpaper_count;
+    if (wallpaper_current == wallpaper_count)
+        wallpaper_current = 0;
+    id = wallpaper_list[wallpaper_current++];
 
     // Set the wallpaper path
-    if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;",
-            wallpaper_list[i]) == -1) {
+    if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;", id) == -1) {
         fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
         goto on_error;
     }
@@ -360,7 +362,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
     if (query2)
         free(query2);
 
-    return wallpaper_list[i];
+    return id;
 
 on_error:
     if (query)
