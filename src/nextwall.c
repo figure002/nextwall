@@ -242,8 +242,10 @@ int main(int argc, char **argv) {
             input = readline(shell_prompt);
 
             // Check for EOF.
-            if (!input)
+            if (!input) {
+                fprintf(stderr, "\n");
                 break;
+            }
 
             // If the line has any text in it, save it on the history.
             if (input && *input)
