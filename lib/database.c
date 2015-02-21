@@ -20,6 +20,7 @@
 
 #define _GNU_SOURCE     /* for asprintf() */
 
+#include <errno.h>      /* errno */
 #include <floatfann.h>
 #include <magic.h>
 #include <limits.h>     /* for realpath() */
@@ -35,6 +36,8 @@
 #include "gnome.h"      /* for file_trash() */
 #include "image.h"      /* for get_image_info() */
 #include "std.h"        /* for get_brightness() */
+
+extern int errno;
 
 static int wallpaper_list_populated = 0;
 static int wallpaper_count = 0;
@@ -55,8 +58,7 @@ static int callback_wallpaper_path(void *param, int argc, char **argv, char **co
  */
 int create_database(sqlite3 *db) {
     int rc = 0, rc2 = 0;
-    char *query;
-    char *aquery = NULL;
+    char *query, *mquery;
 
     query = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
@@ -77,29 +79,29 @@ int create_database(sqlite3 *db) {
     if (rc != SQLITE_OK)
         goto Return;
 
-    if ((rc2 = asprintf(&aquery, "INSERT INTO info VALUES (null, 'version', %f);",
-                NEXTWALL_DB_VERSION)) == -1) {
-        fprintf(stderr, "Error: asprintf() failed\n");
+    if ((rc2 = asprintf(&mquery,
+            "INSERT INTO info VALUES (null, 'version', %f);",
+            NEXTWALL_DB_VERSION)) == -1) {
+        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
         goto Return;
     }
 
-    rc = sqlite3_exec(db, aquery, NULL, NULL, NULL);
+    rc = sqlite3_exec(db, mquery, NULL, NULL, NULL);
     if (rc != SQLITE_OK)
         goto Return;
 
-    rc = sqlite3_exec(db, "CREATE UNIQUE INDEX wallpapers_path_idx ON wallpapers (path);",
-            NULL, NULL, NULL);
+    rc = sqlite3_exec(db,
+        "CREATE UNIQUE INDEX wallpapers_path_idx ON wallpapers (path);",
+        NULL, NULL, NULL);
 
     goto Return;
 
 Return:
-    if (aquery)
-        free(aquery);
-
-    if (rc2 == -1)
-        rc = -1;
-
-    return rc;
+    if (mquery)
+        free(mquery);
+    if (rc != SQLITE_OK || rc2 == -1)
+        return -1;
+    return 0;
 }
 
 /**
@@ -143,12 +145,12 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
 
     do {
         if (asprintf(&path_tmp, "%s/%s", base, entry->d_name) == -1) {
-            fprintf(stderr, "Error: asprintf() failed\n");
+            fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
             goto Return;
         }
 
         if (realpath(path_tmp, path) == NULL) {
-            fprintf(stderr, "Error: realpath() failed\n");
+            fprintf(stderr, "realpath() failed: %s\n", strerror(errno));
             goto Return;
         }
 
@@ -204,7 +206,7 @@ int is_known_image(sqlite3 *db, const char *path) {
     char *query = NULL;
 
     if (asprintf(&query, "SELECT id FROM wallpapers WHERE path='%s';", path) == -1) {
-        fprintf(stderr, "Error: asprintf() failed\n");
+        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
         goto on_error;
     }
 
@@ -299,7 +301,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
         /* Make sure the base path is absolute, since only absolute paths are
            stored in the database. */
         if (realpath(base, real_base) == NULL) {
-            fprintf(stderr, "Error: realpath() failed\n");
+            fprintf(stderr, "realpath() failed: %s\n", strerror(errno));
             goto on_error;
         }
 
@@ -307,7 +309,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
             if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
                     "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
                     real_base, brightness, LIST_MAX) == -1) {
-                fprintf(stderr, "Error: asprintf() failed\n");
+                fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
                 goto on_error;
             }
         }
@@ -315,7 +317,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
             if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
                     "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
                     real_base, LIST_MAX) == -1) {
-                fprintf(stderr, "Error: asprintf() failed\n");
+                fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
                 goto on_error;
             }
         }
@@ -342,7 +344,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
     // Set the wallpaper path
     if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;",
             wallpaper_list[i]) == -1) {
-        fprintf(stderr, "Error: asprintf() failed\n");
+        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
         goto on_error;
     }
 
@@ -417,7 +419,7 @@ int remove_wallpaper(sqlite3 *db, char *path) {
     char *query = NULL;
 
     if (asprintf(&query, "DELETE FROM wallpapers WHERE path='%s';", path) == -1) {
-        fprintf(stderr, "Error: asprintf() failed\n");
+        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
         return -1;
     }
 

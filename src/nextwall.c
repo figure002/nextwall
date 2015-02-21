@@ -20,6 +20,7 @@
 
 #define _GNU_SOURCE     /* for asprintf(), tm_gmtoff and tm_zone */
 
+#include <errno.h>      /* errno */
 #include <config.h>
 #include <argp.h>
 #include <floatfann.h>
@@ -43,6 +44,8 @@
 #include "gnome.h"
 #include "sunriset.h"
 #include "std.h"
+
+extern int errno;
 
 /* Define the global variable for verbosity */
 int verbose = 0;
@@ -111,7 +114,7 @@ int main(int argc, char **argv) {
         char *annfiles[3];
 
         if (asprintf(&annfile, "%snextwall.net", cfgpath) == -1) {
-            fprintf(stderr, "Error: asprintf() failed\n");
+            fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
 
             exit_status = EXIT_FAILURE;
             goto Return;
