@@ -22,6 +22,8 @@
 
 #include <floatfann.h>
 #include <magic.h>
+#include <limits.h>     /* for realpath() */
+#include <stdlib.h>     /* for realpath() */
 #include <string.h>
 #include <sqlite3.h>
 #include <sys/types.h>  /* for open() and opendir() */
@@ -35,7 +37,7 @@
 #include "std.h"        /* for get_brightness() */
 
 static int wallpaper_list_populated = 0;
-static int max_walls = 0;
+static int wallpaper_count = 0;
 static int wallpaper_list[LIST_MAX];
 
 /* Function prototypes */
@@ -292,10 +294,19 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
     char *query2 = NULL;
 
     if (!wallpaper_list_populated) {
+        char real_base[PATH_MAX];
+
+        /* Make sure the base path is absolute, since only absolute paths are
+           stored in the database. */
+        if (realpath(base, real_base) == NULL) {
+            fprintf(stderr, "Error: realpath() failed\n");
+            goto on_error;
+        }
+
         if (brightness != -1) {
             if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
                     "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
-                    base, brightness, LIST_MAX) == -1) {
+                    real_base, brightness, LIST_MAX) == -1) {
                 fprintf(stderr, "Error: asprintf() failed\n");
                 goto on_error;
             }
@@ -303,7 +314,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
         else {
             if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
                     "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
-                    base, LIST_MAX) == -1) {
+                    real_base, LIST_MAX) == -1) {
                 fprintf(stderr, "Error: asprintf() failed\n");
                 goto on_error;
             }
@@ -315,14 +326,18 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
             goto on_error;
         }
 
+        // Free real_path if malloc was used.
+        if (real_base == NULL)
+            free(real_base);
+
         wallpaper_list_populated = 1;
     }
 
-    if (max_walls == 0)
+    if (wallpaper_count == 0)
         goto on_error;
 
     // Get random index for wallpaper_list
-    i = rand() % max_walls;
+    i = rand() % wallpaper_count;
 
     // Set the wallpaper path
     if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;",
@@ -366,8 +381,8 @@ on_error:
  */
 int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames) {
     int *wallpaper_list = (int *)param;
-    wallpaper_list[max_walls] = atoi(argv[0]);
-    ++max_walls;
+    wallpaper_list[wallpaper_count] = atoi(argv[0]);
+    ++wallpaper_count;
     return 0;
 }
 
