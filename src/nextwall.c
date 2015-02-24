@@ -254,6 +254,14 @@ int main(int argc, char **argv) {
             if (input && *input)
                 add_history(input);
 
+            // Check if the directory still exists.
+            if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
+                fprintf(stderr, "Cannot access directory %s\n", wallpaper.dir);
+
+                exit_status = EXIT_FAILURE;
+                goto Return;
+            }
+
             if (strcmp(input, "d") == 0) {
                 get_background_uri(settings, wallpaper.current);
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
