@@ -4,7 +4,8 @@ compiler:
   - gcc
 
 install:
-  - sudo apt-get install check libglib2.0-dev libmagickwand-dev libmagic-dev libsqlite3-dev libfann-dev
+  - sudo apt-get install check libfann-dev libglib2.0-dev libmagic-dev
+    libmagickwand-dev libreadline-dev libsqlite3-dev
 
 before_script:
   - autoreconf --install
