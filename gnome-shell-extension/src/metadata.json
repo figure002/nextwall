@@ -9,7 +9,8 @@
 	"shell-version": [
 		"3.6",
 		"3.8",
-		"3.10"
+		"3.10",
+		"3.14"
 	],
 	"url": "https://github.com/figure002/nextwall/",
 	"uuid": "nextwall@serrano.byobu.info",

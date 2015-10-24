@@ -1,16 +1,12 @@
-Session.vim
-*~
-*.anjuta*
-*.swp
 *.o
 *.gschema.valid
+*.zip
 _build/
 includes.txt
 lib/libnextwall.a
 nextwall
 nextwall-trainer
 tests/check-nextwall
-zip-files/
 
 Makefile
 Makefile.in
