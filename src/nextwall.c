@@ -27,6 +27,7 @@
 #include <gio/gio.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <locale.h>
 #include <stdlib.h>
 #include <time.h>
 #include <readline/readline.h>
@@ -74,6 +75,9 @@ int main(int argc, char **argv) {
     arguments.scan = 0;
     arguments.time = 0;
     arguments.verbose = 0;
+
+    /* Set the locale to something that works with FANN configuration files. */
+    setlocale(LC_ALL, "C");
 
     /* Parse arguments; every option seen by parse_opt will be reflected
        in arguments. */
