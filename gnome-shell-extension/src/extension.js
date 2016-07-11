@@ -188,7 +188,7 @@ const ThumbnailWidget = new Lang.Class({
         // Try to locate an existing thumbnail for the file specified. Returns
         // the absolute path of the thumbnail, or None if none exist.
         let path = factory.lookup(uri, mtime);
-        if (path != null) {
+        if (path !== null) {
             return path;
         }
 
@@ -221,14 +221,8 @@ const WallpaperInfoBox = new Lang.Class({
 
     _init: function(itemParams) {
         this.parent({ reactive: false, can_focus: false });
-
-        // Load gsettings.
         this.loadSettings();
-
-        // Create the info box.
         this.createBox();
-
-        // Update the info.
         this.update();
     },
 
@@ -243,62 +237,20 @@ const WallpaperInfoBox = new Lang.Class({
     },
 
     createBox: function() {
-        // Create thumbnail button
         this._thumbnail = new ThumbnailWidget(null, { reactive: true });
         this.thumbnailBin = new St.Button({
             child: this._thumbnail.actor,
             style_class: 'thumbnail-bin'
         });
 
-        // Create wallpaper captions
-        this._currentWallpaperFolder = new St.Label({ text: '...' });
-
-        this._currentWallpaperName = new St.Label({ text: '...' });
-        this._currentWallpaperName.clutter_text.set_ellipsize(Pango.EllipsizeMode.NONE);
-        this._currentWallpaperName.clutter_text.set_line_wrap(true);
-        this._currentWallpaperName.clutter_text.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR);
-
-        let captionbox = new St.BoxLayout({
-            style_class: 'current-wallpaper-captionbox'
-        });
-
-        let captions = new St.BoxLayout({
-            vertical: true,
-            style_class: 'current-wallpaper-captionbox-captions'
-        });
-        let values = new St.BoxLayout({
-            vertical: true,
-            style_class: 'current-wallpaper-captionbox-values'
-        });
-        captionbox.add_actor(captions);
-        captionbox.add_actor(values);
-
-        //captions.add_actor(new St.Label({text: 'Folder:'}));
-        //values.add_actor(this._currentWallpaperFolder);
-        captions.add_actor(new St.Label({text: 'Name:'}));
-        values.add_actor(this._currentWallpaperName);
-
-        // Add the items.
-        //this.addActor(this.thumbnailBin);
-        //this.addActor(captionbox);
-
-        // This is better, but it creates undesired space on the right side of
-        // the menu.
-        let box = new St.BoxLayout();
+        let box = new St.BoxLayout({style_class: 'nextwall-box'});
         box.add(this.thumbnailBin);
-        box.add(captionbox);
         this.actor.add(box);
     },
 
     update: function() {
         let path = this._currentWallpaperPath;
         this.wallpaperFile = Gio.file_new_for_path(path);
-
-        // Update the labels
-        //this._currentWallpaperFolder.text = path.substring(0, path.lastIndexOf('/') + 1);
-        this._currentWallpaperName.text = path.substring(path.lastIndexOf('/') + 1);
-
-        // Update thumbnail
         this._thumbnail.update(path);
     },
 

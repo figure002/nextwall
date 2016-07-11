@@ -1,3 +1,7 @@
+.nextwall-box {
+    min-width: 15em;
+}
+
 .thumbnail-bin {
     border: 2px solid #8b8b8b;
     border-radius: 2px;
