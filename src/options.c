@@ -44,6 +44,7 @@ static struct argp_option options[] = {
     {"interactive", 'i', 0, 0, "Run in interactive mode"},
     {"location", 'l', "LAT:LON", 0, "Specify latitude and longitude of your " \
         "current location"},
+    {"print", 'p', 0, 0, "Print random wallpaper path and exit"},
     {"recursion", 'r', 0, 0, "Causes --scan to look in subdirectories"},
     {"scan", 's', 0, 0, "Scan for images files in PATH. Also see the " \
         "--recursion option"},
@@ -104,6 +105,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
                 fprintf(stderr, "Incorrect value for longitude\n");
                 argp_usage(state);
             }
+            break;
+        case 'p':
+            arguments->print = 1;
             break;
         case 'r':
             arguments->recursion = 1;

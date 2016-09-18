@@ -25,7 +25,7 @@
 struct arguments {
     char *args[1]; /* PATH argument */
     char *location;
-    int brightness, interactive, recursion, scan, time, verbose;
+    int brightness, interactive, print, recursion, scan, time, verbose;
     double latitude, longitude;
 };
 

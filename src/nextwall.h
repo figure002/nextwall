@@ -40,8 +40,11 @@ struct wallpaper_state {
 };
 
 int get_local_brightness(double lat, double lon);
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness,
-                  struct wallpaper_state *state);
+int set_wallpaper(GSettings *settings,
+                  sqlite3 *db,
+                  int brightness,
+                  struct wallpaper_state *state,
+                  int print_only);
 
 /* Set to 1 to display verbose messages */
 extern int verbose;

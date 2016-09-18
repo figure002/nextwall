@@ -55,6 +55,7 @@ int verbose = 0;
 int main(int argc, char **argv) {
     int rc = -1, local_brightness = -1;
     int exit_status = EXIT_SUCCESS;
+    int print_only;
     unsigned seed;
     char *annfile = NULL;
     char cfgpath[PATH_MAX];
@@ -71,6 +72,7 @@ int main(int argc, char **argv) {
     arguments.interactive = 0;
     arguments.latitude = -1;
     arguments.longitude = -1;
+    arguments.print = 0;
     arguments.recursion = 0;
     arguments.scan = 0;
     arguments.time = 0;
@@ -82,6 +84,8 @@ int main(int argc, char **argv) {
     /* Parse arguments; every option seen by parse_opt will be reflected
        in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
+
+    print_only = arguments.print;
 
     /* Define the wallpaper state */
     struct wallpaper_state wallpaper = {
@@ -270,15 +274,18 @@ int main(int argc, char **argv) {
                 get_background_uri(settings, wallpaper.current);
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         wallpaper.current);
-                if ( (input = readline("")) && strcmp(input, "y") == 0 && \
-                        remove_wallpaper(db, wallpaper.current) == 0 ) {
+                if ( (input = readline("")) && \
+                     strcmp(input, "y") == 0 && \
+                     remove_wallpaper(db, wallpaper.current) == 0 ) {
                     fprintf(stderr, "Wallpaper removed\n");
-                    if ( set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
+
+                    if ( set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
                         goto Return;
+                    }
                 }
             }
             else if (strcmp(input, "") == 0 || strcmp(input, "n") == 0) {
-                if (set_wallpaper(settings, db, local_brightness, &wallpaper) == -1)
+                if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1)
                     goto Return;
             }
             else if (strcmp(input, "o") == 0) {
@@ -307,7 +314,7 @@ int main(int argc, char **argv) {
         }
     }
     else {
-        set_wallpaper(settings, db, local_brightness, &wallpaper);
+        set_wallpaper(settings, db, local_brightness, &wallpaper, print_only);
     }
 
     goto Return;
@@ -323,8 +330,11 @@ Return:
 }
 
 /* Wrapper function for setting the wallpaper */
-int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness,
-                  struct wallpaper_state *wallpaper) {
+int set_wallpaper(GSettings *settings,
+                  sqlite3 *db,
+                  int brightness,
+                  struct wallpaper_state *wallpaper,
+                  int print_only) {
     int i, exists;
 
     /* Get the path of the current wallpaper */
@@ -348,8 +358,15 @@ int set_wallpaper(GSettings *settings, sqlite3 *db, int brightness,
         nextwall(db, wallpaper->dir, brightness, wallpaper->path);
     }
 
-    /* Set the new wallpaper */
+    if (print_only) {
+        /* Print wallpaper and exit */
+        fprintf(stdout, "%s", wallpaper->path);
+        return 0;
+    }
+
     eprintf("Setting wallpaper to %s\n", wallpaper->path);
+
+    /* Set the new wallpaper */
     if (set_background_uri(settings, wallpaper->path) == -1) {
         fprintf(stderr, "Error: failed to set the background.\n");
     }
