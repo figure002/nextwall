@@ -1,4 +1,4 @@
-2014-01-13  Serrano Pereira  <serrano.pereira@gmail.com>
+2014-01-13  Serrano Pereira  <serrano@bitosis.nl>
 
 	Added basic unit testing and rearranged the directory structure.
 	* .gitignore: Updated.
@@ -24,7 +24,7 @@
 	* tests/Makefile.am: New file. Build unit tests.
 	* tests/check-nextwall.c: New file. Unit testing tool.
 
-2013-10-15  Serrano Pereira  <serrano.pereira@gmail.com>
+2013-10-15  Serrano Pereira  <serrano@bitosis.nl>
 
 	Added a Gnome Shell extension.
 	* Makefile.am: Updated.
@@ -40,7 +40,7 @@
 	* gnome-shell-extension/src/prefs.js: New file.
 	* gnome-shell-extension/src/stylesheet.css: New file.
 
-2013-09-26  Serrano Pereira  <serrano.pereira@gmail.com>
+2013-09-26  Serrano Pereira  <serrano@bitosis.nl>
 
 	Added a man page.
 	* configure.ac: Updated.
@@ -50,13 +50,13 @@
 	* src/Makefile.am: Updated.
 	* src/nextwall.c: Updated.
 
-2013-09-17  Serrano Pereira  <serrano.pereira@gmail.com>
+2013-09-17  Serrano Pereira  <serrano@bitosis.nl>
 
 	Implemented a basic interactive mode.
 	* include/nextwall.h: Updated.
 	* src/nextwall.c: Updated.
 
-2013-09-11  Serrano Pereira  <serrano.pereira@gmail.com>
+2013-09-11  Serrano Pereira  <serrano@bitosis.nl>
 
 	Rewrite in C.
 	* ChangeLog: New file.

@@ -1,5 +1,5 @@
 /*
-   Copyright 2013, Serrano Pereira <serrano.pereira@gmail.com>
+   Copyright 2013, Serrano Pereira <serrano@bitosis.nl>
 
    Copying and distribution of this file, with or without modification,
    are permitted in any medium without royalty provided the copyright

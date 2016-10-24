@@ -2,7 +2,7 @@
   This file is part of nextwall - a wallpaper rotator with some sense of time.
 
    Copyright 2004, Davyd Madeley <davyd@madeley.id.au>
-   Copyright 2010-2013, Serrano Pereira <serrano.pereira@gmail.com>
+   Copyright 2010-2013, Serrano Pereira <serrano@bitosis.nl>
 
    Nextwall is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

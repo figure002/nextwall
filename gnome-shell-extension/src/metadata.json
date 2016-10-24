@@ -3,7 +3,7 @@
 	"extension-id": "nextwall",
 	"name": "Nextwall Indicator",
 	"original-authors": [
-		"serrano.pereira@gmail.com"
+		"serrano@bitosis.nl"
 	],
 	"settings-schema": "org.gnome.shell.extensions.nextwall",
 	"shell-version": [
