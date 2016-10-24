@@ -11,3 +11,7 @@ before_script:
   - autoreconf --install
 
 script: ./configure && make && make check
+
+sudo: required
+
+dist: trusty
