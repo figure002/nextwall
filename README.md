@@ -23,8 +23,7 @@ Nextwall also comes with a GNOME Shell extension.
 
 ## Setup
 
-To compile `nextwall` you need to have the following development libraries
-installed:
+To compile `nextwall` you need to have `gcc` and `automake` as well as the following development libraries:
 
 * check
 * libfann
@@ -36,17 +35,17 @@ installed:
 
 On Debian (based) systems, run this command to install the dependencies:
 
-    apt-get install check libfann-dev libglib2.0-dev libmagic-dev \
-    libmagickwand-dev libreadline-dev libsqlite3-dev
+    apt-get install build-essential automake check libfann-dev libglib2.0-dev \
+    libmagic-dev libmagickwand-dev libreadline-dev libsqlite3-dev
+
+If you're building `nextwall` from the Git repository, you first need to use
+GNU Autotools to make the GNU Build System files before the below commands work.
+This can be done with the shell command `autoreconf --install`.
 
 You can then build and install `nextwall`. See the INSTALL file for building
 and installation instructions. Briefly, the shell commands
 `./configure; make; make install` should configure, build, and install this
 package.
-
-If you're building `nextwall` from the Git repository, you first need to use
-GNU Autotools to make the GNU Build System files before the above commands work.
-This can be done with the shell command `autoreconf --install`.
 
 
 ## Usage
