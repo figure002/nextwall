@@ -39,7 +39,7 @@ On Debian (based) systems, run this command to install the dependencies:
     libmagic-dev libmagickwand-dev libreadline-dev libsqlite3-dev
 
 If you're building `nextwall` from the Git repository, you first need to use
-GNU Autotools to make the GNU Build System files before the above commands work.
+GNU Autotools to make the GNU Build System files before the below commands work.
 This can be done with the shell command `autoreconf --install`.
 
 You can then build and install `nextwall`. See the INSTALL file for building
