@@ -12,40 +12,11 @@
    This program uses Check, a unit testing framework for C.
  */
 
-#include <stdlib.h>
 #include <check.h>
-#include <floatfann.h>
-#include <glib.h>
-#include <glib/gstdio.h>
 
 #include "std.h"
 
-struct fann *ann = NULL;
-
-void setup(void) {
-    int i, r;
-    char *ann_paths[2];
-
-    ann_paths[0] = "../data/ann/nextwall.net";
-    ann_paths[1] = "../../data/ann/nextwall.net"; /* for `make distcheck` */
-
-    for (i = 0; i < 2; i++) {
-        if ( (r = g_file_test(ann_paths[i], G_FILE_TEST_IS_REGULAR)) ) {
-            ann = fann_create_from_file(ann_paths[i]);
-            break;
-        }
-    }
-
-    if (!r)
-        exit(EXIT_FAILURE);
-}
-
-void teardown(void) {
-    fann_destroy(ann);
-}
-
-START_TEST(test_floatcmp)
-{
+START_TEST(test_floatcmp) {
     float a;
     float b;
 
@@ -61,39 +32,26 @@ START_TEST(test_floatcmp)
 }
 END_TEST
 
-START_TEST(test_ann)
-{
-    ck_assert( get_brightness(ann, 17.933842, 0.117967) == 0 );
-    ck_assert( get_brightness(ann, 0.408988, 0.241489) == 1 );
-    ck_assert( get_brightness(ann, 8.668308, 0.742252) == 2 );
-    ck_assert( get_brightness(ann, 166.338012, 0.016205) == 0 );
-    ck_assert( get_brightness(ann, 0.135857, 0.245151) == 1 );
-    ck_assert( get_brightness(ann, -0.159653, 0.557191) == 2 );
-}
-END_TEST
+Suite *nextwall_suite(void) {
+    Suite *suite = suite_create("nextwall");
 
-Suite *nextwall_suite(void)
-{
-    Suite *s = suite_create("Nextwall");
+    /* Test case: std */
+    TCase *test_case_std = tcase_create("std");
+    tcase_add_test(test_case_std, test_floatcmp);
 
-    /* Core test case */
-    TCase *tc_core = tcase_create("Core");
-    tcase_add_checked_fixture(tc_core, setup, teardown);
-    tcase_add_test(tc_core, test_floatcmp);
-    tcase_add_test(tc_core, test_ann);
-    suite_add_tcase(s, tc_core);
+    suite_add_tcase(suite, test_case_std);
 
-    return s;
+    return suite;
 }
 
-int main (void)
-{
+int main (void) {
     int number_failed;
     Suite *s = nextwall_suite();
     SRunner *sr = srunner_create(s);
+
     srunner_run_all(sr, CK_NORMAL);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
+
     return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-
