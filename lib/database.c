@@ -59,7 +59,7 @@ static int callback_wallpaper_path(void *param, int argc, char **argv, char **co
  */
 int create_database(sqlite3 *db) {
     int rc = 0, rc2 = 0;
-    char *query, *mquery;
+    char *query, *mquery = NULL;
 
     query = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
@@ -68,7 +68,9 @@ int create_database(sqlite3 *db) {
         "lightness FLOAT," \
         "brightness INTEGER" \
         ");";
+
     rc = sqlite3_exec(db, query, NULL, NULL, NULL);
+
     if (rc != SQLITE_OK)
         goto Return;
 
@@ -76,7 +78,9 @@ int create_database(sqlite3 *db) {
         "id INTEGER PRIMARY KEY," \
         "name VARCHAR," \
         "value VARCHAR);";
+
     rc = sqlite3_exec(db, query, NULL, NULL, NULL);
+
     if (rc != SQLITE_OK)
         goto Return;
 
@@ -88,6 +92,7 @@ int create_database(sqlite3 *db) {
     }
 
     rc = sqlite3_exec(db, mquery, NULL, NULL, NULL);
+
     if (rc != SQLITE_OK)
         goto Return;
 
@@ -100,8 +105,10 @@ int create_database(sqlite3 *db) {
 Return:
     if (mquery)
         free(mquery);
+
     if (rc != SQLITE_OK || rc2 == -1)
         return -1;
+
     return 0;
 }
 
@@ -328,10 +335,6 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
             fprintf(stderr, "Error: Failed to execute query: %s\n", query);
             goto on_error;
         }
-
-        // Free real_path if malloc was used.
-        if (real_base == NULL)
-            free(real_base);
 
         wallpaper_list_populated = 1;
     }
