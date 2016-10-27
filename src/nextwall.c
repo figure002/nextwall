@@ -29,6 +29,7 @@
 #include <glib/gstdio.h>
 #include <locale.h>
 #include <stdlib.h>
+#include <string.h> /* for strcpy strcat strerr strcmp */
 #include <time.h>
 #include <readline/readline.h>
 #include <readline/history.h>
