@@ -33,6 +33,12 @@
 #ifndef CFGPATH_H_
 #define CFGPATH_H_
 
+#ifdef _MSC_VER
+#define inline __inline
+#include <direct.h>
+#define mkdir _mkdir
+#endif
+
 #ifdef __linux__
 #include <string.h>
 #include <stdlib.h>
@@ -45,6 +51,12 @@
 /* MAX_PATH is defined by the Windows API */
 #define PATH_SEPARATOR_CHAR '\\'
 #define PATH_SEPARATOR_STRING "\\"
+#elif defined(__APPLE__)
+#include <CoreServices/CoreServices.h>
+#include <sys/stat.h>
+#define MAX_PATH PATH_MAX
+#define PATH_SEPARATOR_CHAR '/'
+#define PATH_SEPARATOR_STRING "/"
 #else
 #error cfgpath.h functions have not been implemented for your platform!  Please send patches.
 #endif
@@ -58,7 +70,7 @@
  *
  *   Windows: C:\Users\jcitizen\AppData\Roaming\appname.ini
  *   Linux: /home/jcitizen/.config/appname.conf
- *   Mac: <not implemented, please send patches>
+ *   Mac: /Users/jcitizen/Library/Application Support/appname.conf
  *
  * @param out
  *   Buffer to write the path.  On return will contain the path, or an empty
@@ -74,7 +86,7 @@
  * @post The file may or may not exist.
  * @post The folder holding the file is created if needed.
  */
-inline void get_user_config_file(char *out, unsigned int maxlen, const char *appname)
+static inline void get_user_config_file(char *out, unsigned int maxlen, const char *appname)
 {
 #ifdef __linux__
 	const char *out_orig = out;
@@ -133,6 +145,22 @@ inline void get_user_config_file(char *out, unsigned int maxlen, const char *app
 	strcat(out, "\\");
 	strcat(out, appname);
 	strcat(out, ".ini");
+#elif defined(__APPLE__)
+	FSRef ref;
+	FSFindFolder(kUserDomain, kApplicationSupportFolderType, kCreateFolder, &ref);
+	char home[MAX_PATH];
+	FSRefMakePath(&ref, (UInt8 *)&home, MAX_PATH);
+	/* first +1 is "/", second is terminating null */
+	const char *ext = ".conf";
+	if (strlen(home) + 1 + strlen(appname) + strlen(ext) + 1 > maxlen) {
+		out[0] = 0;
+		return;
+	}
+
+	strcpy(out, home);
+	strcat(out, PATH_SEPARATOR_STRING);
+	strcat(out, appname);
+	strcat(out, ext);
 #endif
 }
 
@@ -149,7 +177,7 @@ inline void get_user_config_file(char *out, unsigned int maxlen, const char *app
  *
  *   Windows: C:\Users\jcitizen\AppData\Roaming\appname\
  *   Linux: /home/jcitizen/.config/appname/
- *   Mac: <not implemented, please send patches>
+ *   Mac: /Users/jcitizen/Library/Application Support/appname/
  *
  * @param out
  *   Buffer to write the path.  On return will contain the path, or an empty
@@ -164,7 +192,7 @@ inline void get_user_config_file(char *out, unsigned int maxlen, const char *app
  *
  * @post The folder is created if needed.
  */
-inline void get_user_config_folder(char *out, unsigned int maxlen, const char *appname)
+static inline void get_user_config_folder(char *out, unsigned int maxlen, const char *appname)
 {
 #ifdef __linux__
 	const char *out_orig = out;
@@ -228,6 +256,23 @@ inline void get_user_config_folder(char *out, unsigned int maxlen, const char *a
 	/* Make the AppData\appname folder if it doesn't already exist */
 	mkdir(out);
 	strcat(out, "\\");
+#elif defined(__APPLE__)
+	FSRef ref;
+	FSFindFolder(kUserDomain, kApplicationSupportFolderType, kCreateFolder, &ref);
+	char home[MAX_PATH];
+	FSRefMakePath(&ref, (UInt8 *)&home, MAX_PATH);
+	/* first +1 is "/", second is trailing "/", third is terminating null */
+	if (strlen(home) + 1 + strlen(appname) + 1 + 1 > maxlen) {
+		out[0] = 0;
+		return;
+	}
+
+	strcpy(out, home);
+	strcat(out, PATH_SEPARATOR_STRING);
+	strcat(out, appname);
+	/* Make the .config/appname folder if it doesn't already exist */
+	mkdir(out, 0755);
+	strcat(out, PATH_SEPARATOR_STRING);
 #endif
 }
 
@@ -249,7 +294,7 @@ inline void get_user_config_folder(char *out, unsigned int maxlen, const char *a
  *
  *   Windows: C:\Users\jcitizen\AppData\Roaming\appname-data\
  *   Linux: /home/jcitizen/.local/share/appname/
- *   Mac: <not implemented, please send patches>
+ *   Mac: /Users/jcitizen/Library/Application Support/appname-data/
  *
  * @param out
  *   Buffer to write the path.  On return will contain the path, or an empty
@@ -264,7 +309,7 @@ inline void get_user_config_folder(char *out, unsigned int maxlen, const char *a
  *
  * @post The folder is created if needed.
  */
-inline void get_user_data_folder(char *out, unsigned int maxlen, const char *appname)
+static inline void get_user_data_folder(char *out, unsigned int maxlen, const char *appname)
 {
 #ifdef __linux__
 	const char *out_orig = out;
@@ -308,9 +353,9 @@ inline void get_user_data_folder(char *out, unsigned int maxlen, const char *app
 	*out = '/';
 	out++;
 	*out = 0;
-#elif defined(WIN32)
-	/* No distinction under Windows */
-	return get_user_config_folder(out, maxlen, appname);
+#elif defined(WIN32) || defined(__APPLE__)
+	/* No distinction under Windows or OS X */
+	get_user_config_folder(out, maxlen, appname);
 #endif
 }
 
@@ -334,7 +379,7 @@ inline void get_user_data_folder(char *out, unsigned int maxlen, const char *app
  *
  *   Windows: C:\Users\jcitizen\AppData\Local\appname\
  *   Linux: /home/jcitizen/.cache/appname/
- *   Mac: <not implemented, please send patches>
+ *   Mac: /Users/jcitizen/Library/Application Support/appname/
  *
  * @param out
  *   Buffer to write the path.  On return will contain the path, or an empty
@@ -349,7 +394,7 @@ inline void get_user_data_folder(char *out, unsigned int maxlen, const char *app
  *
  * @post The folder is created if needed.
  */
-inline void get_user_cache_folder(char *out, unsigned int maxlen, const char *appname)
+static inline void get_user_cache_folder(char *out, unsigned int maxlen, const char *appname)
 {
 #ifdef __linux__
 	const char *out_orig = out;
@@ -413,6 +458,9 @@ inline void get_user_cache_folder(char *out, unsigned int maxlen, const char *ap
 	/* Make the AppData\appname folder if it doesn't already exist */
 	mkdir(out);
 	strcat(out, "\\");
+#elif defined(__APPLE__)
+	/* No distinction under OS X */
+	get_user_config_folder(out, maxlen, appname);
 #endif
 }
 
