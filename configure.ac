@@ -51,13 +51,12 @@ else
 fi
 
 AC_CONFIG_FILES([Makefile
-				data/Makefile
-				gnome-shell-extension/Makefile
-				gnome-shell-extension/src/Makefile
-				lib/Makefile
-				man/Makefile
-				src/Makefile
-				tests/Makefile
-				])
+                 data/Makefile
+                 gnome-shell-extension/Makefile
+                 gnome-shell-extension/src/Makefile
+                 lib/Makefile
+                 man/Makefile
+                 src/Makefile
+                 tests/Makefile
+                 ])
 AC_OUTPUT
-
