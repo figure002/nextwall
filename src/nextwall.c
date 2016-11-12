@@ -343,7 +343,7 @@ int set_wallpaper(GSettings *settings,
 
     /* Make sure we select a different wallpaper and that the file exists */
     for (i = 0; !(exists = g_file_test(wallpaper->path, G_FILE_TEST_IS_REGULAR)) ||
-            strcmp(wallpaper->path, wallpaper->current) == 0; i++) {
+                strcmp(wallpaper->path, wallpaper->current) == 0; i++) {
         if (i == 5) {
             fprintf(stderr, "Not enough wallpapers found. Select a different " \
                     "directory or use the --scan option.\n");
@@ -354,6 +354,9 @@ int set_wallpaper(GSettings *settings,
             eprintf("Wallpaper '%s' no longer exists. Deleting.\n",
                     wallpaper->path);
             remove_wallpaper(db, wallpaper->path);
+
+            /* Don't increment if the file was moved/deleted. */
+            --i;
         }
 
         nextwall(db, wallpaper->dir, brightness, wallpaper->path);
