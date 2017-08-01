@@ -407,7 +407,7 @@ int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames)
 int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames) {
     char **path = (char **)param;
     //*path = (char *) realloc(*path, strlen(argv[0])+1);
-    if (strlen(argv[0]) < PATH_MAX)
+    if (strlen(argv[0]) + 1 < PATH_MAX)
         strcpy(*path, argv[0]);
     return 0;
 }
