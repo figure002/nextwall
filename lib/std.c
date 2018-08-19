@@ -95,4 +95,3 @@ int get_brightness(struct fann *ann, double kurtosis, double lightness) {
 
     return -1;
 }
-

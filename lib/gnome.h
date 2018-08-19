@@ -25,7 +25,7 @@
 
 /* Function prototypes */
 int set_background_uri(GSettings *settings, const char *path);
-void get_background_uri(GSettings *settings, char *dest);
+int get_background_uri(GSettings *settings, char *dest);
 int open_image(char *path);
 int file_trash(char *path);
 

@@ -29,4 +29,3 @@ int floatcmp(const void *a, const void *b);
 int get_brightness(struct fann *ann, double kurtosis, double lightness);
 
 #endif
-

@@ -18,24 +18,25 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE     /* for asprintf() */
+#define _GNU_SOURCE     /* asprintf */
 
 #include <errno.h>      /* errno */
 #include <floatfann.h>
 #include <magic.h>
-#include <limits.h>     /* for realpath() */
-#include <stdlib.h>     /* for realpath() */
-#include <string.h>
+#include <limits.h>     /* realpath */
+#include <stdlib.h>     /* realpath */
+#include <string.h>     /* strcmp */
 #include <sqlite3.h>
-#include <sys/types.h>  /* for open() and opendir() */
-#include <sys/stat.h>   /* for open() and opendir() */
-#include <dirent.h>     /* for open() and opendir() */
-#include <fcntl.h>      /* for open() and opendir() */
+#include <sys/types.h>  /* open opendir */
+#include <sys/stat.h>   /* open opendir */
+#include <dirent.h>     /* open opendir */
+#include <fcntl.h>      /* open opendir */
+#include <bsd/string.h> /* strlcpy strlcat */
 
 #include "database.h"
-#include "gnome.h"      /* for file_trash() */
-#include "image.h"      /* for get_image_info() */
-#include "std.h"        /* for get_brightness() */
+#include "gnome.h"      /* file_trash */
+#include "image.h"      /* get_image_info */
+#include "std.h"        /* get_brightness */
 
 extern int errno;
 
@@ -149,7 +150,7 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
 
     // Prepare INSERT statement
     query = "INSERT INTO wallpapers VALUES (null, @PATH, @KUR, @LGT, @BRI);";
-    sqlite3_prepare_v2(db, query, strlen(query)+1, &stmt, &tail);
+    sqlite3_prepare_v2(db, query, strlen(query) + 1, &stmt, &tail);
 
     do {
         if (asprintf(&path_tmp, "%s/%s", base, entry->d_name) == -1) {
@@ -176,9 +177,7 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
 
             if (save_image_info(stmt, ann, path) == 0) {
                 ++found;
-                if (found % 10 == 0) {
-                    fprintf(stderr, ".");
-                }
+                fprintf(stderr, ".");
             }
             else {
                 fprintf(stderr, "Error: Failed to save image info for %s\n", path);
@@ -355,7 +354,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
 
     rc = sqlite3_exec(db, query2, callback_wallpaper_path, &path, NULL);
     if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to execute query: %s\n", query2);
+        fprintf(stderr, "Error: query or query callback failure: %s\n", query2);
         goto on_error;
     }
 
@@ -406,9 +405,11 @@ int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames)
  */
 int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames) {
     char **path = (char **)param;
-    //*path = (char *) realloc(*path, strlen(argv[0])+1);
-    if (strlen(argv[0]) + 1 < PATH_MAX)
-        strcpy(*path, argv[0]);
+
+    if (strlcpy(*path, argv[0], PATH_MAX) >= PATH_MAX) {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -420,7 +421,6 @@ int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames)
   @return Returns 0 on successful completion, and -1 on error.
  */
 int remove_wallpaper(sqlite3 *db, char *path) {
-    int rc = 0;
     char *query = NULL;
 
     if (asprintf(&query, "DELETE FROM wallpapers WHERE path='%s';", path) == -1) {
@@ -428,9 +428,8 @@ int remove_wallpaper(sqlite3 *db, char *path) {
         return -1;
     }
 
-    rc = sqlite3_exec(db, query, NULL, NULL, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: Failed to execute query: %s\n", query);
+    if (sqlite3_exec(db, query, NULL, NULL, NULL) != SQLITE_OK) {
+        fprintf(stderr, "Error: failed to execute query: %s\n", query);
         free(query);
         return -1;
     }
@@ -438,8 +437,9 @@ int remove_wallpaper(sqlite3 *db, char *path) {
     free(query);
 
     // Move wallpaper to trash.
-    if ( file_trash(path) == 0 )
-        rc = -1;
+    if (file_trash(path) == -1) {
+        return -1;
+    }
 
-    return rc;
+    return 0;
 }

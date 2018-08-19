@@ -119,7 +119,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             arguments->time = 1;
             break;
         case 'v':
-            arguments->verbose = verbose = 1;
+            arguments->verbose = nextwall_verbose = 1;
             break;
 
         case ARGP_KEY_ARG:

@@ -29,7 +29,7 @@
 
 /* Wrapper for fprintf() for verbose messages */
 #define eprintf(format, ...) do { \
-    if (verbose) \
+    if (nextwall_verbose) \
         fprintf(stderr, format, ##__VA_ARGS__); \
 } while(0)
 
@@ -47,6 +47,6 @@ int set_wallpaper(GSettings *settings,
                   int print_only);
 
 /* Set to 1 to display verbose messages */
-extern int verbose;
+extern int nextwall_verbose;
 
 #endif

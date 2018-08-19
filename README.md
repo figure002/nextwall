@@ -34,11 +34,13 @@ following development libraries:
 * libmagickwand
 * libreadline
 * libsqlite3
+* libbsd
 
-On Debian (based) systems, run this command to install the dependencies:
+On Debian and relatives, run this command to install the dependencies:
 
-    apt-get install build-essential automake check help2man libfann-dev \
-    libglib2.0-dev libmagic-dev libmagickwand-dev libreadline-dev libsqlite3-dev
+    apt install build-essential automake check help2man libfann-dev \
+    libglib2.0-dev libmagic-dev libmagickwand-dev libreadline-dev \
+    libsqlite3-dev libbsd-dev
 
 If you're building `nextwall` from the Git repository, you first need to use
 GNU Autotools to make the GNU Build System files before the below commands work.
@@ -63,14 +65,7 @@ Then `nextwall` can be used as follows:
 
 	nextwall [OPTION...] PATH
 
-
-### Usage Tips
-
-* You can use `watch` to temporarily change the background at a set interval.
-  For 60 seconds, run `watch -n 60 nextwall [OPTION...] PATH`
-* You can also use the cron deamon to schedule execution of `nextwall`. For
-  once an hour, run `crontab -e` and add this line:
-  ``0 * * * * DISPLAY=:0.0 /usr/local/bin/nextwall [OPTION...] PATH``
+See `man nextwall` for details.
 
 
 ## ANN trainer

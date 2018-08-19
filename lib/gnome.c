@@ -20,7 +20,7 @@
 
 #include <gio/gio.h>
 #include <stdio.h>
-#include <string.h>
+#include <bsd/string.h> /* strlcpy */
 
 #include "gnome.h"
 
@@ -32,19 +32,31 @@
   @return Returns 0 on success, -1 on failure.
  */
 int set_background_uri(GSettings *settings, const char *path) {
-    char pathc[PATH_MAX];
+    char normalized_path[PATH_MAX];
 
-    if (!strstr(path, "file://"))
-        sprintf(pathc, "file://%s", path);
-    else
-        strcpy(pathc, path);
+    if (strstr(path, "file://") == NULL) {
+        if (snprintf(normalized_path,
+                     PATH_MAX,
+                     "file://%s", path) >= PATH_MAX) {
+            return -1;
+        }
+    }
+    else {
+        if (strlcpy(normalized_path,
+                    path,
+                    PATH_MAX) >= PATH_MAX) {
+            return -1;
+        }
+    }
 
-    g_assert(g_settings_set(settings, "picture-uri", "s", pathc));
+    g_assert(g_settings_set(settings, "picture-uri", "s", normalized_path));
     g_settings_sync(); // Make sure the changes are written to disk
-    if ( strcmp(g_settings_get_string(settings, "picture-uri"), pathc) == 0 )
+
+    if (strcmp(g_settings_get_string(settings, "picture-uri"), normalized_path) == 0) {
         return 0;
-    else
-        return -1;
+    }
+
+    return -1;
 }
 
 /**
@@ -53,50 +65,71 @@ int set_background_uri(GSettings *settings, const char *path) {
   @param[in] settings GSettings object with desktop background schema.
   @param[out] dest Is set to the URI of the current desktop background.
  */
-void get_background_uri(GSettings *settings, char *dest) {
+int get_background_uri(GSettings *settings, char *dest) {
     const char *uri;
 
     uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
-    strcpy(dest, uri+7);
+
+    // Strip off the "file://" part of the URI.
+    if (strlcpy(dest, uri + 7, PATH_MAX) >= PATH_MAX) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
   Launch the default application for an image path.
 
   @param[in] path Path or uri for the image.
-  @return Returns TRUE on success, FALSE on error.
+  @return Returns 0 on success, -1 on error.
  */
 int open_image(char *path) {
-    gboolean ret;
+    gboolean success;
     GError *error = NULL;
     char uri[PATH_MAX];
 
-    if (!strstr(path, "file://"))
-        sprintf(uri, "file://%s", path);
-    else
-        strcpy(uri, path);
+    if (strstr(path, "file://") == NULL) {
+        if (snprintf(uri,
+                     PATH_MAX,
+                     "file://%s", path) >= PATH_MAX) {
+            return -1;
+        }
+    }
+    else {
+        if (strlcpy(uri, path, PATH_MAX) >= PATH_MAX) {
+            return FALSE;
+        }
+    }
 
-    ret = g_app_info_launch_default_for_uri(uri, NULL, &error);
-    if (!ret)
+    success = g_app_info_launch_default_for_uri(uri, NULL, &error);
+
+    if (success == FALSE) {
         g_message("%s", error->message);
+        return -1;
+    }
 
-    return ret;
+    return 0;
 }
 
 /**
   Move a file to trash.
 
   @param[in] path Path for the file.
-  @return Returns TRUE on success, FALSE on error.
+  @return Returns 0 on success, -1 on error.
  */
 int file_trash(char *path) {
-    gboolean ret;
+    gboolean success;
     GFile *file;
 
     file = g_file_new_for_path(path);
-    ret = g_file_trash(file, NULL, NULL);
+    success = g_file_trash(file, NULL, NULL);
+
     g_object_unref(file);
 
-    return ret;
-}
+    if (success == FALSE) {
+        return -1;
+    }
 
+    return 0;
+}

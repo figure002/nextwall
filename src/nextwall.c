@@ -18,26 +18,27 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define _GNU_SOURCE     /* for asprintf(), tm_gmtoff and tm_zone */
+#define _GNU_SOURCE     /* asprintf tm_gmtoff tm_zone */
 
-#include <errno.h>      /* errno */
-#include <config.h>
 #include <argp.h>
+#include <bsd/string.h> /* strlcpy strlcat */
+#include <config.h>
+#include <errno.h>
+#include <fcntl.h>      /* open */
 #include <floatfann.h>
 #include <gio/gio.h>
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <locale.h>
-#include <stdlib.h>
-#include <string.h> /* for strcpy strcat strerr strcmp */
-#include <time.h>
-#include <readline/readline.h>
 #include <readline/history.h>
+#include <readline/readline.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>     /* strerr strcmp */
+#include <sys/stat.h>   /* open */
+#include <sys/types.h>  /* open */
+#include <time.h>       /* localtime_r */
 #include <unistd.h>
-#include <sys/types.h>  /* for open() */
-#include <sys/stat.h>   /* for open() */
-#include <fcntl.h>      /* for open() */
 
 #include "cfgpath.h"
 #include "nextwall.h"
@@ -50,18 +51,17 @@
 extern int errno;
 
 /* Define the global variable for verbosity */
-int verbose = 0;
+int nextwall_verbose = 0;
 
-/* Main function */
 int main(int argc, char **argv) {
-    int rc = -1, local_brightness = -1;
+    int rc = -1;
+    int local_brightness = -1;
     int exit_status = EXIT_SUCCESS;
-    int print_only;
     unsigned seed;
-    char *annfile = NULL;
-    char cfgpath[PATH_MAX];
-    char current_wallpaper[PATH_MAX] = "\0";
-    char dbfile[PATH_MAX];
+    char *ann_path = NULL;
+    char user_data_path[PATH_MAX];
+    char current_wallpaper_path[PATH_MAX] = "\0";
+    char db_path[PATH_MAX];
     char wallpaper_path[PATH_MAX] = "\0";
     struct arguments arguments;
     struct fann *ann = NULL;
@@ -86,59 +86,57 @@ int main(int argc, char **argv) {
        in arguments. */
     argp_parse(&argp, argc, argv, 0, 0, &arguments);
 
-    print_only = arguments.print;
-
     /* Define the wallpaper state */
     struct wallpaper_state wallpaper = {
         arguments.args[0],
-        current_wallpaper,
+        current_wallpaper_path,
         wallpaper_path
     };
 
-    if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
+    if (!g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR)) {
         fprintf(stderr, "Cannot access directory %s\n", wallpaper.dir);
-
-        exit_status = EXIT_FAILURE;
-        goto Return;
+        goto Return_failure;
     }
 
     /* Set the user specific data storage folder. The folder is automatically
        created if it doesn't already exist. */
-    get_user_data_folder(cfgpath, sizeof cfgpath, "nextwall");
+    get_user_data_folder(user_data_path, sizeof user_data_path, "nextwall");
 
-    if (cfgpath[0] == 0) {
+    if (user_data_path[0] == 0) {
         fprintf(stderr, "Error: Unable to set the data storage folder.\n");
-
-        exit_status = EXIT_FAILURE;
-        goto Return;
+        goto Return_failure;
     }
 
     /* Set the database file path */
-    strcpy(dbfile, cfgpath);
-    strcat(dbfile, "nextwall.db");
+    if (strlcpy(db_path, user_data_path, sizeof db_path) >= sizeof db_path) {
+        goto Too_long;
+    }
+
+    if (strlcat(db_path, "nextwall.db", sizeof db_path) >= sizeof db_path) {
+        goto Too_long;
+    }
 
     /* Find the location of the ANN file */
     if (arguments.scan) {
         int i, ann_found;
-        char *annfiles[3];
+        char *ann_paths[3];
 
-        if (asprintf(&annfile, "%snextwall.net", cfgpath) == -1) {
+        if (asprintf(&ann_path, "%snextwall.net", user_data_path) == -1) {
             fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
 
-            exit_status = EXIT_FAILURE;
-            goto Return;
+            goto Return_failure;
         }
 
-        annfiles[0] = annfile;
-        annfiles[1] = "/usr/local/share/nextwall/nextwall.net";
-        annfiles[2] = "/usr/share/nextwall/nextwall.net";
+        ann_paths[0] = ann_path;
+        ann_paths[1] = "/usr/local/share/nextwall/nextwall.net";
+        ann_paths[2] = "/usr/share/nextwall/nextwall.net";
 
         for (i = 0; i < 3; i++) {
-            if ( (ann_found = g_file_test(annfiles[i], G_FILE_TEST_IS_REGULAR)) ) {
-                eprintf("Using ANN %s\n", annfiles[i]);
+            if ( (ann_found = g_file_test(ann_paths[i], G_FILE_TEST_IS_REGULAR)) ) {
+                eprintf("Using ANN %s\n", ann_paths[i]);
 
                 /* Initialize the ANN */
-                ann = fann_create_from_file(annfiles[i]);
+                ann = fann_create_from_file(ann_paths[i]);
 
                 break;
             }
@@ -147,15 +145,14 @@ int main(int argc, char **argv) {
         if (!ann_found) {
             fprintf(stderr, "Error: Could not find ANN file nextwall.net\n");
 
-            exit_status = EXIT_FAILURE;
-            goto Return;
+            goto Return_failure;
         }
     }
 
     /* Create the database if it doesn't exist */
-    if ( !g_file_test(dbfile, G_FILE_TEST_IS_REGULAR) ) {
+    if ( !g_file_test(db_path, G_FILE_TEST_IS_REGULAR) ) {
         eprintf("Creating database... ");
-        if ( (rc = sqlite3_open(dbfile, &db)) == SQLITE_OK && \
+        if ( (rc = sqlite3_open(db_path, &db)) == SQLITE_OK && \
                 create_database(db) == 0 ) {
             eprintf("Done\n");
         }
@@ -163,19 +160,17 @@ int main(int argc, char **argv) {
             eprintf("Failed\n");
             fprintf(stderr, "Error: Creating database failed.\n");
 
-            exit_status = EXIT_FAILURE;
-            goto Return;
+            goto Return_failure;
         }
     }
 
     /* Open database connection */
     if ( rc != SQLITE_OK ) {
-        if ( sqlite3_open(dbfile, &db) != SQLITE_OK ) {
+        if ( sqlite3_open(db_path, &db) != SQLITE_OK ) {
             fprintf(stderr, "Error: Can't open database: %s\n",
                     sqlite3_errmsg(db));
 
-            exit_status = EXIT_FAILURE;
-            goto Return;
+            goto Return_failure;
         }
     }
 
@@ -213,22 +208,23 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Error: Could not determine the local " \
                         "brightness value.\n");
 
-                exit_status = EXIT_FAILURE;
-                goto Return;
+                goto Return_failure;
         }
     }
 
     /* Set the seed for the random number generator */
     if ( read(open("/dev/urandom", O_RDONLY), &seed, sizeof seed) == -1 ) {
-        exit_status = EXIT_FAILURE;
-        goto Return;
+        goto Return_failure;
     }
+
     srand(seed);
 
     /* Set the wallpaper path */
     if ( (nextwall(db, wallpaper.dir, local_brightness, wallpaper.path)) == -1 ) {
-        fprintf(stderr, "No wallpapers found for directory %s. Try the " \
-                "--scan option or remove the --time option.\n", wallpaper.dir);
+        fprintf(stderr,
+                "No wallpapers found for directory %s. Try the " \
+                "--scan option or remove the --time option.\n",
+                wallpaper.dir);
         goto Return;
     }
 
@@ -236,12 +232,15 @@ int main(int argc, char **argv) {
     settings = g_settings_new("org.gnome.desktop.background");
 
     if (arguments.interactive) {
-        char* input, shell_prompt[100];
+        char *input;
+        char shell_prompt[100];
 
-        fprintf(stderr, "Nextwall %s\n" \
+        fprintf(stderr,
+                "Nextwall %s\n" \
                 "License: GNU GPL version 3 or later " \
                 "<http://gnu.org/licenses/gpl.html>\n" \
-                "Type 'help' for more information.\n", PACKAGE_VERSION);
+                "Type 'help' for more information.\n",
+                PACKAGE_VERSION);
 
         // Configure readline to auto-complete paths when the tab key is hit.
         rl_bind_key('\t', rl_complete);
@@ -260,37 +259,47 @@ int main(int argc, char **argv) {
             }
 
             // If the line has any text in it, save it on the history.
-            if (input && *input)
+            if (input && *input) {
                 add_history(input);
+            }
 
             // Check if the directory still exists.
             if ( !g_file_test(wallpaper.dir, G_FILE_TEST_IS_DIR) ) {
                 fprintf(stderr, "Cannot access directory %s\n", wallpaper.dir);
 
-                exit_status = EXIT_FAILURE;
-                goto Return;
+                goto Return_failure;
             }
 
             if (strcmp(input, "d") == 0) {
-                get_background_uri(settings, wallpaper.current);
+                if (get_background_uri(settings, wallpaper.current) != 0) {
+                    fprintf(stderr, "Error: failed to get the current wallpaper\n");
+                    goto Return_failure;
+                }
+
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         wallpaper.current);
+
                 if ( (input = readline("")) && \
                      strcmp(input, "y") == 0 && \
                      remove_wallpaper(db, wallpaper.current) == 0 ) {
                     fprintf(stderr, "Wallpaper removed\n");
 
-                    if ( set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
+                    if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
                         goto Return;
                     }
                 }
             }
             else if (strcmp(input, "") == 0 || strcmp(input, "n") == 0) {
-                if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1)
+                if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
                     goto Return;
+                }
             }
             else if (strcmp(input, "o") == 0) {
-                get_background_uri(settings, wallpaper.current);
+                if (get_background_uri(settings, wallpaper.current) != 0) {
+                    fprintf(stderr, "Error: failed to get the current wallpaper\n");
+                    goto Return_failure;
+                }
+
                 open_image(wallpaper.current);
             }
             else if (strcmp(input, "help") == 0) {
@@ -306,27 +315,38 @@ int main(int argc, char **argv) {
                 goto Return;
             }
             else {
-                fprintf(stderr, "Unknown command. Type 'help' to see the " \
+                fprintf(stderr,
+                        "Unknown command. Type 'help' to see the " \
                         "available commands.\n");
             }
 
-            // Free input.
             free(input);
         }
     }
     else {
-        set_wallpaper(settings, db, local_brightness, &wallpaper, print_only);
+        set_wallpaper(settings, db, local_brightness, &wallpaper, arguments.print);
     }
 
     goto Return;
 
+Too_long:
+    fprintf(stderr, "Error: string too long\n");
+    goto Return_failure;
+
+Return_failure:
+    exit_status = EXIT_FAILURE;
+    goto Return;
+
 Return:
-    if (annfile)
-        free(annfile);
-    if (settings)
+    if (ann_path) {
+        free(ann_path);
+    }
+    if (settings) {
         g_object_unref(settings);
-    if (db)
+    }
+    if (db) {
         sqlite3_close(db);
+    }
     return exit_status;
 }
 
@@ -336,22 +356,28 @@ int set_wallpaper(GSettings *settings,
                   int brightness,
                   struct wallpaper_state *wallpaper,
                   int print_only) {
-    int i, exists;
+    int i;
+    int file_exists;
 
     /* Get the path of the current wallpaper */
-    get_background_uri(settings, wallpaper->current);
+    if (get_background_uri(settings, wallpaper->current) != 0) {
+        fprintf(stderr, "Error: failed to get the current wallpaper\n");
+        return -1;
+    }
 
     /* Make sure we select a different wallpaper and that the file exists */
-    for (i = 0; !(exists = g_file_test(wallpaper->path, G_FILE_TEST_IS_REGULAR)) ||
+    for (i = 0; !(file_exists = g_file_test(wallpaper->path, G_FILE_TEST_IS_REGULAR)) ||
                 strcmp(wallpaper->path, wallpaper->current) == 0; i++) {
         if (i == 5) {
-            fprintf(stderr, "Not enough wallpapers found. Select a different " \
+            // Give up after 5 tries.
+            fprintf(stderr,
+                    "Not enough wallpapers found. Select a different " \
                     "directory or use the --scan option.\n");
             return -1;
         }
 
-        if (!exists) {
-            eprintf("Wallpaper '%s' no longer exists. Deleting.\n",
+        if (!file_exists) {
+            eprintf("Wallpaper '%s' no longer exists. Removing from database.\n",
                     wallpaper->path);
             remove_wallpaper(db, wallpaper->path);
 
@@ -394,7 +420,7 @@ int get_local_brightness(double lat, double lon) {
     time_t now;
     double htime, sunrise, sunset, civ_start, civ_end;
     int year, month, day, gmt_offset_h, rs, civ;
-    char sr_s[6], ss_s[6], civ_start_s[6], civ_end_s[6];
+    char sunrise_str[6], sunset_str[6], civ_start_str[6], civ_end_str[6];
 
     time(&now);
     localtime_r(&now, &ltime);
@@ -416,13 +442,17 @@ int get_local_brightness(double lat, double lon) {
         case 0:
             sunrise += gmt_offset_h;
             sunset += gmt_offset_h;
-            eprintf("Sun rises %s, sets %s %s\n", hours_to_hm(sunrise, sr_s),
-                    hours_to_hm(sunset, ss_s), ltime.tm_zone);
+            eprintf("Sun rises %s, sets %s %s\n",
+                    hours_to_hm(sunrise, sunrise_str),
+                    hours_to_hm(sunset, sunset_str),
+                    ltime.tm_zone);
             break;
+
         case +1:
             eprintf("Sun above horizon\n");
             return 2;
             break;
+
         case -1:
             eprintf("Sun below horizon\n");
             return 0;
@@ -434,24 +464,30 @@ int get_local_brightness(double lat, double lon) {
             civ_start += gmt_offset_h;
             civ_end += gmt_offset_h;
             eprintf("Civil twilight starts %s, ends %s %s\n",
-                    hours_to_hm(civ_start, civ_start_s),
-                    hours_to_hm(civ_end, civ_end_s), ltime.tm_zone);
+                    hours_to_hm(civ_start, civ_start_str),
+                    hours_to_hm(civ_end, civ_end_str),
+                    ltime.tm_zone);
             break;
+
         case +1:
             eprintf("Never darker than civil twilight\n");
             break;
+
         case -1:
             eprintf("Never as bright as civil twilight\n");
             break;
     }
 
     if (rs == 0 && civ == 0) {
-        if (sunrise < htime && htime < sunset)
+        if (sunrise < htime && htime < sunset) {
             return 2;
-        else if (htime < civ_start || htime > civ_end)
+        }
+        else if (htime < civ_start || htime > civ_end) {
             return 0;
-        else
+        }
+        else {
             return 1;
+        }
     }
     else {
         return -1;
