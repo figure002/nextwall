@@ -5,7 +5,7 @@ compiler:
 
 install:
   - sudo apt-get install check help2man libfann-dev libglib2.0-dev libmagic-dev
-    libmagickwand-dev libreadline-dev libsqlite3-dev
+    libmagickwand-dev libreadline-dev libsqlite3-dev libbsd-dev
 
 before_script:
   - autoreconf --install
@@ -14,4 +14,4 @@ script: ./configure && make && make distcheck
 
 sudo: required
 
-dist: trusty
+dist: bionic
