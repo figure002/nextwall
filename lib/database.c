@@ -28,8 +28,9 @@
 #include <stdlib.h>     /* realpath */
 #include <string.h>     /* strcmp */
 #include <sqlite3.h>
-#include <sys/types.h>  /* open opendir */
-#include <sys/stat.h>   /* open opendir */
+#include <sys/types.h>  /* open opendir stat */
+#include <sys/stat.h>   /* open opendir stat */
+#include <unistd.h>     /* stat */
 #include <dirent.h>     /* open opendir */
 #include <fcntl.h>      /* open opendir */
 #include <bsd/string.h> /* strlcpy strlcat */
@@ -197,7 +198,32 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
             }
         }
         else if (entry->d_type == DT_UNKNOWN) {
-            fprintf(stderr, "\nCould not determine file type of '%s'; skipping...\n", path);
+            // The file type could not be determined. Fallback to using stat.
+
+            struct stat statbuf;
+            _Bool is_dir;
+
+            stat(entry->d_name, &statbuf);
+            is_dir = S_ISDIR(statbuf.st_mode);
+
+            if (is_dir) {
+                if (!recursive) {
+                    continue;
+                }
+
+                if (strcmp(entry->d_name, ".") == 0 || \
+                    strcmp(entry->d_name, "..") == 0 || \
+                    strcmp(entry->d_name, ".thumbs") == 0) {
+                    continue;
+                }
+
+                fprintf(stderr, "\nEntering %s...", path);
+                found += scan_dir(db, path, ann, recursive + 1);
+            }
+            else {
+                // TODO: Check if it is an image file.
+                fprintf(stderr, "\nCould not determine file type of '%s'; skipping...\n", path);
+            }
         }
     } while ((entry = readdir(dir)));
 
