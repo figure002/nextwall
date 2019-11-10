@@ -178,11 +178,10 @@ int main(int argc, char **argv) {
     if (arguments.scan) {
         int found;
 
-        fprintf(stderr, "Scanning for new wallpapers...");
+        fprintf(stderr, "Scanning for new wallpapers...\n");
         found = scan_dir(db, wallpaper.dir, ann, arguments.recursion);
         fann_destroy(ann);
-        fprintf(stderr, " Done\n");
-        fprintf(stderr, "Found %d new wallpapers\n", found);
+        fprintf(stderr, "\nFound %d new wallpapers\n", found);
         goto Return;
     }
 

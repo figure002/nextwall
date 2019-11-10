@@ -21,6 +21,7 @@
 #define _GNU_SOURCE     /* asprintf */
 
 #include <errno.h>      /* errno */
+#include <stdio.h>      /* perror */
 #include <floatfann.h>
 #include <magic.h>
 #include <limits.h>     /* realpath */
@@ -140,13 +141,17 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
     magic_t magic = magic_open(MAGIC_MIME_TYPE);
     magic_load(magic, NULL);
 
-    if (recursive < 2)
+    if (recursive < 2) {
         sqlite3_exec(db, "BEGIN TRANSACTION", NULL, NULL, NULL);
+    }
 
-    if (!(dir = opendir(base)))
+    if (!(dir = opendir(base))) {
         return found;
-    if (!(entry = readdir(dir)))
+    }
+
+    if (!(entry = readdir(dir))) {
         return found;
+    }
 
     // Prepare INSERT statement
     query = "INSERT INTO wallpapers VALUES (null, @PATH, @KUR, @LGT, @BRI);";
@@ -154,37 +159,47 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
 
     do {
         if (asprintf(&path_tmp, "%s/%s", base, entry->d_name) == -1) {
-            fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
+            perror("asprintf");
             goto Return;
         }
 
         if (realpath(path_tmp, path) == NULL) {
-            fprintf(stderr, "realpath() failed: %s\n", strerror(errno));
+            perror("realpath");
             goto Return;
         }
 
         if (entry->d_type == DT_DIR) {
-            if (!recursive)
+            if (!recursive) {
                 continue;
-            if (strcmp(entry->d_name, ".") == 0  || strcmp(entry->d_name, "..") == 0 || \
-                strcmp(entry->d_name, ".thumbs") == 0)
+            }
+
+            if (strcmp(entry->d_name, ".") == 0 || \
+                strcmp(entry->d_name, "..") == 0 || \
+                strcmp(entry->d_name, ".thumbs") == 0) {
                 continue;
-            found += scan_dir(db, path, ann, recursive+1);
+            }
+
+            fprintf(stderr, "\nEntering %s...", path);
+            found += scan_dir(db, path, ann, recursive + 1);
         }
         else if (strstr(magic_file(magic, path), "image")) {
-            if (is_known_image(db, path))
+            if (is_known_image(db, path)) {
                 continue;
+            }
 
             if (save_image_info(stmt, ann, path) == 0) {
                 ++found;
                 fprintf(stderr, ".");
             }
             else {
-                fprintf(stderr, "Error: Failed to save image info for %s\n", path);
+                fprintf(stderr, "\nError: Failed to save image info for %s\n", path);
                 goto Return;
             }
         }
-    } while ( (entry = readdir(dir)) );
+        else if (entry->d_type == DT_UNKNOWN) {
+            fprintf(stderr, "\nCould not determine file type of '%s'; skipping...\n", path);
+        }
+    } while ((entry = readdir(dir)));
 
     goto Return;
 
@@ -193,10 +208,15 @@ Return:
         sqlite3_exec(db, "END TRANSACTION", NULL, NULL, NULL);
         sqlite3_finalize(stmt);
     }
+
     magic_close(magic);
-    if (path_tmp)
+
+    if (path_tmp) {
         free(path_tmp);
+    }
+
     closedir(dir);
+
     return found;
 }
 
@@ -224,6 +244,7 @@ int is_known_image(sqlite3 *db, const char *path) {
     }
 
     free(query);
+
     return known;
 
 on_error:
@@ -245,6 +266,7 @@ on_error:
 int callback_known_image(void *param, int argc, char **argv, char **colnames) {
     int *known = (int *)param;
     *known = 1;
+
     return 0;
 }
 
@@ -265,8 +287,9 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
 	int rc = 0;
 
     // Get the lightness for this image
-    if (get_image_info(path, &kurtosis, &lightness) == -1)
+    if (get_image_info(path, &kurtosis, &lightness) == -1) {
         return -1;
+    }
 
     // Get image brigthness
     brightness = get_brightness(ann, kurtosis, lightness);
@@ -278,10 +301,13 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
     sqlite3_bind_int(stmt, 4, brightness);
 
     rc = sqlite3_step(stmt);
-    if (rc != SQLITE_DONE)
+    if (rc != SQLITE_DONE) {
         return -1;
+    }
+
     sqlite3_clear_bindings(stmt);
     sqlite3_reset(stmt);
+
     return 0;
 }
 
@@ -338,12 +364,15 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
         wallpaper_list_populated = 1;
     }
 
-    if (wallpaper_count == 0)
+    if (wallpaper_count == 0) {
         goto on_error;
+    }
 
     // Get random index for wallpaper_list
-    if (wallpaper_current == wallpaper_count)
+    if (wallpaper_current == wallpaper_count) {
         wallpaper_current = 0;
+    }
+
     id = wallpaper_list[wallpaper_current++];
 
     // Set the wallpaper path
@@ -359,18 +388,25 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
     }
 
     // Deallocate
-    if (query)
+    if (query) {
         free(query);
-    if (query2)
+    }
+
+    if (query2) {
         free(query2);
+    }
 
     return id;
 
 on_error:
-    if (query)
+    if (query) {
         free(query);
-    if (query2)
+    }
+
+    if (query2) {
         free(query2);
+    }
+
     return -1;
 }
 
@@ -389,6 +425,7 @@ int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames)
     int *wallpaper_list = (int *)param;
     wallpaper_list[wallpaper_count] = atoi(argv[0]);
     ++wallpaper_count;
+
     return 0;
 }
 
