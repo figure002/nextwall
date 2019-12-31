@@ -116,16 +116,21 @@ const ThumbnailWidget = new Lang.Class({
 
     _init: function(image_path, params) {
         this._image_path = image_path;
-        params = Params.parse(params, { reactive: false,
-                                        iconSize: THUMBNAIL_ICON_SIZE,
-                                        styleClass: 'thumbnail-widget' });
-        this._iconSize = params.iconSize;
+        const _params = Params.parse(params, {
+            iconSize: THUMBNAIL_ICON_SIZE,
+            reactive: false,
+            styleClass: 'thumbnail-widget',
+        });
+        this._iconSize = _params.iconSize;
 
-        this.actor = new St.Bin({ style_class: params.styleClass,
-                                  track_hover: params.reactive,
-                                  reactive: params.reactive });
+        this.actor = new St.Bin({
+            reactive: _params.reactive,
+            style_class: _params.styleClass,
+            track_hover: _params.reactive,
+        });
 
-        this._thumbnail_factory = new GnomeDesktop.DesktopThumbnailFactory();
+        this._thumbnail_factory = GnomeDesktop.DesktopThumbnailFactory.new(
+            GnomeDesktop.DesktopThumbnailSize.LARGE);
     },
 
     setSensitive: function(sensitive) {
@@ -134,17 +139,19 @@ const ThumbnailWidget = new Lang.Class({
     },
 
     update: function(image_path) {
-        let thumbnail_path;
+        let filename = null;
 
-        if (!GLib.file_test(image_path, GLib.FileTest.EXISTS))
-            image_path = null;
-        else
-            thumbnail_path = this.getThumbnailPath(this._thumbnail_factory, image_path);
+        if (GLib.file_test(image_path, GLib.FileTest.EXISTS)) {
+            filename = this.getThumbnailPath(this._thumbnail_factory, image_path);
+        }
 
-        if (image_path && thumbnail_path) {
-            if (GLib.file_test(thumbnail_path, GLib.FileTest.EXISTS)) {
-                let thumbTexture = new Clutter.Texture({filter_quality: 2, filename: thumbnail_path});
-                let [thumbWidth, thumbHeight] = thumbTexture.get_base_size();
+        if (filename) {
+            if (GLib.file_test(filename, GLib.FileTest.EXISTS)) {
+                const thumbTexture = new Clutter.Texture({
+                    filter_quality: 2,
+                    filename,
+                });
+                const [thumbWidth, thumbHeight] = thumbTexture.get_base_size();
                 this.actor.width = thumbWidth;
                 this.actor.height = thumbHeight;
                 this.actor.set_child(thumbTexture);
@@ -202,7 +209,7 @@ const ThumbnailWidget = new Lang.Class({
 
         // Try to generate a thumbnail for the specified file. If it succeeds it
         // returns a pixbuf that can be used as a thumbnail.
-        let thumbnail = factory.generate_thumbnail(uri, mime_type);
+        const thumbnail = factory.generate_thumbnail(uri, mime_type);
         if (!thumbnail) {
             return null;
         }
