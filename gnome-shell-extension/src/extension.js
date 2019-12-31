@@ -21,6 +21,8 @@ const BACKGROUND_SCHEMA = 'org.gnome.desktop.background';
 const NEXTWALL_SCHEMA = 'org.gnome.shell.extensions.nextwall';
 const THUMBNAIL_ICON_SIZE = 64;
 const DIALOG_ICON_SIZE = 32;
+const ICON_COLOR = 'nextwall';
+const ICON_SYMBOLIC = 'nextwall-symbolic';
 
 let nextwallMenu;
 
@@ -255,14 +257,13 @@ const WallpaperInfoBox = new Lang.Class({
     },
 
     onNextwallSettingsChanged: function() {
-        nextwallMenu.panelIcon.icon_name = 'nextwall' + this.icon_type;
-    },
+        let iconPath = `${Me.path}/icons/${ICON_COLOR}.svg`;
 
-    get icon_type() {
-        if (this._settingsNextwall.get_boolean('symbolic-icons'))
-            return '-symbolic';
-        else
-            return '';
+        if (this._settingsNextwall.get_boolean('symbolic-icons')) {
+            iconPath = `${Me.path}/icons/${ICON_SYMBOLIC}.svg`;
+        }
+
+        nextwallMenu.panelIcon.gicon = Gio.icon_new_for_string(iconPath);
     },
 
     get _currentWallpaperPath() {
@@ -287,10 +288,17 @@ const NextwallMenuButton = new Lang.Class({
 
         // Add an icon to the panel container.
         this.panelIcon = new St.Icon({
-            icon_name: 'nextwall' + this.icon_type,
             icon_size: 16,
             style_class: 'panel-icon'
         });
+
+        let iconPath = `${Me.path}/icons/${ICON_COLOR}.svg`;
+
+        if (this._settings.get_boolean('symbolic-icons')) {
+            iconPath = `${Me.path}/icons/${ICON_SYMBOLIC}.svg`;
+        }
+
+        this.panelIcon.gicon = Gio.icon_new_for_string(iconPath);
         this.panelContainer.add(this.panelIcon);
 
         // Create a wallpaper info box.
@@ -335,13 +343,6 @@ const NextwallMenuButton = new Lang.Class({
         item = new PopupMenu.PopupMenuItem("Settings");
         item.connect('activate', Lang.bind(this, this._onSettings));
         this.menu.addMenuItem(item);
-    },
-
-    get icon_type() {
-        if (this._settings.get_boolean('symbolic-icons'))
-            return '-symbolic';
-        else
-            return '';
     },
 
     _onFitTimeChange: function(widget, data) {
