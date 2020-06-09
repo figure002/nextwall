@@ -7,15 +7,9 @@
 	],
 	"settings-schema": "org.gnome.shell.extensions.nextwall",
 	"shell-version": [
-		"3.6",
-		"3.8",
-		"3.10",
-		"3.12",
-		"3.14",
-		"3.16",
-		"3.18"
+		"3.36"
 	],
 	"url": "https://github.com/figure002/nextwall/",
-	"uuid": "nextwall@serrano.byobu.info",
-	"version": "0.3.1"
+	"uuid": "nextwall@serrano.bitosis.nl",
+	"version": "0.4.0"
 }

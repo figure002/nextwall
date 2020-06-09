@@ -1,5 +1,7 @@
 const BoxPointer = imports.ui.boxpointer;
 const Clutter = imports.gi.Clutter;
+const Cogl = imports.gi.Cogl;
+const GdkPixbuf = imports.gi.GdkPixbuf;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 const GnomeDesktop = imports.gi.GnomeDesktop;
@@ -147,14 +149,25 @@ const ThumbnailWidget = new Lang.Class({
 
         if (filename) {
             if (GLib.file_test(filename, GLib.FileTest.EXISTS)) {
-                const thumbTexture = new Clutter.Texture({
-                    filter_quality: 2,
-                    filename,
-                });
-                const [thumbWidth, thumbHeight] = thumbTexture.get_base_size();
-                this.actor.width = thumbWidth;
-                this.actor.height = thumbHeight;
-                this.actor.set_child(thumbTexture);
+                const pixbuf = GdkPixbuf.Pixbuf.new_from_file(filename);
+                const pixel_format = pixbuf.get_has_alpha() ? Cogl.PixelFormat.RGBA_8888 : Cogl.PixelFormat.RGB_888;
+                const thumbnail = new Clutter.Image();
+                const image_actor = new Clutter.Actor();
+
+                thumbnail.set_data(
+                    pixbuf.get_pixels(),
+                    pixel_format,
+                    pixbuf.get_width(),
+                    pixbuf.get_height(),
+                    pixbuf.get_rowstride());
+
+                image_actor.set_content_scaling_filters(
+                    Clutter.ScalingFilter.TRILINEAR,
+                    Clutter.ScalingFilter.LINEAR)
+                image_actor.set_content(thumbnail)
+                image_actor.set_size(pixbuf.get_width(), pixbuf.get_height())
+
+                this.actor.set_child(image_actor);
             }
         }
         else {
