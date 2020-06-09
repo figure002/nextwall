@@ -438,7 +438,7 @@ const NextwallMenuButton = new Lang.Class({
 
     /* Open extension preferences */
     _onSettings: function() {
-        Util.spawn(['gnome-shell-extension-prefs', 'nextwall@serrano.byobu.info']);
+        Util.spawn(['gnome-shell-extension-prefs', 'nextwall@serrano.bitosis.nl']);
         return 0;
     }
 });
