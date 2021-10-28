@@ -44,7 +44,7 @@
 #include "trainer-options.h"
 
 /* Number of input values for the ANN */
-#define NUM_INPUT 2
+#define NUM_INPUT 1
 
 /* Number of output values for the ANN */
 #define NUM_OUTPUT 3
@@ -142,7 +142,7 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
     struct dirent *entry;
     char tmp[PATH_MAX];
     char path[PATH_MAX];
-    double kurtosis, lightness;
+    double lightness;
     int n_pairs = 0;
     char *line = NULL;
     size_t len = 0;
@@ -174,8 +174,8 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
             continue;
         }
         else if (strstr(magic_file(magic, path), "image")) {
-            // Get image kurtosis and lightness.
-            if (get_image_info(path, &kurtosis, &lightness) == -1)
+            // Get image lightness.
+            if (get_image_info(path, &lightness) == -1)
                 continue;
 
             set_background_uri(settings, path);
@@ -186,21 +186,21 @@ int set_training_pairs(FILE *fp, const char *base, int max_pairs) {
             // Get image brightness value from user input.
             while ( getline(&line, &len, stdin) != -1 ) {
                 if ( strcmp(line, "0\n") == 0 ) {
-                    fprintf(fp, "%f %f\n", kurtosis, lightness);
+                    fprintf(fp, "%f\n", lightness);
                     fprintf(fp, "1 0 0\n");
                     fprintf(stderr, "Marked dark\n\n");
                     n_pairs++;
                     break;
                 }
                 else if ( strcmp(line, "1\n") == 0 ) {
-                    fprintf(fp, "%f %f\n", kurtosis, lightness);
+                    fprintf(fp, "%f\n", lightness);
                     fprintf(fp, "0 1 0\n");
                     fprintf(stderr, "Marked intermediate\n\n");
                     n_pairs++;
                     break;
                 }
                 else if ( strcmp(line, "2\n") == 0 ) {
-                    fprintf(fp, "%f %f\n", kurtosis, lightness);
+                    fprintf(fp, "%f\n", lightness);
                     fprintf(fp, "0 0 1\n");
                     fprintf(stderr, "Marked light\n\n");
                     n_pairs++;

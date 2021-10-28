@@ -67,7 +67,6 @@ int create_database(sqlite3 *db) {
     query = "CREATE TABLE wallpapers (" \
         "id INTEGER PRIMARY KEY," \
         "path TEXT," \
-        "kurtosis FLOAT," \
         "lightness FLOAT," \
         "brightness INTEGER" \
         ");";
@@ -119,9 +118,8 @@ Return:
   Scan the directory for new wallpapers.
 
   The path of each image file that is found in the directory is saved along
-  with additional information (e.g. kurtosis, lightness) to the database. It
-  will use the Artificial Neural Network to define the brightness value of each
-  image.
+  with additional information (e.g. lightness) to the database. It will use the
+  Artificial Neural Network to define the brightness value of each image.
 
   @param[in] db The database handler.
   @param[in] name The base directory.
@@ -155,7 +153,7 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
     }
 
     // Prepare INSERT statement
-    query = "INSERT INTO wallpapers VALUES (null, @PATH, @KUR, @LGT, @BRI);";
+    query = "INSERT INTO wallpapers VALUES (null, @PATH, @LGT, @BRI);";
     sqlite3_prepare_v2(db, query, strlen(query) + 1, &stmt, &tail);
 
     do {
@@ -299,8 +297,8 @@ int callback_known_image(void *param, int argc, char **argv, char **colnames) {
 /**
   Saves the wallpaper information to the nextwall database.
 
-  Saves the wallpaper path along with the kurtosis, lightness, and brightness
-  value for the wallpaper.
+  Saves the wallpaper path along with the lightness and brightness value for
+  the wallpaper.
 
   @param[in] The prepared insert statement.
   @param[in] The Artificial Neural Network.
@@ -308,23 +306,22 @@ int callback_known_image(void *param, int argc, char **argv, char **colnames) {
   @return Returns 0 on success, -1 otherwise.
  */
 int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
-    double kurtosis, lightness;
+    double lightness;
     int brightness;
 	int rc = 0;
 
     // Get the lightness for this image
-    if (get_image_info(path, &kurtosis, &lightness) == -1) {
+    if (get_image_info(path, &lightness) == -1) {
         return -1;
     }
 
     // Get image brigthness
-    brightness = get_brightness(ann, kurtosis, lightness);
+    brightness = get_brightness(ann, lightness);
 
     // Bind values to prepared statement
     sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT);
-    sqlite3_bind_double(stmt, 2, kurtosis);
-    sqlite3_bind_double(stmt, 3, lightness);
-    sqlite3_bind_int(stmt, 4, brightness);
+    sqlite3_bind_double(stmt, 2, lightness);
+    sqlite3_bind_int(stmt, 3, brightness);
 
     rc = sqlite3_step(stmt);
     if (rc != SQLITE_DONE) {

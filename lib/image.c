@@ -23,18 +23,17 @@
 #include "image.h"
 
 /**
-  Returns the kurtosis and lightness value for an image file.
+  Returns the lightness value for an image file.
 
   @param[in] path Absolute path of the image file.
-  @param[out] kurtosis The kurtosis value.
   @param[out] lightness The lightness value.
   @return Retuns 0 on success, -1 on failure.
  */
-int get_image_info(const char *path, double *kurtosis, double *lightness) {
+int get_image_info(const char *path, double *lightness) {
     MagickBooleanType status;
     MagickWand *magick_wand;
     PixelWand *pixel_wand;
-    double hue, saturation, skewness;
+    double hue, saturation;
 
     MagickWandGenesis();
     magick_wand = NewMagickWand();
@@ -44,10 +43,6 @@ int get_image_info(const char *path, double *kurtosis, double *lightness) {
     status = MagickReadImage(magick_wand, path);
     if (status == MagickFalse)
         return -1;
-
-    // Get the kurtosis value
-    MagickGetImageChannelKurtosis(magick_wand, DefaultChannels, kurtosis,
-            &skewness);
 
     // Resize the image to 1x1 pixel (results in average color)
     MagickResizeImage(magick_wand, 1, 1, LanczosFilter, 1);

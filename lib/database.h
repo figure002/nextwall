@@ -25,7 +25,7 @@
 #include <sqlite3.h>
 
 /* The nextwall database version */
-#define NEXTWALL_DB_VERSION 0.4
+#define NEXTWALL_DB_VERSION 0.5
 
 /* The maximum number of wallpapers in the wallpaper list */
 #define LIST_MAX 2000

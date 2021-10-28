@@ -60,25 +60,23 @@ int floatcmp(const void *pa, const void *pb) {
 }
 
 /**
-  Return the brightness value for a kurtosis/lightness pair.
+  Return the brightness value for a lightness.
 
   Uses the Artificial Neural Network to define the brightness value
-  for a given kurtosis and lightness.
+  for a given lightness.
 
   @param[in] The Artificial Neural Network.
-  @param[in] The kurtosis value of the wallpaper.
   @param[in] The lightness value of the wallpaper.
   @return Returns the brightness value (0 for dark, 1 for intermediate, 2 for
           light). Returns -1 on failure.
  */
-int get_brightness(struct fann *ann, double kurtosis, double lightness) {
+int get_brightness(struct fann *ann, double lightness) {
     fann_type *out;
-    fann_type input[2];
+    fann_type input[1];
     float diff[3];
     int i;
 
-    input[0] = kurtosis;
-    input[1] = lightness;
+    input[0] = lightness;
     out = fann_run(ann, input);
 
     diff[0] = 1.0 - out[0];

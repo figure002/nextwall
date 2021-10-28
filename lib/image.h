@@ -22,7 +22,6 @@
 #define NEXTWALL_IMAGE_H
 
 /* Function prototypes */
-int get_image_info(const char *path, double *kurtosis, double *lightness);
+int get_image_info(const char *path, double *lightness);
 
 #endif
-
