@@ -33,6 +33,7 @@
  */
 int set_background_uri(GSettings *settings, const char *path) {
     char normalized_path[PATH_MAX];
+    static char picture_param[] = "picture-uri-dark";
 
     if (strstr(path, "file://") == NULL) {
         if (snprintf(normalized_path,
@@ -49,10 +50,10 @@ int set_background_uri(GSettings *settings, const char *path) {
         }
     }
 
-    g_assert(g_settings_set(settings, "picture-uri", "s", normalized_path));
+    g_assert(g_settings_set(settings, picture_param, "s", normalized_path));
     g_settings_sync(); // Make sure the changes are written to disk
 
-    if (strcmp(g_settings_get_string(settings, "picture-uri"), normalized_path) == 0) {
+    if (strcmp(g_settings_get_string(settings, picture_param), normalized_path) == 0) {
         return 0;
     }
 
@@ -67,8 +68,9 @@ int set_background_uri(GSettings *settings, const char *path) {
  */
 int get_background_uri(GSettings *settings, char *dest) {
     const char *uri;
+    static char picture_param[] = "picture-uri-dark";
 
-    uri = g_variant_get_string(g_settings_get_value(settings, "picture-uri"), NULL);
+    uri = g_variant_get_string(g_settings_get_value(settings, picture_param), NULL);
 
     // Strip off the "file://" part of the URI.
     if (strlcpy(dest, uri + 7, PATH_MAX) >= PATH_MAX) {
