@@ -18,7 +18,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <wand/MagickWand.h>
+#include <MagickWand/MagickWand.h>
 
 #include "image.h"
 
@@ -45,7 +45,7 @@ int get_image_info(const char *path, double *lightness) {
         return -1;
 
     // Resize the image to 1x1 pixel (results in average color)
-    MagickResizeImage(magick_wand, 1, 1, LanczosFilter, 1);
+    MagickResizeImage(magick_wand, 1, 1, LanczosFilter);
 
     // Get pixel color
     status = MagickGetImagePixelColor(magick_wand, 0, 0, pixel_wand);
