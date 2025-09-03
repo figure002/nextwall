@@ -255,6 +255,7 @@ int main(int argc, char **argv) {
 
             // Check for EOF.
             if (!input) {
+                fprintf(stderr, "Bye\n");
                 break;
             }
 
@@ -310,6 +311,7 @@ int main(int argc, char **argv) {
                     "'q'\tExit nextwall\n");
             }
             else if (strcmp(input, "q") == 0) {
+                fprintf(stderr, "Bye\n");
                 break;
             }
             else {
@@ -345,8 +347,6 @@ Return:
     if (db) {
         sqlite3_close(db);
     }
-
-    fprintf(stderr, "Bye\n");
 
     return exit_status;
 }
