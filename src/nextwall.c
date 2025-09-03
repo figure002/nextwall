@@ -33,6 +33,7 @@
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>     /* strerr strcmp */
 #include <sys/stat.h>   /* open */
@@ -233,6 +234,7 @@ int main(int argc, char **argv) {
     if (arguments.interactive) {
         char *input;
         char shell_prompt[100];
+        int rc;
 
         fprintf(stderr,
                 "Nextwall %s\n" \
@@ -253,7 +255,7 @@ int main(int argc, char **argv) {
 
             // Check for EOF.
             if (!input) {
-                fprintf(stderr, "\n");
+                fprintf(stderr, "Bye\n");
                 break;
             }
 
@@ -278,12 +280,10 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "Move wallpaper %s to trash? (y/N) ",
                         wallpaper.current);
 
-                if ( (input = readline("")) && \
-                     strcmp(input, "y") == 0 && \
-                     remove_wallpaper(db, wallpaper.current) == 0 ) {
-                    fprintf(stderr, "Wallpaper removed\n");
+                if ((input = readline("")) && strcmp(input, "y") == 0) {
+                    rc = remove_wallpaper(db, wallpaper.current, true);
 
-                    if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
+                    if (rc == 0 && set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
                         goto Return;
                     }
                 }
@@ -378,7 +378,7 @@ int set_wallpaper(GSettings *settings,
         if (!file_exists) {
             eprintf("Wallpaper '%s' no longer exists. Removing from database.\n",
                     wallpaper->path);
-            remove_wallpaper(db, wallpaper->path);
+            remove_wallpaper(db, wallpaper->path, false);
 
             /* Don't increment if the file was moved/deleted. */
             --i;

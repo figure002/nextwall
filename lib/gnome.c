@@ -123,15 +123,20 @@ int open_image(char *path) {
 int file_trash(char *path) {
     gboolean success;
     GFile *file;
+    GError *error = NULL;
 
     file = g_file_new_for_path(path);
-    success = g_file_trash(file, NULL, NULL);
+    success = g_file_trash(file, NULL, &error);
+
+    if (success) {
+        printf("Successfully moved '%s' to the trash.\n", path);
+    }
+    else {
+        fprintf(stderr, "%s\n", error->message);
+        g_error_free(error);
+    }
 
     g_object_unref(file);
 
-    if (success == FALSE) {
-        return -1;
-    }
-
-    return 0;
+    return success ? 0 : -1;
 }

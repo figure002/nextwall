@@ -33,6 +33,6 @@
 int create_database(sqlite3 *db);
 int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive);
 int nextwall(sqlite3 *db, const char *base, int brightness, char *path);
-int remove_wallpaper(sqlite3 *db, char *path);
+int remove_wallpaper(sqlite3 *db, char *path, bool trash_file);
 
 #endif

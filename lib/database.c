@@ -22,6 +22,7 @@
 
 #include <errno.h>      /* errno */
 #include <stdio.h>      /* perror */
+#include <stdbool.h>
 #include <floatfann.h>
 #include <magic.h>
 #include <limits.h>     /* realpath */
@@ -480,24 +481,33 @@ int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames)
   @param[in] path Absolute path of the wallpaper.
   @return Returns 0 on successful completion, and -1 on error.
  */
-int remove_wallpaper(sqlite3 *db, char *path) {
-    char *query = NULL;
+int remove_wallpaper(sqlite3 *db, char *path, bool trash_file) {
+    sqlite3_stmt *stmt;
+    const char *query = "DELETE FROM wallpapers WHERE path = ?;";
+    int rc;
 
-    if (asprintf(&query, "DELETE FROM wallpapers WHERE path='%s';", path) == -1) {
-        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
+    rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
         return -1;
     }
 
-    if (sqlite3_exec(db, query, NULL, NULL, NULL) != SQLITE_OK) {
-        fprintf(stderr, "Error: failed to execute query: %s\n", query);
-        free(query);
+    rc = sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to bind parameter: %s\n", sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
         return -1;
     }
 
-    free(query);
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "Execution failed: %s\n", sqlite3_errmsg(db));
+    }
 
-    // Move wallpaper to trash.
-    if (file_trash(path) == -1) {
+    sqlite3_finalize(stmt);
+
+    if (trash_file && file_trash(path) == -1) {
         return -1;
     }
 
