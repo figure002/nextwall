@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     arguments.interactive = 0;
     arguments.latitude = -1;
     arguments.longitude = -1;
-    arguments.print = 0;
+    arguments.print = false;
     arguments.recursion = 0;
     arguments.scan = 0;
     arguments.time = 0;
@@ -283,13 +283,13 @@ int main(int argc, char **argv) {
                 if ((input = readline("")) && strcmp(input, "y") == 0) {
                     rc = remove_wallpaper(db, wallpaper.current, true);
 
-                    if (rc == 0 && set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
+                    if (rc == 0 && set_wallpaper(settings, db, local_brightness, &wallpaper, false) == -1) {
                         goto Return;
                     }
                 }
             }
             else if (strcmp(input, "") == 0 || strcmp(input, "n") == 0) {
-                if (set_wallpaper(settings, db, local_brightness, &wallpaper, 0) == -1) {
+                if (set_wallpaper(settings, db, local_brightness, &wallpaper, false) == -1) {
                     goto Return;
                 }
             }
@@ -354,7 +354,7 @@ int set_wallpaper(GSettings *settings,
                   sqlite3 *db,
                   int brightness,
                   struct wallpaper_state *wallpaper,
-                  int print_only) {
+                  bool print_only) {
     int i;
     int file_exists;
 

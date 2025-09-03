@@ -21,6 +21,7 @@
 #ifndef NEXTWALL_H
 #define NEXTWALL_H
 
+#include <stdbool.h>
 #include <gio/gio.h>
 #include <sqlite3.h>
 
@@ -44,7 +45,7 @@ int set_wallpaper(GSettings *settings,
                   sqlite3 *db,
                   int brightness,
                   struct wallpaper_state *state,
-                  int print_only);
+                  bool print_only);
 
 /* Set to 1 to display verbose messages */
 extern int nextwall_verbose;

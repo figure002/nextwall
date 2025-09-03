@@ -19,6 +19,7 @@
  */
 
 #include <argp.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -107,7 +108,7 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
             }
             break;
         case 'p':
-            arguments->print = 1;
+            arguments->print = true;
             break;
         case 'r':
             arguments->recursion = 1;
