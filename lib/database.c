@@ -31,6 +31,7 @@
 #include <sqlite3.h>
 #include <sys/types.h>  /* open opendir stat */
 #include <sys/stat.h>   /* open opendir stat */
+#include <sys/ioctl.h>  /* ioctl TIOCGWINSZ */
 #include <unistd.h>     /* stat */
 #include <dirent.h>     /* open opendir */
 #include <fcntl.h>      /* open opendir */
@@ -127,6 +128,7 @@ Return:
  */
 int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
     int found = 0;
+    int terminal_width = get_terminal_width();
     char *path_tmp = NULL;
     char *query;
     char path[PATH_MAX];
@@ -177,17 +179,23 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
                 continue;
             }
 
-            fprintf(stderr, "\nEntering %s...", path);
             found += scan_dir(db, path, ann, recursive + 1);
         }
         else if (strstr(magic_file(magic, path), "image")) {
+            // Build the full line to be printed
+            char line_buffer[terminal_width + 1];
+            strlcpy(line_buffer, path, sizeof(line_buffer));
+
+            // Use %-*s to print the line and pad it with spaces to fill the terminal
+            printf("\r%-*s", terminal_width, line_buffer);
+            fflush(stdout);
+
             if (is_known_image(db, path)) {
                 continue;
             }
 
             if (save_image_info(stmt, ann, path) == 0) {
                 ++found;
-                fprintf(stderr, ".");
             }
             else {
                 fprintf(stderr, "\nError: Failed to save image info for %s\n", path);
@@ -214,7 +222,6 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive) {
                     continue;
                 }
 
-                fprintf(stderr, "\nEntering %s...", path);
                 found += scan_dir(db, path, ann, recursive + 1);
             }
             else {
@@ -496,4 +503,17 @@ int remove_wallpaper(sqlite3 *db, char *path, bool trash_file) {
     }
 
     return 0;
+}
+
+/**
+ * Return the current width of the terminal.
+ *
+ * @return The width in columns, or a fallback of 80 on error.
+ */
+int get_terminal_width() {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) {
+        return w.ws_col;
+    }
+    return 80;
 }

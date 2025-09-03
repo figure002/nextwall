@@ -36,5 +36,6 @@ int scan_dir(sqlite3 *db, const char *base, struct fann *ann, int recursive);
 int nextwall(sqlite3 *db, const char *base, int brightness, char *result_path);
 int set_path_from_id(sqlite3 *db, int id, char *result_path);
 int remove_wallpaper(sqlite3 *db, char *path, bool trash_file);
+int get_terminal_width();
 
 #endif
