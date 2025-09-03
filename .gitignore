@@ -10,6 +10,7 @@ tests/check-nextwall
 
 Makefile
 Makefile.in
+.cache/
 .deps/
 aclocal.m4
 ar-lib
