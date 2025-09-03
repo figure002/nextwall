@@ -412,8 +412,24 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *result_path) {
     }
     id = wallpaper_list[wallpaper_current++];
 
-    // Get the path for this ID.
-    query = "SELECT path FROM wallpapers WHERE id = ?;";
+    set_path_from_id(db, id, result_path);
+
+    return id;
+}
+
+/**
+  Set the wallpaper path from an ID.
+
+  @param[in] db The database handler.
+  @param[in] id The ID of the wallpaper.
+  @param[out] result_path Will be set to the path of the randomly selected wallpaper.
+  @return 0 on success, -1 otherwise.
+ */
+int set_path_from_id(sqlite3 *db, int id, char *result_path) {
+    int rc;
+    sqlite3_stmt *stmt;
+    const char *query = "SELECT path FROM wallpapers WHERE id = ?;";
+
     rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
     if (rc != SQLITE_OK) {
         fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
@@ -439,7 +455,7 @@ int nextwall(sqlite3 *db, const char *base, int brightness, char *result_path) {
 
     sqlite3_finalize(stmt);
 
-    return id;
+    return 0;
 }
 
 /**
