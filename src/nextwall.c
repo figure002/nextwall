@@ -255,7 +255,10 @@ int main(int argc, char **argv) {
 
             // Check for EOF.
             if (!input) {
-                fprintf(stderr, "Bye\n");
+                // \x1b[A     -> Move cursor UP 1 line
+                // \x1b[%ldC  -> Move cursor FORWARD (right) by 'offset' columns
+                long offset = strlen(shell_prompt);
+                fprintf(stderr, "\x1b[A\x1b[%ldCq\n", offset);
                 break;
             }
 
@@ -311,7 +314,6 @@ int main(int argc, char **argv) {
                     "'q'\tExit nextwall\n");
             }
             else if (strcmp(input, "q") == 0) {
-                fprintf(stderr, "Bye\n");
                 break;
             }
             else {
