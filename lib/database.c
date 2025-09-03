@@ -52,8 +52,6 @@ static int wallpaper_list[LIST_MAX];
 static int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path);
 static int is_known_image(sqlite3 *db, const char *path);
 static int callback_known_image(void *param, int argc, char **argv, char **colnames);
-static int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames);
-static int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames);
 
 /**
   Create a new nextwall database.
@@ -342,136 +340,106 @@ int save_image_info(sqlite3_stmt *stmt, struct fann *ann, const char *path) {
   @param[in] base The base directory from which to select wallpapers.
   @param[in] brightness If set to 0, 1, or 2, wallpapers matching this
              brightness value are returned.
-  @param[out] path Will be set to the path of the randomly selected wallpaper.
+  @param[out] result_path Will be set to the path of the randomly selected wallpaper.
   @return Returns the ID of a randomly selected wallpaper on success, -1
           otherwise.
  */
-int nextwall(sqlite3 *db, const char *base, int brightness, char *path) {
+int nextwall(sqlite3 *db, const char *base, int brightness, char *result_path) {
     int id;
-    int rc = 0;
-    char *query = NULL;
-    char *query2 = NULL;
+    int rc;
+    sqlite3_stmt *stmt;
+    const char *query;
 
     if (!wallpaper_list_populated) {
-        char real_base[PATH_MAX];
-
         /* Make sure the base path is absolute, since only absolute paths are
            stored in the database. */
+        char real_base[PATH_MAX];
         if (realpath(base, real_base) == NULL) {
             fprintf(stderr, "realpath() failed: %s\n", strerror(errno));
-            goto on_error;
+            return -1;
         }
+
+        // Construct the LIKE pattern by appending '%'.
+        char like_pattern[PATH_MAX];
+        strlcpy(like_pattern, real_base, sizeof(like_pattern));
+        strlcat(like_pattern, "%", sizeof(like_pattern));
 
         if (brightness != -1) {
-            if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
-                    "LIKE \"%s%%\" AND brightness=%d ORDER BY RANDOM() LIMIT %d;",
-                    real_base, brightness, LIST_MAX) == -1) {
-                fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
-                goto on_error;
-            }
+            query = "SELECT id FROM wallpapers WHERE path LIKE ? AND brightness = ? ORDER BY RANDOM() LIMIT ?;";
         }
         else {
-            if (asprintf(&query, "SELECT id FROM wallpapers WHERE path " \
-                    "LIKE \"%s%%\" ORDER BY RANDOM() LIMIT %d;",
-                    real_base, LIST_MAX) == -1) {
-                fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
-                goto on_error;
-            }
+            query = "SELECT id FROM wallpapers WHERE path LIKE ? ORDER BY RANDOM() LIMIT ?;";
         }
 
-        rc = sqlite3_exec(db, query, callback_wallpaper_list, &wallpaper_list, NULL);
+        rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
         if (rc != SQLITE_OK) {
-            fprintf(stderr, "Error: Failed to execute query: %s\n", query);
-            goto on_error;
+            fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+            sqlite3_close(db);
+            return -1;
         }
+
+        sqlite3_bind_text(stmt, 1, like_pattern, -1, SQLITE_TRANSIENT);
+        if (brightness != -1) {
+            sqlite3_bind_int(stmt, 2, brightness);
+            sqlite3_bind_int(stmt, 3, LIST_MAX);
+        }
+        else {
+            sqlite3_bind_int(stmt, 2, LIST_MAX);
+        }
+
+        while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+            int id = sqlite3_column_int(stmt, 0);
+            wallpaper_list[wallpaper_count] = id;
+            ++wallpaper_count;
+        }
+
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr, "SQL error while selecting: %s\n", sqlite3_errmsg(db));
+        }
+
+        sqlite3_finalize(stmt);
 
         wallpaper_list_populated = 1;
     }
 
     if (wallpaper_count == 0) {
-        goto on_error;
-    }
-
-    // Get random index for wallpaper_list
-    if (wallpaper_current == wallpaper_count) {
-        wallpaper_current = 0;
-    }
-
-    id = wallpaper_list[wallpaper_current++];
-
-    // Set the wallpaper path
-    if (asprintf(&query2, "SELECT path FROM wallpapers WHERE id=%d;", id) == -1) {
-        fprintf(stderr, "asprintf() failed: %s\n", strerror(errno));
-        goto on_error;
-    }
-
-    rc = sqlite3_exec(db, query2, callback_wallpaper_path, &path, NULL);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Error: query or query callback failure: %s\n", query2);
-        goto on_error;
-    }
-
-    // Deallocate
-    if (query) {
-        free(query);
-    }
-
-    if (query2) {
-        free(query2);
-    }
-
-    return id;
-
-on_error:
-    if (query) {
-        free(query);
-    }
-
-    if (query2) {
-        free(query2);
-    }
-
-    return -1;
-}
-
-/**
-  Callback for nextwall() which populates an array with wallpaper IDs.
-
-  Populates the first argumenent to the callback.
-
-  @param[out] param The wallpaper list array.
-  @param[in] argc The number of columns in the result.
-  @param[in] argv An array of pointers to strings obtained for each column.
-  @param[in] colnames An array of pointers to strings where each entry
-             represents the name of corresponding result column.
- */
-int callback_wallpaper_list(void *param, int argc, char **argv, char **colnames) {
-    int *wallpaper_list = (int *)param;
-    wallpaper_list[wallpaper_count] = atoi(argv[0]);
-    ++wallpaper_count;
-
-    return 0;
-}
-
-/**
-  Callback for nextwall() which returns the path of the selected wallpaper.
-
-  Sets the first argument to the callback.
-
-  @param[out] param The path of the selected wallpaper.
-  @param[in] argc The number of columns in the result.
-  @param[in] argv An array of pointers to strings obtained for each column.
-  @param[in] colnames An array of pointers to strings where each entry
-             represents the name of corresponding result column.
- */
-int callback_wallpaper_path(void *param, int argc, char **argv, char **colnames) {
-    char **path = (char **)param;
-
-    if (strlcpy(*path, argv[0], PATH_MAX) >= PATH_MAX) {
         return -1;
     }
 
-    return 0;
+    // Get the next ID from the list.
+    if (wallpaper_current == wallpaper_count) {
+        wallpaper_current = 0;
+    }
+    id = wallpaper_list[wallpaper_current++];
+
+    // Get the path for this ID.
+    query = "SELECT path FROM wallpapers WHERE id = ?;";
+    rc = sqlite3_prepare_v2(db, query, -1, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Failed to prepare statement: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, id);
+
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+        const unsigned char *found_path = sqlite3_column_text(stmt, 0);
+
+        if (strlcpy(result_path, (const char *)found_path, PATH_MAX) >= PATH_MAX) {
+            fprintf(stderr, "Error: path truncation occurred.\n");
+            sqlite3_finalize(stmt);
+            return -1;
+        }
+    }
+
+    if (rc != SQLITE_DONE) {
+        fprintf(stderr, "SQL error while selecting: %s\n", sqlite3_errmsg(db));
+    }
+
+    sqlite3_finalize(stmt);
+
+    return id;
 }
 
 /**
